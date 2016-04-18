@@ -1,0 +1,39 @@
+# This file contains metadata for your plugin. Since 
+# version 2.0 of QGIS this is the proper way to supply 
+# information about a plugin. The old method of 
+# embedding metadata in __init__.py will 
+# is no longer supported since version 2.0.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=JRodos
+qgisMinimumVersion=2.0
+description=Plugin to connect to JRodos via WPS
+version=0.1
+author=Zuidt
+email=richard@zuidt.nl
+
+about=This plugin will connect to a JRodos/Geoserver WPS instance to download data based on project/path information and show it in QGIS
+
+tracker=https://github.com/rduivenvoorde/jrodos/issues
+repository=https://github.com/rduivenvoorde/jrodos
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=
+
+homepage=
+category=Web
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+

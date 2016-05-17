@@ -46,7 +46,7 @@ PY_FILES = \
 	__init__.py \
 	jrodos.py jrodos_dialog.py
 
-UI_FILES = jrodos_dialog_base.ui
+UI_FILES = jrodos_dialog_base.ui jrodos_measurement_dialog_base.ui
 
 EXTRAS = metadata.txt icon.png
 

@@ -13,10 +13,15 @@ class WfsSettings:
         self.output_dir = '/tmp'
         # check and set defaults
         self.page_size = 10000
+        self.start_datetime = ''
+        self.end_datetime = ''
+        self.quantity = ''
+        self.substance = ''
+        self.endminusstart = ''
 
     def __str__(self):
-        return """WFS settings:\n WFS url: {}\n outputdir: {}\n page_size: {}
-        """.format(self.url, self.output_dir, self.page_size)
+        return """WFS settings:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}
+        """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime, self.endminusstart, self.quantity, self.substance)
 
 
 class WfsDataWorker(QObject):
@@ -27,13 +32,14 @@ class WfsDataWorker(QObject):
         # init superclass
         QObject.__init__(self)
 
+        print "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR INIT in dataworker"
+
         if isinstance(settings, WfsSettings) is False:
             raise TypeError('Worker expected a WfsSettings, got a {} instead'.format(type(settings)))
 
         self.settings = settings
 
     def run(self):
-
         ret = None
         try:
             # "http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?Count=10000&startIndex=40000&CQL_FILTER=bbox(location%2C+50%2C+0%2C+60%2C+20)+and+time+<+'2016-04-26T08%3A00%3A00.000+00%3A00'+and+time+>+'2016-04-25T08%3A00%3A00.000+00%3A00'+and+endTime-startTime%3D3600+and+quantity%3D'T-GAMMA'+and+substance+%3D+'A5'&typeName=radiation.measurements%3AMEASUREMENT&version=2.0.0&service=WFS&request=GetFeature"
@@ -56,8 +62,8 @@ class WfsDataWorker(QObject):
             # FOR DEVELOPMENT ONLY
             stop_at = 40000
 
-            #while total_count % page_size == 0 and step_count > 0: # and feature_count <= STOP_AT:
-            for i in range(0, 10):
+            while total_count % page_size == 0 and step_count > 0: # and feature_count <= STOP_AT:
+            #for i in range(0, 10):
                 step_count = 0
                 file_count += 1
 
@@ -65,9 +71,18 @@ class WfsDataWorker(QObject):
                 params = {}
                 params['Count'] = page_size
                 params['startIndex'] = total_count
-                # TODO make bbox and endTime-startTime dynamic
+                cql_filter = "bbox(location,50,0,60,20) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}'".format(
+                    start_datetime=self.settings.start_datetime,
+                    end_datetime=self.settings.end_datetime,
+                    quantity=self.settings.quantity,
+                    substance=self.settings.substance,
+                    endminusstart=self.settings.endminusstart
+                )
+                # TODO development
+                # cql_filter = "bbox(location,50,0,60,20) and time > '2016-04-25T08:00:00.000+00:00' and time < '2016-04-26T08:00:00.000+00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
+                # cql_filter = "bbox(location,50,0,60,20) and time > '2016-04-25T08:02:02.000+00:00' and time < '2016-04-25T10:00:00.000+00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
                 params[
-                    'CQL_FILTER'] = "bbox(location,50,0,60,20) and time > '2016-04-25T08:00:00.000+00:00' and time < '2016-04-26T08:00:00.000+00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
+                    'CQL_FILTER'] = cql_filter
                 params['typeName'] = "radiation.measurements:MEASUREMENT"
                 params['version'] = '2.0.0'
                 params['service'] = 'WFS'
@@ -115,7 +130,7 @@ class WfsDataWorker(QObject):
             # forward the exception upstream
             self.error.emit(e, traceback.format_exc())
 
-        ret = {'result':'OK'}
+        ret = {'result': 'OK', 'output_dir': self.settings.output_dir}
         self.finished.emit(ret)
 
     def kill(self):
@@ -277,7 +292,8 @@ class WpsDataWorker(QObject):
             # forward the exception upstream
             self.error.emit(e, traceback.format_exc())
 
-        ret = {'result': 'OK'}
+        ret = {'result': 'OK', 'output_dir': self.settings.output_dir}
+
         self.finished.emit(ret)
 
     def kill(self):
@@ -289,9 +305,7 @@ class WpsDataWorker(QObject):
 
 
 # https://pymotw.com/2/threading/
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(levelname)s] (%(threadName)-10s) %(message)s',
-                    )
+logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s',)
 
 
 def test():
@@ -300,14 +314,19 @@ def test():
         print err
 
     def wfs_finished(ret):
+        print('wfs finished: {}'.format(ret))
         wfs_thread.quit()
-        #app.quit()
-        print ret
+        if both_finished:
+            app.quit()
 
     def wps_finished(ret):
+        print('wps finished: {}'.format(ret))
         wps_thread.quit()
-        #app.quit()
-        print ret
+        if both_finished:
+            app.quit()
+
+    def both_finished():
+        return wps_thread.isFinished() and wfs_thread.isFinished()
 
     def wps_progress(part):
         print('wps progress: {}'.format(part))
@@ -328,7 +347,7 @@ def test():
     wps_settings.jrodos_project = "'wps-test-3'"
     wps_settings.jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
     wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-    wps_settings.jrodos_columns = 24  # columns / timesteps
+    wps_settings.jrodos_columns = 4  # columns / timesteps
     wps_settings.jrodos_verticals = 0  # z / layers
     work_dir = Utils.jrodos_dirname(wps_settings.jrodos_project, wps_settings.jrodos_path, datetime.now().strftime("%Y%m%d%H%M%S"))
     wps_settings.output_dir = work_dir
@@ -348,6 +367,14 @@ def test():
     wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
     wfs_settings.output_dir = work_dir
     wfs_settings.page_size = 10000
+    #wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
+    #wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
+    wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
+    wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
+    wfs_settings.endminusstart =  '3600'
+    wfs_settings.quantity = 'T-GAMMA'
+    wfs_settings.substance = 'A5'
+
     print wfs_settings
 
     wfs_thread = QThread()
@@ -357,8 +384,9 @@ def test():
     w.error.connect(error)
     w.progress.connect(wfs_progress)
     wfs_thread.started.connect(w.run)
-    wfs_thread.start()
+
     wps_thread.start()
+    #wfs_thread.start()
 
     # NOT WORKING in parallel neither
     # combined_thread = QThread()

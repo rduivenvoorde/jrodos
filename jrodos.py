@@ -257,11 +257,13 @@ class JRodos:
         # self.msg(None, result)
         #self.iface.messageBar().clearWidgets()
         del self.wfs_progress_bar
-        #self.iface.messageBar().pushSuccess("Measurements", "Retrieved all measerements data...")
-        self.iface.messageBar().createMessage("Measurements", "Retrieved all measerements data...")
+        #self.iface.messageBar().pushSuccess("Measurements", "Retrieved all measurement data...")
+        #self.iface.messageBar().createMessage("Measurements", "Retrieved all measurement data...")
         # Load the received gml files
         # TODO: determine qml file based on something coming from the settings/result object
         self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+        # if self.all_data_received():
+        #     self.iface.messageBar().clearWidgets()
         self.wfs_settings = None
         self.wfs_progress_bar = None
 
@@ -279,10 +281,12 @@ class JRodos:
         #self.iface.messageBar().clearWidgets()
         del self.wps_progress_bar
         #self.iface.messageBar().pushSuccess("Modeldata", "Retrieved all model data...")
-        self.iface.messageBar().createMessage("Modeldata", "Retrieved all model data...")
+        #self.iface.messageBar().createMessage("Modeldata", "Retrieved all model data...")
         # Load the received shp-zip files
         # TODO: determine qml file based on something coming from the settings/result object
         self.load_shapes(result['output_dir'], 'totalpotentialdoseeffective.qml')
+        # if self.all_data_received():
+        #     self.iface.messageBar().clearWidgets()
         self.wps_settings = None
         self.wps_progress_bar = None
 
@@ -295,46 +299,50 @@ class JRodos:
         self.wps_progress_bar = None
         self.wps_settings = None
 
-    #def data_thread_busy(self):
-    #    self.wfs_thread.isRunning() or self.wps_thread.isRunning()
+    # def all_data_received(self):
+    #     ready = self.wfs_thread.isFinished() and self.wps_thread.isFinished()
+    #     self.msg(None, "%s %s %s " % (ready, self.wfs_thread.isFinished(), self.wps_thread.isFinished()))
+    #     return ready
 
     def run(self):
-
+        self.iface.messageBar().clearWidgets()
         try:
             # WPS / MODEL PART
             wps_settings = self.show_jrodos_wps_dialog()
             if wps_settings is None or self.wps_settings is not None:
-                self.msg(None, "Either a wps-thread is busy, OR we got no wps_settings from dialog")
-                return
-            self.wps_settings = wps_settings
-            #self.msg(None, wps_settings)
-            wps_thread = QThread(self.iface)
-            wps_worker = WpsDataWorker(wps_settings)
-            wps_worker.moveToThread(wps_thread)
-            wps_worker.finished.connect(self.wps_finished)
-            wps_worker.error.connect(self.wps_error)
-            wps_worker.progress.connect(self.wps_progress)
-            wps_thread.started.connect(wps_worker.run)
+                #self.msg(None, "Either a wps-thread is busy, OR we got no wps_settings from dialog")
+                #return
+                pass
+            else:
+                self.wps_settings = wps_settings
+                #self.msg(None, wps_settings)
+                wps_thread = QThread(self.iface)
+                wps_worker = WpsDataWorker(wps_settings)
+                wps_worker.moveToThread(wps_thread)
+                wps_worker.finished.connect(self.wps_finished)
+                wps_worker.error.connect(self.wps_error)
+                wps_worker.progress.connect(self.wps_progress)
+                wps_thread.started.connect(wps_worker.run)
 
-            if self.progress_message_bar == None:
-                self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
-                self.iface.messageBar().pushWidget(self.progress_message_bar, self.iface.messageBar().INFO)
+                if self.progress_message_bar == None:
+                    self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
+                    self.iface.messageBar().pushWidget(self.progress_message_bar, self.iface.messageBar().INFO)
 
-            self.wps_progress_bar = QProgressBar()
-            self.wps_progress_bar.setMaximum(100)
-            self.wps_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self.progress_message_bar.layout().addWidget(self.wps_progress_bar)
+                self.wps_progress_bar = QProgressBar()
+                self.wps_progress_bar.setMaximum(100)
+                self.wps_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                self.progress_message_bar.layout().addWidget(self.wps_progress_bar)
 
-            # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
-            self.wps_thread = wps_thread
-            self.wps_worker = wps_worker
+                # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
+                self.wps_thread = wps_thread
+                self.wps_worker = wps_worker
 
-            wps_thread.start()
+                wps_thread.start()
 
             # WFS / MEASUREMENTS PART
             wfs_settings = self.show_measurements_dialog(wps_settings)
             if wfs_settings is None or self.wfs_settings is not None:
-                self.msg(None, "Either a wfs-thread is busy, OR we got no wfs_settings from dialog")
+                #self.msg(None, "Either a wfs-thread is busy, OR we got no wfs_settings from dialog")
                 return
             self.wfs_settings = wfs_settings
             #self.msg(None, wfs_settings)
@@ -392,9 +400,9 @@ class JRodos:
 
     def show_measurements_dialog(self, wps_settings=None):
 
+        end_time = QDateTime.currentDateTime() # end NOW
+        start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
         # INIT dialog based on earlier wps dialog
-        start_time = QDateTime.currentDateTime()
-        end_time = start_time.addSecs(60 * 60 * 6) # +6 hours
         if wps_settings is not None:
             start_time = wps_settings.jrodos_datetime_start
             end_time = start_time.addSecs(60 * 60 * int(wps_settings.jrodos_model_time)) # model time

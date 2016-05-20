@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, pyqtSignal, QSettings, QThread
+from PyQt4.QtCore import QObject, pyqtSignal, QSettings, QThread, QDate, QTime, QDateTime
 from PyQt4.QtGui import QApplication
 from utils import Utils
 import traceback, logging
@@ -10,7 +10,7 @@ from datetime import date, time, datetime, timedelta
 class WfsSettings:
     def __init__(self):
         self.url = ''
-        self.output_dir = '/tmp'
+        self.output_dir = None
         # check and set defaults
         self.page_size = 10000
         self.start_datetime = ''
@@ -18,10 +18,11 @@ class WfsSettings:
         self.quantity = ''
         self.substance = ''
         self.endminusstart = ''
+        self.bbox = '50,0,60,20'
 
     def __str__(self):
-        return """WFS settings:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}
-        """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime, self.endminusstart, self.quantity, self.substance)
+        return """WFS settings:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n bbox: {}
+        """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime, self.endminusstart, self.quantity, self.substance, self.bbox)
 
 
 class WfsDataWorker(QObject):
@@ -31,8 +32,6 @@ class WfsDataWorker(QObject):
     def __init__(self, settings):
         # init superclass
         QObject.__init__(self)
-
-        print "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR INIT in dataworker"
 
         if isinstance(settings, WfsSettings) is False:
             raise TypeError('Worker expected a WfsSettings, got a {} instead'.format(type(settings)))
@@ -59,8 +58,9 @@ class WfsDataWorker(QObject):
             step_count = 1
             file_count = 0
 
-            # FOR DEVELOPMENT ONLY
-            stop_at = 40000
+            wfs_settings_file = self.settings.output_dir + '/wfs_settings.txt'
+            with open(wfs_settings_file, 'wb') as f:
+                f.write(unicode(self.settings))
 
             while total_count % page_size == 0 and step_count > 0: # and feature_count <= STOP_AT:
             #for i in range(0, 10):
@@ -71,7 +71,9 @@ class WfsDataWorker(QObject):
                 params = {}
                 params['Count'] = page_size
                 params['startIndex'] = total_count
-                cql_filter = "bbox(location,50,0,60,20) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}'".format(
+                # cql_filter = "bbox(location,50,0,60,20) and time > '2016-04-25T08:00:00.000+00:00' and time < '2016-04-26T08:00:00.000+00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
+                cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}'".format(
+                    bbox=self.settings.bbox,
                     start_datetime=self.settings.start_datetime,
                     end_datetime=self.settings.end_datetime,
                     quantity=self.settings.quantity,
@@ -94,7 +96,7 @@ class WfsDataWorker(QObject):
 
                     data = urllib.urlencode(params)
                     request = urllib2.Request(wfs_url, data)
-                    logging.debug('Firing WFS request')
+                    logging.debug('Firing WFS request: %s' % request.get_full_url()+request.get_data())
                     response = urllib2.urlopen(request)
                     CHUNK = 16 * 1024
                     filename = self.settings.output_dir + '/data' + unicode(file_count) + '.gml'
@@ -144,20 +146,31 @@ class WfsDataWorker(QObject):
 
 class WpsSettings:
     def __init__(self):
-        self.url = ''
-        self.output_dir = '/tmp'
+        self.url = 'http://localhost:8080/geoserver/wps'
         self.user = 'admin'
         self.password = 'geoserver'
         self.jrodos_project = "'wps-test-3'"
         self.jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         self.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-        self.jrodos_columns = 24  # columns / timesteps
+        self.jrodos_model_time = 24 # hours now fixed 24 hrs
+        self.jrodos_model_step = 60 # minutes 10, 30, 60
+        # self.jrodos_columns # now calculated!!
         self.jrodos_verticals = 0  # z / layers
+        self.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
+        self.jrodos_datetime_format = "yyyy-MM-ddTHH:mm:ss.000 00:00"  # '2016-04-25T08:00:00.000+00:00'
+        self.timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    def output_dir(self):
+        return Utils.jrodos_dirname(self.jrodos_project, self.jrodos_path, self.timestamp)
+
+    def jrodos_columns(self):
+        return (int(self.jrodos_model_time) * 60) / int(self.jrodos_model_step)  # modeltime*60 / timesteps
 
     def __str__(self):
-        return """WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n columns: {}\n verticals: {}
+        return """WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n model(hrs): {}\n step(min): {}\n columns: {}\n verticals: {}\n format: {}\n start : {}
         """.format(self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
-                   self.jrodos_format, self.jrodos_columns, self.jrodos_verticals)
+                   self.jrodos_format, self.jrodos_model_time, self.jrodos_model_step, self.jrodos_columns(), self.jrodos_verticals, self.jrodos_datetime_format,
+                   self.jrodos_datetime_start.toString(self.jrodos_datetime_format))
 
 class WpsDataWorker(QObject):
     '''
@@ -218,7 +231,12 @@ class WpsDataWorker(QObject):
             #        jrodos_vertical=0
             #        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             #        result_dir = self.path_to_dirname(jrodos_project, jrodos_path, timestamp)
-            for column in range(0, self.settings.jrodos_columns + 1):
+
+            wps_settings_file = self.settings.output_dir() + '/wps_settings.txt'
+            with open(wps_settings_file, 'wb') as f:
+                f.write(unicode(self.settings))
+
+            for column in range(0, self.settings.jrodos_columns()):
                 request = """<?xml version="1.0" encoding="UTF-8"?>
                         <wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                           xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs"
@@ -265,9 +283,9 @@ class WpsDataWorker(QObject):
                                            format=self.settings.jrodos_format,
                                            column=unicode(column),
                                            vertical=unicode(self.settings.jrodos_verticals))
-                url = 'http://localhost:8080/geoserver/wps'
-                user = 'admin'
-                password = 'geoserver'
+                url = self.settings.url #'http://localhost:8080/geoserver/wps'
+                user = self.settings.user
+                password = self.settings.password
                 password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
                 password_mgr.add_password(None, url, user, password)
                 handler = urllib2.HTTPBasicAuthHandler(password_mgr)
@@ -278,7 +296,7 @@ class WpsDataWorker(QObject):
                 logging.debug('Firing WPS request')
                 response = opener.open(request)
                 CHUNK = 16 * 1024
-                filename = self.settings.output_dir + '/' + unicode(column) + '_' + unicode(self.settings.jrodos_verticals) + '.zip'
+                filename = self.settings.output_dir() + '/' + unicode(column) + '_' + unicode(self.settings.jrodos_verticals) + '.zip'
                 # using 'with open', then file is explicitly closed
                 with open(filename, 'wb') as f:
                     for chunk in iter(lambda: response.read(CHUNK), ''):
@@ -286,14 +304,14 @@ class WpsDataWorker(QObject):
                         f.write(chunk)
                 # fake progress because we do not know actual total count:
                 # we start at 1/2 then 2/3, 3/4, 4/5 etc
-                self.progress.emit(column / (1.0 + column))
+                #self.progress.emit(column / (1.0 + column))
+                self.progress.emit((1.0 + column) / self.settings.jrodos_columns())
 
         except Exception, e:
             # forward the exception upstream
             self.error.emit(e, traceback.format_exc())
 
-        ret = {'result': 'OK', 'output_dir': self.settings.output_dir}
-
+        ret = {'result': 'OK', 'output_dir': self.settings.output_dir()}
         self.finished.emit(ret)
 
     def kill(self):
@@ -337,7 +355,7 @@ def test():
     app = QApplication(sys.argv)
 
     wps_settings = WpsSettings()
-    wps_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
+    wps_settings.url = 'http://localhost:8080/geoserver/wps'
     # jrodos_path=  "'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'"  # 1
     # jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135'" # 24
     # jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=Cs-137'" # 24
@@ -347,12 +365,11 @@ def test():
     wps_settings.jrodos_project = "'wps-test-3'"
     wps_settings.jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
     wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-    wps_settings.jrodos_columns = 4  # columns / timesteps
+    wps_settings.jrodos_model_time = 24
+    wps_settings.jrodos_model_step = 60
     wps_settings.jrodos_verticals = 0  # z / layers
-    work_dir = Utils.jrodos_dirname(wps_settings.jrodos_project, wps_settings.jrodos_path, datetime.now().strftime("%Y%m%d%H%M%S"))
-    wps_settings.output_dir = work_dir
+    wps_settings.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
 
-    print wps_settings
     wps_thread = QThread()
     w2 = WpsDataWorker(wps_settings)
     w2.moveToThread(wps_thread)
@@ -360,22 +377,24 @@ def test():
     w2.error.connect(error)
     w2.progress.connect(wps_progress)
     wps_thread.started.connect(w2.run)
-    #wps_thread.start()
+
+    print wps_settings
+    wps_thread.start()
 
 
     wfs_settings = WfsSettings()
     wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
-    wfs_settings.output_dir = work_dir
+    # we have always an wps_settings.output_dir here:
+    wfs_settings.output_dir = wps_settings.output_dir()
     wfs_settings.page_size = 10000
-    #wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
-    #wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
-    wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
-    wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
+    wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
+    wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
+    #wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
+    #wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
     wfs_settings.endminusstart =  '3600'
     wfs_settings.quantity = 'T-GAMMA'
     wfs_settings.substance = 'A5'
-
-    print wfs_settings
+    wfs_settings.bbox = '55,5,60,15'
 
     wfs_thread = QThread()
     w = WfsDataWorker(wfs_settings)
@@ -385,7 +404,7 @@ def test():
     w.progress.connect(wfs_progress)
     wfs_thread.started.connect(w.run)
 
-    wps_thread.start()
+    #print wfs_settings
     #wfs_thread.start()
 
     # NOT WORKING in parallel neither

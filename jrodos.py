@@ -312,13 +312,13 @@ class JRodos:
             else:
                 self.wps_settings = wps_settings
                 #self.msg(None, wps_settings)
-                wps_thread = QThread(self.iface)
-                wps_worker = WpsDataWorker(wps_settings)
-                wps_worker.moveToThread(wps_thread)
-                wps_worker.finished.connect(self.wps_finished)
-                wps_worker.error.connect(self.wps_error)
-                wps_worker.progress.connect(self.wps_progress)
-                wps_thread.started.connect(wps_worker.run)
+                self.wps_thread = QThread(self.iface)
+                self.wps_worker = WpsDataWorker(wps_settings)
+                self.wps_worker.moveToThread(self.wps_thread)
+                self.wps_worker.finished.connect(self.wps_finished)
+                self.wps_worker.error.connect(self.wps_error)
+                self.wps_worker.progress.connect(self.wps_progress)
+                self.wps_thread.started.connect(self.wps_worker.run)
 
                 if self.progress_message_bar == None:
                     self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
@@ -329,11 +329,7 @@ class JRodos:
                 self.wps_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
                 self.progress_message_bar.layout().addWidget(self.wps_progress_bar)
 
-                # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
-                self.wps_thread = wps_thread
-                self.wps_worker = wps_worker
-
-                wps_thread.start()
+                self.wps_thread.start()
 
             # WFS / MEASUREMENTS PART
             wfs_settings = self.show_measurements_dialog(wps_settings)
@@ -342,13 +338,13 @@ class JRodos:
                 return
             self.wfs_settings = wfs_settings
             #self.msg(None, wfs_settings)
-            wfs_thread = QThread(self.iface)
-            wfs_worker = WfsDataWorker(wfs_settings)
-            wfs_worker.moveToThread(wfs_thread)
-            wfs_worker.finished.connect(self.wfs_finished)
-            wfs_worker.error.connect(self.wfs_error)
-            wfs_worker.progress.connect(self.wfs_progress)
-            wfs_thread.started.connect(wfs_worker.run)
+            self.wfs_thread = QThread(self.iface)
+            self.wfs_worker = WfsDataWorker(wfs_settings)
+            self.wfs_worker.moveToThread(self.wfs_thread)
+            self.wfs_worker.finished.connect(self.wfs_finished)
+            self.wfs_worker.error.connect(self.wfs_error)
+            self.wfs_worker.progress.connect(self.wfs_progress)
+            self.wfs_thread.started.connect(self.wfs_worker.run)
 
             if self.progress_message_bar == None:
                self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
@@ -359,11 +355,7 @@ class JRodos:
             self.wfs_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.progress_message_bar.layout().addWidget(self.wfs_progress_bar)
 
-            wfs_thread.start()
-
-            # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
-            self.wfs_thread = wfs_thread
-            self.wfs_worker = wfs_worker
+            self.wfs_thread.start()
 
         except Exception as e:
             self.msg(None, "Exception: %s" % e)

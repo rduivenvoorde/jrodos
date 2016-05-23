@@ -554,7 +554,7 @@ class JRodos:
         STEPSIZE = 10000
         feature_count = 0
         step_count = STEPSIZE
-        temp_layer = None
+        measurements_layer = None
         flist = []
 
         gmls = glob(os.path.join(output_dir, "*.gml"))
@@ -564,8 +564,8 @@ class JRodos:
                 self.msg(None, 'GML layer NOT VALID!')
                 return
             # IF there is no memory layer yet: create it
-            if temp_layer is None:
-                temp_layer = QgsVectorLayer("point", "Measurements", "memory")
+            if measurements_layer is None:
+                measurements_layer = QgsVectorLayer("point", "Measurements", "memory")
 
                 #fields = gml_layer.fields()
                 #self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
@@ -575,7 +575,7 @@ class JRodos:
                 #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
 
                 # add fields
-                pr = temp_layer.dataProvider()
+                pr = measurements_layer.dataProvider()
                 pr.addAttributes([QgsField("gml_id", QVariant.String),
                                   QgsField("startTime", QVariant.String),
                                   QgsField("endTime", QVariant.String),
@@ -588,8 +588,8 @@ class JRodos:
                                   QgsField("device", QVariant.String)
                                   ,QgsField("valuemsv", QVariant.Double)
                                   ])
-                temp_layer.updateFields()
-                QgsMapLayerRegistry.instance().addMapLayer(temp_layer)
+                measurements_layer.updateFields()
+                QgsMapLayerRegistry.instance().addMapLayer(measurements_layer)
 
             if not gml_layer.isValid():
                 self.msg(None, 'Layer failed to load!')
@@ -621,7 +621,7 @@ class JRodos:
                         f.setGeometry(feature.geometry())
                         flist.append(f)
                         if len(flist)>1000:
-                            temp_layer.dataProvider().addFeatures(flist)
+                            measurements_layer.dataProvider().addFeatures(flist)
                             flist = []
                         #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())
                     else:
@@ -630,18 +630,18 @@ class JRodos:
                         #print "%s gml_id: %s" % (feature_count, f['gml_id'])
                         #break
 
-            temp_layer.dataProvider().addFeatures(flist)
+            measurements_layer.dataProvider().addFeatures(flist)
             #temp_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
 
-            temp_layer.updateFields()
-            temp_layer.updateExtents()
+            measurements_layer.updateFields()
+            measurements_layer.updateExtents()
 
             self.iface.mapCanvas().refresh()
 
             #self.msg(None, '%s features loaded, written in: %s' %(feature_count, file_count))
             #break
 
-        temp_layer.loadNamedStyle(
+        measurements_layer.loadNamedStyle(
             os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
 
         #self.iface.messageBar().pushSuccess('OK', 'Ready receiving measurements, feature count: ' + unicode(feature_count))

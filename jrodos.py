@@ -332,7 +332,6 @@ class JRodos:
                 # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
                 self.wps_thread = wps_thread
                 self.wps_worker = wps_worker
-                self.iface.wps_thread = wps_thread
 
                 wps_thread.start()
 
@@ -365,7 +364,6 @@ class JRodos:
             # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
             self.wfs_thread = wfs_thread
             self.wfs_worker = wfs_worker
-            self.iface.wfs_thread = wfs_thread
 
         except Exception as e:
             self.msg(None, "Exception: %s" % e)

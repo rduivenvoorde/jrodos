@@ -109,7 +109,6 @@ class JRodos:
         utcdatetime = QDateTime(QDate(2016, 04, 25), QTime(8, 0))
         self.dlg.dateTime_start.setDateTime(utcdatetime)
         #self.dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
-
         # TODO dev
         self.dlg.combo_project.setCurrentIndex(1)
         self.dlg.combo_steps.setCurrentIndex(2)
@@ -254,16 +253,14 @@ class JRodos:
 
 
     def wfs_finished(self, result):
-        # self.msg(None, result)
-        #self.iface.messageBar().clearWidgets()
-        del self.wfs_progress_bar
-        #self.iface.messageBar().pushSuccess("Measurements", "Retrieved all measurement data...")
-        #self.iface.messageBar().createMessage("Measurements", "Retrieved all measurement data...")
+        self.wfs_progress_bar.setValue(100)
+        self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", 0, 5)
         # Load the received gml files
         # TODO: determine qml file based on something coming from the settings/result object
         self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-        # if self.all_data_received():
-        #     self.iface.messageBar().clearWidgets()
+        self.wfs_thread.quit()
+        #del self.wfs_progress_bar
+        self.check_data_received()
         self.wfs_settings = None
         self.wfs_progress_bar = None
 
@@ -277,16 +274,16 @@ class JRodos:
         self.wfs_settings = None
 
     def wps_finished(self, result):
-        #self.msg(None, result)
-        #self.iface.messageBar().clearWidgets()
-        del self.wps_progress_bar
+        self.wps_progress_bar.setValue(100)
+        self.wps_thread.quit()
+        #del self.wps_progress_bar
         #self.iface.messageBar().pushSuccess("Modeldata", "Retrieved all model data...")
-        #self.iface.messageBar().createMessage("Modeldata", "Retrieved all model data...")
+        self.iface.messageBar().pushSuccess("Modeldata", "Retrieved all model data, loading layer...")
         # Load the received shp-zip files
         # TODO: determine qml file based on something coming from the settings/result object
+        self.iface.messageBar().pushMessage("Retrieved all model data, loading layer...", 0, 5)
         self.load_shapes(result['output_dir'], 'totalpotentialdoseeffective.qml')
-        # if self.all_data_received():
-        #     self.iface.messageBar().clearWidgets()
+        self.check_data_received()
         self.wps_settings = None
         self.wps_progress_bar = None
 
@@ -299,10 +296,9 @@ class JRodos:
         self.wps_progress_bar = None
         self.wps_settings = None
 
-    # def all_data_received(self):
-    #     ready = self.wfs_thread.isFinished() and self.wps_thread.isFinished()
-    #     self.msg(None, "%s %s %s " % (ready, self.wfs_thread.isFinished(), self.wps_thread.isFinished()))
-    #     return ready
+    def check_data_received(self):
+        if self.wfs_thread.isFinished() and self.wps_thread.isFinished():
+            self.iface.messageBar().clearWidgets()
 
     def run(self):
         self.iface.messageBar().clearWidgets()
@@ -336,6 +332,7 @@ class JRodos:
                 # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
                 self.wps_thread = wps_thread
                 self.wps_worker = wps_worker
+                self.iface.wps_thread = wps_thread
 
                 wps_thread.start()
 
@@ -368,6 +365,7 @@ class JRodos:
             # NOTE: YOU REALLY NEED TO DO THIS! WITHOUT THE RUN WILL NOT BE STARTED!
             self.wfs_thread = wfs_thread
             self.wfs_worker = wfs_worker
+            self.iface.wfs_thread = wfs_thread
 
         except Exception as e:
             self.msg(None, "Exception: %s" % e)
@@ -646,7 +644,7 @@ class JRodos:
         temp_layer.loadNamedStyle(
             os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
 
-        self.iface.messageBar().pushSuccess('OK', 'Ready receiving measurements, feature count: ' + unicode(feature_count))
+        #self.iface.messageBar().pushSuccess('OK', 'Ready receiving measurements, feature count: ' + unicode(feature_count))
 
         # change back to default action of asking for crs or whatever the old behaviour was!
         s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)

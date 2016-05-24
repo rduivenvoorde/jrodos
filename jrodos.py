@@ -96,6 +96,10 @@ class JRodos:
             "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137'"
         ]
         self.JRODOS_STEP_MINUTES = ['10', '30', '60'] # as in JRodos
+
+        # WFS 2.0: number of features to load when 'paging' data
+        self.WFS_PAGING_SIZE = 10000
+
         # Create the dialog (after translation) and keep reference
         self.dlg = JRodosDialog()
         # add current models to dropdown
@@ -136,12 +140,14 @@ class JRodos:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'JRodos')
         self.toolbar.setObjectName(u'JRodos')
-
-        self.progress_message_bar = None
         self.wps_progress_bar = None
         self.wfs_progress_bar = None
+
+
         self.wps_settings = None
         self.wfs_settings = None
+        self.wps_thread = None
+        self.wfs_thread = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -241,6 +247,24 @@ class JRodos:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        progress_bar_width = 100
+
+        if self.wps_progress_bar is None:
+            self.wps_progress_bar = QProgressBar()
+            self.wps_progress_bar.setToolTip("Model data (WPS)")
+            self.wps_progress_bar.setMaximum(100)
+            self.wps_progress_bar.setFixedWidth(progress_bar_width)
+            self.wps_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.toolbar.addWidget(self.wps_progress_bar)
+
+        if self.wfs_progress_bar is None:
+            self.wfs_progress_bar = QProgressBar()
+            self.wfs_progress_bar.setToolTip("Measurement data (WFS)")
+            self.wfs_progress_bar.setMaximum(100)
+            self.wfs_progress_bar.setFixedWidth(progress_bar_width)
+            self.wfs_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.toolbar.addWidget(self.wfs_progress_bar)
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -248,96 +272,22 @@ class JRodos:
                 self.tr(u'&JRodos'),
                 action)
             self.iface.removeToolBarIcon(action)
+        # remove progress bars
+        del self.wps_progress_bar
+        del self.wfs_progress_bar
         # remove the toolbar
         del self.toolbar
 
-
-    def wfs_finished(self, result):
-        self.wfs_progress_bar.setValue(100)
-        self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", 0, 5)
-        # Load the received gml files
-        # TODO: determine qml file based on something coming from the settings/result object
-        self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-        self.wfs_thread.quit()
-        #del self.wfs_progress_bar
-        self.check_data_received()
-        self.wfs_settings = None
-        self.wfs_progress_bar = None
-
-    def wfs_progress(self, part):
-        self.wfs_progress_bar.setValue(part*100)
-
-    def wfs_error(self, err):
-        self.msg(None, err)
-        del self.wfs_progress_bar
-        self.wfs_progress_bar = None
-        self.wfs_settings = None
-
-    def wps_finished(self, result):
-        self.wps_progress_bar.setValue(100)
-        self.wps_thread.quit()
-        #del self.wps_progress_bar
-        #self.iface.messageBar().pushSuccess("Modeldata", "Retrieved all model data...")
-        self.iface.messageBar().pushSuccess("Modeldata", "Retrieved all model data, loading layer...")
-        # Load the received shp-zip files
-        # TODO: determine qml file based on something coming from the settings/result object
-        self.iface.messageBar().pushMessage("Retrieved all model data, loading layer...", 0, 5)
-        self.load_shapes(result['output_dir'], 'totalpotentialdoseeffective.qml')
-        self.check_data_received()
-        self.wps_settings = None
-        self.wps_progress_bar = None
-
-    def wps_progress(self, part):
-        self.wps_progress_bar.setValue(part * 100)
-
-    def wps_error(self, err):
-        self.msg(None, err)
-        del self.wps_progress_bar
-        self.wps_progress_bar = None
-        self.wps_settings = None
-
-    def check_data_received(self):
-        if self.wfs_thread.isFinished() and self.wps_thread.isFinished():
-            self.iface.messageBar().clearWidgets()
-
-    def run(self):
-        self.iface.messageBar().clearWidgets()
-        try:
-            # WPS / MODEL PART
-            wps_settings = self.show_jrodos_wps_dialog()
-            if wps_settings is None or self.wps_settings is not None:
-                #self.msg(None, "Either a wps-thread is busy, OR we got no wps_settings from dialog")
-                #return
-                pass
-            else:
-                self.wps_settings = wps_settings
-                #self.msg(None, wps_settings)
-                self.wps_thread = QThread(self.iface)
-                self.wps_worker = WpsDataWorker(wps_settings)
-                self.wps_worker.moveToThread(self.wps_thread)
-                self.wps_worker.finished.connect(self.wps_finished)
-                self.wps_worker.error.connect(self.wps_error)
-                self.wps_worker.progress.connect(self.wps_progress)
-                self.wps_thread.started.connect(self.wps_worker.run)
-
-                if self.progress_message_bar == None:
-                    self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
-                    self.iface.messageBar().pushWidget(self.progress_message_bar, self.iface.messageBar().INFO)
-
-                self.wps_progress_bar = QProgressBar()
-                self.wps_progress_bar.setMaximum(100)
-                self.wps_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                self.progress_message_bar.layout().addWidget(self.wps_progress_bar)
-
-                self.wps_thread.start()
-
-            # WFS / MEASUREMENTS PART
-            wfs_settings = self.show_measurements_dialog(wps_settings)
-            if wfs_settings is None or self.wfs_settings is not None:
-                #self.msg(None, "Either a wfs-thread is busy, OR we got no wfs_settings from dialog")
-                return
+    def wfs_start(self, wps_settings):
+        # WFS / MEASUREMENTS PART
+        wfs_settings = self.show_measurements_dialog(wps_settings)
+        if wfs_settings is None or self.wfs_settings is not None:
+            self.msg(None, "Either a wfs-thread is busy, OR we got no wfs_settings from dialog")
+            #return
+            pass
+        else:
             self.wfs_settings = wfs_settings
-            #self.msg(None, wfs_settings)
+            # self.msg(None, wfs_settings)
             self.wfs_thread = QThread(self.iface)
             self.wfs_worker = WfsDataWorker(wfs_settings)
             self.wfs_worker.moveToThread(self.wfs_thread)
@@ -345,17 +295,91 @@ class JRodos:
             self.wfs_worker.error.connect(self.wfs_error)
             self.wfs_worker.progress.connect(self.wfs_progress)
             self.wfs_thread.started.connect(self.wfs_worker.run)
-
-            if self.progress_message_bar == None:
-               self.progress_message_bar = self.iface.messageBar().createMessage("Retrieving data from server ...")
-               self.iface.messageBar().pushWidget(self.progress_message_bar, self.iface.messageBar().INFO)
-
-            self.wfs_progress_bar = QProgressBar()
-            self.wfs_progress_bar.setMaximum(100)
-            self.wfs_progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self.progress_message_bar.layout().addWidget(self.wfs_progress_bar)
-
+            self.wfs_progress(0)
             self.wfs_thread.start()
+
+    def wfs_finished(self, result):
+        self.wfs_progress_bar.setValue(0.9)
+        self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
+        # Load the received gml files
+        # TODO: determine qml file based on something coming from the settings/result object
+        self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+        self.wfs_thread.quit()
+        self.wfs_settings = None
+        self.wfs_progress(1)
+        self.check_data_received()
+
+    def wfs_progress(self, part):
+        self.wfs_progress_bar.setValue(part*100)
+
+    def wfs_error(self, err):
+        self.msg(None, err)
+        self.wfs_settings = None
+
+    def wps_start(self):
+        # WPS / MODEL PART
+        wps_settings = self.show_jrodos_wps_dialog()
+        if wps_settings is None or self.wps_settings is not None:
+            self.msg(None, "Either a wps-thread is busy, OR we got no wps_settings from dialog")
+            # return
+            pass
+        else:
+            self.wps_settings = wps_settings
+            # self.msg(None, wps_settings)
+            self.wps_thread = QThread(self.iface)
+            self.wps_worker = WpsDataWorker(wps_settings)
+            self.wps_worker.moveToThread(self.wps_thread)
+            self.wps_worker.finished.connect(self.wps_finished)
+            self.wps_worker.error.connect(self.wps_error)
+            self.wps_worker.progress.connect(self.wps_progress)
+            self.wps_thread.started.connect(self.wps_worker.run)
+            self.wps_thread.start()
+            self.wps_progress(0)
+        return wps_settings
+
+    def wps_finished(self, result):
+        self.wps_thread.quit()
+        # Load the received shp-zip files
+        # TODO: determine qml file based on something coming from the settings/result object
+        self.wps_progress(0.9)
+        self.iface.messageBar().pushMessage("Retrieved all model data, loading layer...", self.iface.messageBar().INFO, 1)
+        self.load_shapes(result['output_dir'], 'totalpotentialdoseeffective.qml')
+        self.wps_settings = None
+        self.wps_progress(1)
+        self.check_data_received()
+
+    def wps_progress(self, part):
+        self.wps_progress_bar.setValue(part * 100)
+        #print "wps progress: %s " % part
+
+    def get_progress_message_bar_item(self):
+        self.progress_message_bar_item = self.iface.messageBar().createMessage("Retrieving data from server ...")
+        self.iface.messageBar().pushWidget(self.progress_message_bar_item, self.iface.messageBar().INFO)
+        return self.progress_message_bar_item
+
+    def wps_error(self, err):
+        self.msg(None, err)
+        self.wps_settings = None
+
+    def check_data_received(self):
+        wfs_is_ready = True
+        wps_is_ready = True
+        if self.wfs_thread is not None:
+            wfs_is_ready = self.wfs_thread.isFinished()
+        if self.wps_thread is not None:
+            wps_is_ready = self.wps_thread.isFinished()
+        if wfs_is_ready and wps_is_ready:
+            # TODO
+            self.iface.messageBar().pushMessage("JRodos plugin: retrieved and loaded all data ...", self.iface.messageBar().INFO, 5)
+            self.wfs_progress(0)
+            self.wps_progress(0)
+
+    def run(self):
+        try:
+            # try to start wps
+            wps_settings = self.wps_start()
+            # try to start wfs (using wps settings if available)
+            self.wfs_start(wps_settings)
 
         except Exception as e:
             self.msg(None, "Exception: %s" % e)
@@ -387,7 +411,6 @@ class JRodos:
         return settings
 
     def show_measurements_dialog(self, wps_settings=None):
-
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
         # INIT dialog based on earlier wps dialog
@@ -425,7 +448,7 @@ class JRodos:
             else:
                 wfs_settings.output_dir = wps_settings.output_dir()
 
-            wfs_settings.page_size = 10000
+            wfs_settings.page_size = self.WFS_PAGING_SIZE
             wfs_settings.start_datetime = start_date.toString(date_format)
             wfs_settings.end_datetime = end_date.toString(date_format)
             wfs_settings.endminusstart = endminusstart
@@ -639,27 +662,3 @@ class JRodos:
         # change back to default action of asking for crs or whatever the old behaviour was!
         s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)
         s.setValue("/Projections/layerDefaultCrs", oldCrs)
-    #
-    # def path_to_dirname(self, project, path, timestamp):
-    #     # path.split('=;=')[-2]+'_'+path.split('=;=')[-1]
-    #     dirname = tempfile.gettempdir() + os.sep
-    #     dirname += self.slugify(unicode(project)) + '_'
-    #     dirname += self.slugify(unicode(path.split('=;=')[-2])) + '_'
-    #     dirname += self.slugify(unicode(path.split('=;=')[-1])) + '_'
-    #     dirname += timestamp
-    #     if not os.path.exists(dirname):
-    #         os.mkdir(dirname)
-    #     # else:
-    #     #    raise Exception("Directory already there????")
-    #     return dirname
-    #
-    # def slugify(self, value):
-    #     """
-    #     Normalizes string, converts to lowercase, removes non-alpha characters,
-    #     and converts spaces to hyphens.
-    #     """
-    #     import unicodedata, re
-    #     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
-    #     value = unicode(re.sub('[^\w\s-]', '', value).strip())
-    #     value = unicode(re.sub('[-\s]+', '-', value))
-    #     return value

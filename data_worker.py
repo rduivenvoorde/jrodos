@@ -168,7 +168,7 @@ class WpsSettings:
 
     def __str__(self):
         return """WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n model(hrs): {}\n step(min): {}\n columns: {}\n verticals: {}\n format: {}\n start : {}
-        """.format(self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
+        """.format(self.url, self.output_dir(), self.user, self.password, self.jrodos_project, self.jrodos_path,
                    self.jrodos_format, self.jrodos_model_time, self.jrodos_model_step, self.jrodos_columns(), self.jrodos_verticals, self.jrodos_datetime_format,
                    self.jrodos_datetime_start.toString(self.jrodos_datetime_format))
 
@@ -233,6 +233,7 @@ class WpsDataWorker(QObject):
             #        result_dir = self.path_to_dirname(jrodos_project, jrodos_path, timestamp)
 
             wps_settings_file = self.settings.output_dir() + '/wps_settings.txt'
+
             with open(wps_settings_file, 'wb') as f:
                 f.write(unicode(self.settings))
 
@@ -381,7 +382,6 @@ def test():
     print wps_settings
     wps_thread.start()
 
-
     wfs_settings = WfsSettings()
     wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
     # we have always an wps_settings.output_dir here:
@@ -404,8 +404,8 @@ def test():
     w.progress.connect(wfs_progress)
     wfs_thread.started.connect(w.run)
 
-    #print wfs_settings
-    #wfs_thread.start()
+    print wfs_settings
+    wfs_thread.start()
 
     # NOT WORKING in parallel neither
     # combined_thread = QThread()

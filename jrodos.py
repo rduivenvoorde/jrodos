@@ -278,25 +278,18 @@ class JRodos:
         # remove the toolbar
         del self.toolbar
 
-    def wfs_start(self, wps_settings):
+    def wfs_start(self):
         # WFS / MEASUREMENTS PART
-        wfs_settings = self.show_measurements_dialog(wps_settings)
-        if wfs_settings is None or self.wfs_settings is not None:
-            self.msg(None, "Either a wfs-thread is busy, OR we got no wfs_settings from dialog")
-            #return
-            pass
-        else:
-            self.wfs_settings = wfs_settings
-            # self.msg(None, wfs_settings)
-            self.wfs_thread = QThread(self.iface)
-            self.wfs_worker = WfsDataWorker(wfs_settings)
-            self.wfs_worker.moveToThread(self.wfs_thread)
-            self.wfs_worker.finished.connect(self.wfs_finished)
-            self.wfs_worker.error.connect(self.wfs_error)
-            self.wfs_worker.progress.connect(self.wfs_progress)
-            self.wfs_thread.started.connect(self.wfs_worker.run)
-            self.wfs_progress(0)
-            self.wfs_thread.start()
+        # self.msg(None, self.wfs_settings)
+        self.wfs_thread = QThread(self.iface)
+        self.wfs_worker = WfsDataWorker(self.wfs_settings)
+        self.wfs_worker.moveToThread(self.wfs_thread)
+        self.wfs_worker.finished.connect(self.wfs_finished)
+        self.wfs_worker.error.connect(self.wfs_error)
+        self.wfs_worker.progress.connect(self.wfs_progress)
+        self.wfs_thread.started.connect(self.wfs_worker.run)
+        self.wfs_progress(0.1)
+        self.wfs_thread.start()
 
     def wfs_finished(self, result):
         self.wfs_progress_bar.setValue(0.9)
@@ -317,25 +310,16 @@ class JRodos:
         self.wfs_settings = None
 
     def wps_start(self):
-        # WPS / MODEL PART
-        wps_settings = self.show_jrodos_wps_dialog()
-        if wps_settings is None or self.wps_settings is not None:
-            self.msg(None, "Either a wps-thread is busy, OR we got no wps_settings from dialog")
-            # return
-            pass
-        else:
-            self.wps_settings = wps_settings
-            # self.msg(None, wps_settings)
-            self.wps_thread = QThread(self.iface)
-            self.wps_worker = WpsDataWorker(wps_settings)
-            self.wps_worker.moveToThread(self.wps_thread)
-            self.wps_worker.finished.connect(self.wps_finished)
-            self.wps_worker.error.connect(self.wps_error)
-            self.wps_worker.progress.connect(self.wps_progress)
-            self.wps_thread.started.connect(self.wps_worker.run)
-            self.wps_thread.start()
-            self.wps_progress(0)
-        return wps_settings
+        # self.msg(None, wps_settings)
+        self.wps_thread = QThread(self.iface)
+        self.wps_worker = WpsDataWorker(self.wps_settings)
+        self.wps_worker.moveToThread(self.wps_thread)
+        self.wps_worker.finished.connect(self.wps_finished)
+        self.wps_worker.error.connect(self.wps_error)
+        self.wps_worker.progress.connect(self.wps_progress)
+        self.wps_thread.started.connect(self.wps_worker.run)
+        self.wps_thread.start()
+        self.wps_progress(0.1)
 
     def wps_finished(self, result):
         self.wps_thread.quit()
@@ -377,9 +361,11 @@ class JRodos:
     def run(self):
         try:
             # try to start wps
-            wps_settings = self.wps_start()
-            # try to start wfs (using wps settings if available)
-            self.wfs_start(wps_settings)
+            #self.wps_start()
+            self.show_jrodos_wps_dialog()
+            # try to start wfs (using wps-settings if available as self.wps_settings)
+            #self.wfs_start()
+            self.show_measurements_dialog()
 
         except Exception as e:
             self.msg(None, "Exception: %s" % e)
@@ -391,10 +377,13 @@ class JRodos:
 
     def show_jrodos_wps_dialog(self):
         # TODO ?? init dialog based on older values
+        # WPS / MODEL PART
+        if self.wps_settings is not None:
+            self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
+            return
+
         self.dlg.show()
-        result = self.dlg.exec_()
-        settings = None
-        if result:  # OK was pressed
+        if self.dlg.exec_():  # OK was pressed
             wps_settings = WpsSettings()
             # TODO: get these from ?? dialog?? settings??
             wps_settings.url = 'http://localhost:8080/geoserver/wps'
@@ -407,24 +396,26 @@ class JRodos:
             # vertical is fixed to 0 now
             wps_settings.jrodos_verticals = 0  # z / layers
             wps_settings.jrodos_datetime_start = self.dlg.dateTime_start.dateTime()
-            settings = wps_settings
-        return settings
+            self.wps_settings = wps_settings
+            self.wps_start()
 
-    def show_measurements_dialog(self, wps_settings=None):
+    def show_measurements_dialog(self):
+        if self.wfs_settings is not None:
+            self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
+            return
+        self.wfs_settings = None
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
         # INIT dialog based on earlier wps dialog
-        if wps_settings is not None:
-            start_time = wps_settings.jrodos_datetime_start
-            end_time = start_time.addSecs(60 * 60 * int(wps_settings.jrodos_model_time)) # model time
+        if self.wps_settings is not None:
+            start_time = self.wps_settings.jrodos_datetime_start
+            end_time = start_time.addSecs(60 * 60 * int(self.wps_settings.jrodos_model_time)) # model time
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
 
         self.measurements_dlg.show()
         result = self.measurements_dlg.exec_()
-        settings = None
         if result:  # OK was pressed
-
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
             quantity = self.measurements_dlg.le_quantity.text()
             substance = self.measurements_dlg.le_substance.text()
@@ -441,12 +432,12 @@ class JRodos:
             # TODO make these come from config
             wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
 
-            if wps_settings is None:
+            if self.wps_settings is None:
                 project = "'measurements'"
                 path = "'=;=wfs=;=data'"
                 wfs_settings.output_dir = Utils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
             else:
-                wfs_settings.output_dir = wps_settings.output_dir()
+                wfs_settings.output_dir = self.wps_settings.output_dir()
 
             wfs_settings.page_size = self.WFS_PAGING_SIZE
             wfs_settings.start_datetime = start_date.toString(date_format)
@@ -465,8 +456,8 @@ class JRodos:
             #wfs_settings.bbox = '51,3,53,6'
             wfs_settings.bbox = "{},{},{},{}".format(
                 bbox_4326.yMinimum(), bbox_4326.xMinimum(), bbox_4326.yMaximum(), bbox_4326.xMaximum()) # S,W,N,E
-            settings = wfs_settings
-        return settings
+            self.wfs_settings = wfs_settings
+            self.wfs_start()
 
 
     # now, open all shapefiles one by one, s from 0 till x

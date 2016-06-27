@@ -34,6 +34,7 @@ import urllib, urllib2, shutil
 from jrodos_dialog import JRodosDialog
 from jrodos_measurements_dialog import JRodosMeasurementsDialog
 from utils import Utils
+from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
 
 # pycharm debugging
@@ -79,7 +80,7 @@ class JRodos:
         # NOTE !!! project names surrounded by single quotes ??????
         self.JRODOS_PROJECTS = ["'wps-test-5'", "'wps-test-3'", "'wps-test-2'", "'wps-test-1'"]
 
-        self.JRODOS_MODEL_LENGTH_HOURS = ['24']
+        self.JRODOS_MODEL_LENGTH_HOURS = ['24', '12', '6', '3']
 
         # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'"  # 1
         # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135'" # 24
@@ -148,6 +149,9 @@ class JRodos:
         self.wfs_settings = None
         self.wps_thread = None
         self.wfs_thread = None
+
+        # creating a dict for a layer <-> settings mapping
+        self.jrodos_settings = {}
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -311,6 +315,7 @@ class JRodos:
 
     def wps_start(self):
         # self.msg(None, wps_settings)
+        #self.msg(None, "wps starting")
         self.wps_thread = QThread(self.iface)
         self.wps_worker = WpsDataWorker(self.wps_settings)
         self.wps_worker.moveToThread(self.wps_thread)
@@ -360,11 +365,23 @@ class JRodos:
 
     def run(self):
         try:
+            # IF there is a layer selected in the legend
+            # based on 'currentLayer' in legend, check the settings
+            #self.msg(None, self.jrodos_settings)
+            if self.iface.mapCanvas().currentLayer() is not None \
+                    and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
+                #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
+                settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
+                if isinstance(settings, WpsSettings):
+                    self.show_jrodos_wps_dialog(settings)
+                elif isinstance(settings, WfsSettings):
+                    self.show_measurements_dialog(settings)
+                else:
+                    self.msg(None, settings)
+                return
             # try to start wps
-            #self.wps_start()
             self.show_jrodos_wps_dialog()
             # try to start wfs (using wps-settings if available as self.wps_settings)
-            #self.wfs_start()
             self.show_measurements_dialog()
 
         except Exception as e:
@@ -375,8 +392,14 @@ class JRodos:
             parent = self.iface.mainWindow()
         QMessageBox.warning(parent, self.MSG_BOX_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
-    def show_jrodos_wps_dialog(self):
+    def show_jrodos_wps_dialog(self, wps_settings=None):
         # TODO ?? init dialog based on older values
+
+        if wps_settings is not None:
+            self.wps_settings = wps_settings
+            self.wps_start()
+            return
+
         # WPS / MODEL PART
         if self.wps_settings is not None:
             self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
@@ -399,10 +422,19 @@ class JRodos:
             self.wps_settings = wps_settings
             self.wps_start()
 
-    def show_measurements_dialog(self):
+    def show_measurements_dialog(self, wfs_settings=None):
+
+        if wfs_settings is not None:
+            self.wfs_settings = wfs_settings
+            self.find_jrodos_layer(wfs_settings)
+            self.set_wfs_bbox()
+            self.wfs_start()
+            return
+
         if self.wfs_settings is not None:
             self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
             return
+
         self.wfs_settings = None
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
@@ -419,7 +451,6 @@ class JRodos:
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
             quantity = self.measurements_dlg.le_quantity.text()
             substance = self.measurements_dlg.le_substance.text()
-            date_format = "yyyy-MM-ddTHH:mm:ss.000 00:00"  # '2016-04-25T08:00:00.000+00:00'
             start_date = self.measurements_dlg.dateTime_start.dateTime()
 
             # make it UTC
@@ -440,25 +471,32 @@ class JRodos:
                 wfs_settings.output_dir = self.wps_settings.output_dir()
 
             wfs_settings.page_size = self.WFS_PAGING_SIZE
-            wfs_settings.start_datetime = start_date.toString(date_format)
-            wfs_settings.end_datetime = end_date.toString(date_format)
+            wfs_settings.start_datetime = start_date.toString(wfs_settings.date_time_format)
+            wfs_settings.end_datetime = end_date.toString(wfs_settings.date_time_format)
             wfs_settings.endminusstart = endminusstart
             wfs_settings.quantity = quantity
             wfs_settings.substance = substance
+            self.wfs_settings = wfs_settings
+            self.set_wfs_bbox()
+            self.wfs_start()
 
+    def set_wfs_bbox(self):
             # bbox in epsg:4326
             crs_project = self.iface.mapCanvas().mapRenderer().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
             crsTransform = QgsCoordinateTransform(crs_project, crs_4326)
             bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
             # bbox for wfs request based mapCanvas (OR model)
-            #wfs_settings.bbox = '51,1,61,21' # S,W,N,E
-            #wfs_settings.bbox = '51,3,53,6'
-            wfs_settings.bbox = "{},{},{},{}".format(
-                bbox_4326.yMinimum(), bbox_4326.xMinimum(), bbox_4326.yMaximum(), bbox_4326.xMaximum()) # S,W,N,E
-            self.wfs_settings = wfs_settings
-            self.wfs_start()
+            # wfs_settings.bbox = '51,1,61,21' # S,W,N,E
+            # wfs_settings.bbox = '51,3,53,6'
+            self.wfs_settings.bbox = "{},{},{},{}".format(
+                bbox_4326.yMinimum(), bbox_4326.xMinimum(), bbox_4326.yMaximum(), bbox_4326.xMaximum())  # S,W,N,E
 
+    def find_jrodos_layer(self, settings_object):
+        for layer in self.jrodos_settings:
+            if self.jrodos_settings[layer] == settings_object:
+                return layer
+        return None
 
     # now, open all shapefiles one by one, s from 0 till x
     # starting with a startdate 20160101000000 t
@@ -536,6 +574,9 @@ class JRodos:
             vector_layer.updateFields()
             vector_layer.updateExtents()
             self.iface.mapCanvas().refresh()
+            # put a copy of the settings into our map<=>settings dict
+            # IF we want to be able to load a layer several times based on the same settings
+            self.jrodos_settings[vector_layer] = deepcopy(self.wps_settings)
 
     def load_measurements(self, output_dir, style_file):
         """
@@ -545,58 +586,82 @@ class JRodos:
         :return:
         """
 
-        # we do NOT want the default behaviour: prompting for a crs
-        # we want to set it to epsg:4326, see
-        # http://gis.stackexchange.com/questions/27745/how-can-i-specify-the-crs-of-a-raster-layer-in-pyqgis
-        s = QSettings()
-        oldCrsBehaviour = s.value("/Projections/defaultBehaviour", "useGlobal")
-        s.setValue("/Projections/defaultBehaviour", "useGlobal")
-        oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
-        s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
+        # check if for current wfs_settings there is already a layer in the layer list
+        measurements_layer = self.find_jrodos_layer(self.wfs_settings)
+        # IF there is no memory/measurements layer yet: create it
+        if measurements_layer is None:
+            # we do NOT want the default behaviour: prompting for a crs
+            # we want to set it to epsg:4326, see
+            # http://gis.stackexchange.com/questions/27745/how-can-i-specify-the-crs-of-a-raster-layer-in-pyqgis
+            s = QSettings()
+            oldCrsBehaviour = s.value("/Projections/defaultBehaviour", "useGlobal")
+            s.setValue("/Projections/defaultBehaviour", "useGlobal")
+            oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
+            s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
+
+            # create layer name based on self.wfs_settings
+            start_time = QDateTime.fromString(self.wfs_settings.start_datetime, self.wfs_settings.date_time_format)
+            end_time = QDateTime.fromString(self.wfs_settings.end_datetime, self.wfs_settings.date_time_format)
+            # layer_name = "T-GAMMA, A5, 17/6 23:01 - 20/6 11:01"
+            layer_name = self.wfs_settings.quantity + ", " + self.wfs_settings.substance + ", " + \
+                         start_time.toString(self.wfs_settings.date_time_format_short) + " - " + \
+                         end_time.toString(self.wfs_settings.date_time_format_short)
+            measurements_layer = QgsVectorLayer("point", layer_name, "memory")
+            # fields = gml_layer.fields()
+            # self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
+            # for field in fields:
+            #    temp_layer.addAttribute(field)
+            #    temp_layer.commitChanges()
+            #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
+
+            # add fields
+            pr = measurements_layer.dataProvider()
+            pr.addAttributes([QgsField("gml_id", QVariant.String),
+                              QgsField("startTime", QVariant.String),
+                              QgsField("endTime", QVariant.String),
+                              QgsField("quantity", QVariant.String),
+                              QgsField("substance", QVariant.String),
+                              QgsField("unit", QVariant.String),
+                              QgsField("value", QVariant.Double),
+                              QgsField("time", QVariant.String),
+                              QgsField("info", QVariant.String),
+                              QgsField("device", QVariant.String)
+                                 , QgsField("valuemsv", QVariant.Double)
+                              ])
+            measurements_layer.updateFields()
+            QgsMapLayerRegistry.instance().addMapLayer(measurements_layer)
+
+            # put a copy of the settings into our map<=>settings dict
+            # IF we want to be able to load a layer several times based on the same settings
+            # self.jrodos_settings[measurements_layer] = deepcopy(self.wfs_settings)
+            self.jrodos_settings[measurements_layer] = self.wfs_settings
+
+            # change back to default action of asking for crs or whatever the old behaviour was!
+            s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)
+            s.setValue("/Projections/layerDefaultCrs", oldCrs)
+
+            measurements_layer.loadNamedStyle(
+                os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+        else:
+            # there is already a layer for this wfs_settings object, so apparently we got new data for it:
+            # remove current features from the  layer
+            measurements_layer.startEditing()
+            measurements_layer.selectAll()
+            measurements_layer.deleteSelectedFeatures()
+            measurements_layer.commitChanges()
+
 
         # TODO fix this: stepsize is part of settings object
         STEPSIZE = 10000
         feature_count = 0
         step_count = STEPSIZE
-        measurements_layer = None
         flist = []
-
         gmls = glob(os.path.join(output_dir, "*.gml"))
         for gml_file in gmls:
             gml_layer = QgsVectorLayer(gml_file, 'only for loading', 'ogr')
             if not gml_layer.isValid():
                 self.msg(None, 'GML layer NOT VALID!')
                 return
-            # IF there is no memory layer yet: create it
-            if measurements_layer is None:
-                measurements_layer = QgsVectorLayer("point", "Measurements", "memory")
-
-                #fields = gml_layer.fields()
-                #self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
-                #for field in fields:
-                #    temp_layer.addAttribute(field)
-                #    temp_layer.commitChanges()
-                #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
-
-                # add fields
-                pr = measurements_layer.dataProvider()
-                pr.addAttributes([QgsField("gml_id", QVariant.String),
-                                  QgsField("startTime", QVariant.String),
-                                  QgsField("endTime", QVariant.String),
-                                  QgsField("quantity", QVariant.String),
-                                  QgsField("substance", QVariant.String),
-                                  QgsField("unit", QVariant.String),
-                                  QgsField("value", QVariant.Double),
-                                  QgsField("time", QVariant.String),
-                                  QgsField("info", QVariant.String),
-                                  QgsField("device", QVariant.String)
-                                  ,QgsField("valuemsv", QVariant.Double)
-                                  ])
-                measurements_layer.updateFields()
-                QgsMapLayerRegistry.instance().addMapLayer(measurements_layer)
-
-            if not gml_layer.isValid():
-                self.msg(None, 'Layer failed to load!')
             else:
                 features = gml_layer.getFeatures()
                 for feature in features:
@@ -635,21 +700,7 @@ class JRodos:
                         #break
 
             measurements_layer.dataProvider().addFeatures(flist)
-            #temp_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
-
             measurements_layer.updateFields()
             measurements_layer.updateExtents()
 
             self.iface.mapCanvas().refresh()
-
-            #self.msg(None, '%s features loaded, written in: %s' %(feature_count, file_count))
-            #break
-
-        measurements_layer.loadNamedStyle(
-            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-
-        #self.iface.messageBar().pushSuccess('OK', 'Ready receiving measurements, feature count: ' + unicode(feature_count))
-
-        # change back to default action of asking for crs or whatever the old behaviour was!
-        s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)
-        s.setValue("/Projections/layerDefaultCrs", oldCrs)

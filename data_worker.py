@@ -19,6 +19,8 @@ class WfsSettings:
         self.substance = ''
         self.endminusstart = ''
         self.bbox = '50,0,60,20'
+        self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000 00:00'  # '2016-04-25T08:00:00.000+00:00'
+        self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 
     def __str__(self):
         return """WFS settings:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n bbox: {}

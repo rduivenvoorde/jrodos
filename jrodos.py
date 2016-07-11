@@ -78,7 +78,7 @@ class JRodos:
         self.MSG_BOX_TITLE = self.tr("JRodos Plugin")
 
         # NOTE !!! project names surrounded by single quotes ??????
-        self.JRODOS_PROJECTS = ["'wps-test-5'", "'wps-test-3'", "'wps-test-2'", "'wps-test-1'"]
+        self.JRODOS_PROJECTS = ["'wps-test-5'", "'wps-test-juli'", "'wps-test-3'", "'wps-test-2'", "'wps-test-1'"]
 
         self.JRODOS_MODEL_LENGTH_HOURS = ['24', '12', '6', '3']
 
@@ -111,7 +111,8 @@ class JRodos:
         self.dlg.combo_path.addItems(self.JRODOS_PATHS)
         self.dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
         self.dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
-        utcdatetime = QDateTime(QDate(2016, 04, 25), QTime(8, 0))
+        #utcdatetime = QDateTime(QDate(2016, 04, 25), QTime(8, 0))
+        utcdatetime = QDateTime(QDate(2016, 07, 10), QTime(8, 0))
         self.dlg.dateTime_start.setDateTime(utcdatetime)
         #self.dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
         # TODO dev

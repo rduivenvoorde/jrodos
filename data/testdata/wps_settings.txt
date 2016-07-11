@@ -1,0 +1,15 @@
+WPS settings:
+ WPS url: http://localhost:8080/geoserver/wps
+ outputdir: /tmp/wps-test-juli_Total-potential-dose_effective_20160711130053
+ user: admin
+ password: geoserver
+ project: 'wps-test-juli'
+ path: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'
+ format: application/zip
+ model(hrs): 24
+ step(min): 60
+ columns: 24
+ verticals: 0
+ format: yyyy-MM-ddTHH:mm:ss.000 00:00
+ start : 2016-07-10T08:00:00.000 00:00
+        

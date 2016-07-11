@@ -119,6 +119,8 @@ class JRodos:
         self.dlg.combo_project.setCurrentIndex(1)
         self.dlg.combo_steps.setCurrentIndex(2)
 
+        self.development = False
+
 
         self.measurements_dlg = JRodosMeasurementsDialog()
         self.MEASUREMENTS_ENDMINUSTART = ['600', '3600']
@@ -286,6 +288,14 @@ class JRodos:
     def wfs_start(self):
         # WFS / MEASUREMENTS PART
         # self.msg(None, self.wfs_settings)
+        if self.development:
+            self.msg(None, "development!!")
+            test_data_path = os.path.join(
+                self.plugin_dir,
+                'data',
+                'testdata')
+            self.wfs_finished({'output_dir':test_data_path})
+            return
         self.wfs_thread = QThread(self.iface)
         self.wfs_worker = WfsDataWorker(self.wfs_settings)
         self.wfs_worker.moveToThread(self.wfs_thread)
@@ -302,7 +312,8 @@ class JRodos:
         # Load the received gml files
         # TODO: determine qml file based on something coming from the settings/result object
         self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-        self.wfs_thread.quit()
+        if self.wfs_thread is not None:
+            self.wfs_thread.quit()
         self.wfs_settings = None
         self.wfs_progress(1)
         self.check_data_received()
@@ -317,6 +328,14 @@ class JRodos:
     def wps_start(self):
         # self.msg(None, wps_settings)
         #self.msg(None, "wps starting")
+        if self.development:
+            self.msg(None, "development!!")
+            test_data_path = os.path.join(
+                self.plugin_dir,
+                'data',
+                'testdata')
+            self.wps_finished({'output_dir':test_data_path})
+            return
         self.wps_thread = QThread(self.iface)
         self.wps_worker = WpsDataWorker(self.wps_settings)
         self.wps_worker.moveToThread(self.wps_thread)
@@ -328,7 +347,8 @@ class JRodos:
         self.wps_progress(0.1)
 
     def wps_finished(self, result):
-        self.wps_thread.quit()
+        if self.wps_thread is not None:
+            self.wps_thread.quit()
         # Load the received shp-zip files
         # TODO: determine qml file based on something coming from the settings/result object
         self.wps_progress(0.9)

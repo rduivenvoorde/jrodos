@@ -1,0 +1,11 @@
+WFS settings:
+ WFS url: http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?
+ outputdir: /tmp/wps-test-juli_Total-potential-dose_effective_20160711130053
+ page_size: 10000
+ starttime: 2016-07-10T08:00:00.000 00:00
+ endtime: 2016-07-11T08:00:00.000 00:00
+ endminusstart: 3600
+ quantity: T-GAMMA
+ substance: A5
+ bbox: 50.1447658744,1.95099953147,54.1307790885,11.0125062844
+        

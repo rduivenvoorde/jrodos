@@ -119,7 +119,7 @@ class JRodos:
         self.dlg.combo_project.setCurrentIndex(1)
         self.dlg.combo_steps.setCurrentIndex(2)
 
-        self.development = False
+        self.development = True
 
 
         self.measurements_dlg = JRodosMeasurementsDialog()

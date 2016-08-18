@@ -6,38 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>591</width>
-    <height>312</height>
+    <width>588</width>
+    <height>304</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="1" colspan="2">
-    <widget class="QDateTimeEdit" name="dateTime_start">
-     <property name="locale">
-      <locale language="Dutch" country="Netherlands"/>
-     </property>
-     <property name="dateTime">
-      <datetime>
-       <hour>1</hour>
-       <minute>0</minute>
-       <second>0</second>
-       <year>2016</year>
-       <month>1</month>
-       <day>1</day>
-      </datetime>
-     </property>
-     <property name="displayFormat">
-      <string>d MMM yyyy - HH:mm</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="lbl_substance">
      <property name="text">
       <string>Substance</string>
@@ -58,10 +35,26 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QLineEdit" name="le_substance">
-     <property name="text">
-      <string>A5</string>
+   <item row="0" column="1" colspan="2">
+    <widget class="QDateTimeEdit" name="dateTime_start">
+     <property name="locale">
+      <locale language="Dutch" country="Netherlands"/>
+     </property>
+     <property name="dateTime">
+      <datetime>
+       <hour>1</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>2016</year>
+       <month>1</month>
+       <day>1</day>
+      </datetime>
+     </property>
+     <property name="displayFormat">
+      <string>d MMM yyyy - HH:mm</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -95,13 +88,6 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
-    <widget class="QLineEdit" name="le_quantity">
-     <property name="text">
-      <string>T-GAMMA</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="lbl_start_time">
      <property name="text">
@@ -116,13 +102,27 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0" colspan="3">
+   <item row="7" column="0" colspan="3">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1" colspan="2">
+    <widget class="QComboBox" name="combo_quantity">
+     <property name="editable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1" colspan="2">
+    <widget class="QComboBox" name="combo_substance">
+     <property name="editable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>

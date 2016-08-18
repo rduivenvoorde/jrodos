@@ -21,12 +21,11 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, Qt, QDate, QTime
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar
-# Initialize Qt resources from file resources.py
+from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QCompleter, QStringListModel
 import resources
 # Import the code for the dialog
 from qgis.gui import QgsMessageBar
-from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsGeometry
+from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsGeometry, QgsMessageLog
 from glob import glob
 import os.path, tempfile, time
 from datetime import date, time, datetime, timedelta
@@ -36,6 +35,9 @@ from jrodos_measurements_dialog import JRodosMeasurementsDialog
 from utils import Utils
 from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
+from jrodos_soap import do_jrodos_soap_call
+
+
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
@@ -466,12 +468,60 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
 
+
+
+
+        # fill quantities box
+        quantities = do_jrodos_soap_call('Quantities')
+
+        quantity_descriptions = []
+        for q in quantities:
+            quantity_descriptions.append(q['description'])
+        quantity_descriptions.sort()
+
+        self.measurements_dlg.combo_quantity.addItems(quantity_descriptions)
+
+        quantity_completer = QCompleter()
+        quantity_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.measurements_dlg.combo_quantity.setCompleter(quantity_completer)
+
+        quantity_model = QStringListModel()
+        quantity_completer.setModel(quantity_model)
+        quantity_model.setStringList(quantity_descriptions)
+
+        #QgsMessageLog.logMessage(str(len(quantities)), 'jrodos', QgsMessageLog.INFO)
+
+
+        # fill substances box
+        substances = do_jrodos_soap_call('Substances')
+
+        substance_descriptions = []
+        for s in substances:
+            substance_descriptions.append(s['description'])
+        substance_descriptions.sort()
+
+        self.measurements_dlg.combo_substance.addItems(substance_descriptions)
+
+        substances_completer = QCompleter()
+        substances_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.measurements_dlg.combo_substance.setCompleter(substances_completer)
+
+        substances_model = QStringListModel()
+        substances_completer.setModel(substances_model)
+        substances_model.setStringList(substance_descriptions)
+
+        #QgsMessageLog.logMessage(str(len(substances)), 'jrodos', QgsMessageLog.INFO)
+
+
+
+
+
         self.measurements_dlg.show()
         result = self.measurements_dlg.exec_()
         if result:  # OK was pressed
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-            quantity = self.measurements_dlg.le_quantity.text()
-            substance = self.measurements_dlg.le_substance.text()
+            quantity = self.measurements_dlg.combo_quantity.currentText()
+            substance = self.measurements_dlg.combo_substance.currentText()
             start_date = self.measurements_dlg.dateTime_start.dateTime()
 
             # make it UTC

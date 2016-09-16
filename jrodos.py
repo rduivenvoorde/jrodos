@@ -20,8 +20,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, Qt, QDate, QTime
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QCompleter, QStringListModel
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, Qt, QDate, QTime, Qt
+from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QCompleter, QStringListModel, QStandardItemModel, QStandardItem
 import resources
 # Import the code for the dialog
 from qgis.gui import QgsMessageBar
@@ -36,17 +36,14 @@ from utils import Utils
 from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
 from jrodos_soap import do_jrodos_soap_call
+from ui import ExtendedCombo
 
 
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
-#import pydevd
-#pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True)
-
-# uit gridcreator ??
-#sys.path.append('/home/richard/apps/pycharm-3.4.1/pycharm-debug.egg')
-#import pydevd
+# import pydevd
+# pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True)
 
 class JRodos:
     """QGIS Plugin Implementation."""
@@ -80,7 +77,7 @@ class JRodos:
         self.MSG_BOX_TITLE = self.tr("JRodos Plugin")
 
         # NOTE !!! project names surrounded by single quotes ??????
-        self.JRODOS_PROJECTS = ["'wps-test-5'", "'wps-test-juli'", "'wps-test-3'", "'wps-test-2'", "'wps-test-1'"]
+        self.JRODOS_PROJECTS = ["'wps-13sept-test'"]
 
         self.JRODOS_MODEL_LENGTH_HOURS = ['24', '12', '6', '3']
 
@@ -113,16 +110,14 @@ class JRodos:
         self.dlg.combo_path.addItems(self.JRODOS_PATHS)
         self.dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
         self.dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
-        #utcdatetime = QDateTime(QDate(2016, 04, 25), QTime(8, 0))
-        utcdatetime = QDateTime(QDate(2016, 07, 10), QTime(8, 0))
+        utcdatetime = QDateTime(QDate(2016, 9, 13), QTime(8, 0))
         self.dlg.dateTime_start.setDateTime(utcdatetime)
         #self.dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
         # TODO dev
-        self.dlg.combo_project.setCurrentIndex(1)
-        self.dlg.combo_steps.setCurrentIndex(2)
+        self.dlg.combo_project.setCurrentIndex(0)
+        self.dlg.combo_steps.setCurrentIndex(1)
 
-        self.development = True
-
+        self.development = False
 
         self.measurements_dlg = JRodosMeasurementsDialog()
         self.MEASUREMENTS_ENDMINUSTART = ['600', '3600']
@@ -137,9 +132,6 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(now.addSecs(-(60 * 60 * 6)))
         self.measurements_dlg.dateTime_end.setDateTime(now)
 
-
-
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&JRodos')
@@ -148,7 +140,6 @@ class JRodos:
         self.toolbar.setObjectName(u'JRodos')
         self.wps_progress_bar = None
         self.wfs_progress_bar = None
-
 
         self.wps_settings = None
         self.wfs_settings = None
@@ -391,19 +382,19 @@ class JRodos:
             # IF there is a layer selected in the legend
             # based on 'currentLayer' in legend, check the settings
             #self.msg(None, self.jrodos_settings)
-            if self.iface.mapCanvas().currentLayer() is not None \
-                    and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
-                #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
-                settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
-                if isinstance(settings, WpsSettings):
-                    self.show_jrodos_wps_dialog(settings)
-                elif isinstance(settings, WfsSettings):
-                    self.show_measurements_dialog(settings)
-                else:
-                    self.msg(None, settings)
-                return
+            # if self.iface.mapCanvas().currentLayer() is not None \
+            #         and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
+            #     #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
+            #     settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
+            #     if isinstance(settings, WpsSettings):
+            #         self.show_jrodos_wps_dialog(settings)
+            #     elif isinstance(settings, WfsSettings):
+            #         self.show_measurements_dialog(settings)
+            #     else:
+            #         self.msg(None, settings)
+            #     return
             # try to start wps
-            self.show_jrodos_wps_dialog()
+#            self.show_jrodos_wps_dialog()
             # try to start wfs (using wps-settings if available as self.wps_settings)
             self.show_measurements_dialog()
 
@@ -468,62 +459,60 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
 
+        DESCRIPTION_IDX = 0
+        CODE_IDX = 1
 
-
-
-        # fill quantities box
+        # QUANTITIES
         quantities = do_jrodos_soap_call('Quantities')
 
-        quantity_descriptions = []
+        # Replace the default ComboBox with our better ExtendedCombo
+        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
+        self.measurements_dlg.combo_quantity = ExtendedCombo()
+        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
+
+        quantities_model = QStandardItemModel()
         for q in quantities:
-            quantity_descriptions.append(q['description'])
-        quantity_descriptions.sort()
+            quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
+        self.measurements_dlg.combo_quantity.setModel(quantities_model)
 
-        self.measurements_dlg.combo_quantity.addItems(quantity_descriptions)
+        lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
+        items = quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, CODE_IDX)
+        if len(items)>0:
+            self.measurements_dlg.combo_quantity.setCurrentIndex(items[DESCRIPTION_IDX].row())
 
-        quantity_completer = QCompleter()
-        quantity_completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.measurements_dlg.combo_quantity.setCompleter(quantity_completer)
-
-        quantity_model = QStringListModel()
-        quantity_completer.setModel(quantity_model)
-        quantity_model.setStringList(quantity_descriptions)
-
-        #QgsMessageLog.logMessage(str(len(quantities)), 'jrodos', QgsMessageLog.INFO)
-
-
-        # fill substances box
+        # SUBSTANCES
         substances = do_jrodos_soap_call('Substances')
 
-        substance_descriptions = []
+        # Replace the default ComboBox with our better ExtendedCombo
+        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
+        self.measurements_dlg.combo_substance = ExtendedCombo()
+        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
+
+        substances_model = QStandardItemModel()
         for s in substances:
-            substance_descriptions.append(s['description'])
-        substance_descriptions.sort()
+            substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
+        self.measurements_dlg.combo_substance.setModel(substances_model)
 
-        self.measurements_dlg.combo_substance.addItems(substance_descriptions)
-
-        substances_completer = QCompleter()
-        substances_completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.measurements_dlg.combo_substance.setCompleter(substances_completer)
-
-        substances_model = QStringListModel()
-        substances_completer.setModel(substances_model)
-        substances_model.setStringList(substance_descriptions)
-
-        #QgsMessageLog.logMessage(str(len(substances)), 'jrodos', QgsMessageLog.INFO)
-
-
-
-
+        lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
+        items = substances_model.findItems(lastused_substance_code, Qt.MatchExactly, CODE_IDX)
+        if len(items)>0:
+            self.measurements_dlg.combo_substance.setCurrentIndex(items[DESCRIPTION_IDX].row())
 
         self.measurements_dlg.show()
+
         result = self.measurements_dlg.exec_()
         if result:  # OK was pressed
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-            quantity = self.measurements_dlg.combo_quantity.currentText()
-            substance = self.measurements_dlg.combo_substance.currentText()
-            start_date = self.measurements_dlg.dateTime_start.dateTime()
+            # selected quantity + save to QSettings
+            quantity = quantities_model.item(self.measurements_dlg.combo_quantity.currentIndex(), CODE_IDX).text()
+            Utils.set_settings_value("measurements_last_quantity", quantity)
+            # selected substance + save to QSettings
+            substance = substances_model.item(self.measurements_dlg.combo_substance.currentIndex(), CODE_IDX).text()
+            Utils.set_settings_value("measurements_last_substance", substance)
 
+            start_date = self.measurements_dlg.dateTime_start.dateTime()
             # make it UTC
             #start_date = start_date.toUTC()
             end_date = self.measurements_dlg.dateTime_end.dateTime()
@@ -553,15 +542,13 @@ class JRodos:
 
     def set_wfs_bbox(self):
             # bbox in epsg:4326
-            crs_project = self.iface.mapCanvas().mapRenderer().destinationCrs()
+            crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
             crsTransform = QgsCoordinateTransform(crs_project, crs_4326)
-            bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
-            # bbox for wfs request based mapCanvas (OR model)
-            # wfs_settings.bbox = '51,1,61,21' # S,W,N,E
-            # wfs_settings.bbox = '51,3,53,6'
+            current_bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
+            # bbox for wfs request, based on current bbox of mapCanvas (OR model)
             self.wfs_settings.bbox = "{},{},{},{}".format(
-                bbox_4326.yMinimum(), bbox_4326.xMinimum(), bbox_4326.yMaximum(), bbox_4326.xMaximum())  # S,W,N,E
+                current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
 
     def find_jrodos_layer(self, settings_object):
         for layer in self.jrodos_settings:

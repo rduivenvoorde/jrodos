@@ -98,7 +98,7 @@ class WfsDataWorker(QObject):
 
                     data = urllib.urlencode(params)
                     request = urllib2.Request(wfs_url, data)
-                    logging.debug('Firing WFS request: %s' % request.get_full_url()+request.get_data())
+                    logging.debug('Firing WFS request: GET %s' % request.get_full_url()+request.get_data())
                     response = urllib2.urlopen(request)
                     CHUNK = 16 * 1024
                     filename = self.settings.output_dir + '/data' + unicode(file_count) + '.gml'
@@ -296,7 +296,7 @@ class WpsDataWorker(QObject):
 
                 request = urllib2.Request(url=url, data=post_data, headers={'Content-Type': 'text/xml'})
                 request.get_method = lambda: 'POST'
-                logging.debug('Firing WPS request')
+                logging.debug('Firing WPS request, POST to: %s' % url)
                 response = opener.open(request)
                 CHUNK = 16 * 1024
                 filename = self.settings.output_dir() + '/' + unicode(column) + '_' + unicode(self.settings.jrodos_verticals) + '.zip'
@@ -389,9 +389,9 @@ def test():
     # we have always an wps_settings.output_dir here:
     wfs_settings.output_dir = wps_settings.output_dir()
     wfs_settings.page_size = 10000
-    wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
-    wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
-    #wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
+    #wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
+    #wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
+    wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
     #wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
     wfs_settings.endminusstart =  '3600'
     wfs_settings.quantity = 'T-GAMMA'

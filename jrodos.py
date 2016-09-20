@@ -27,8 +27,9 @@ import resources
 from qgis.gui import QgsMessageBar
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsGeometry, QgsMessageLog
+from qgis.utils import qgsfunction, QgsExpression
 from glob import glob
-import os.path, tempfile, time
+import os.path, tempfile, time, json
 from datetime import date, time, datetime, timedelta
 from utils import Utils
 from copy import deepcopy
@@ -267,6 +268,9 @@ class JRodos:
         del self.wfs_progress_bar
         # remove the toolbar
         del self.toolbar
+        # deregister our custom QgsExpression function
+        QgsExpression.unregisterFunction("$measurement_values")
+        QgsExpression.unregisterFunction("measurement_values")
 
     def wfs_start(self):
         # WFS / MEASUREMENTS PART
@@ -673,8 +677,8 @@ class JRodos:
                               QgsField("value", QVariant.Double),
                               QgsField("time", QVariant.String),
                               QgsField("info", QVariant.String),
-                              QgsField("device", QVariant.String)
-                                 , QgsField("valuemsv", QVariant.Double)
+                              QgsField("device", QVariant.String),
+                              QgsField("valuemsv", QVariant.Double)
                               ])
             measurements_layer.updateFields()
             QgsMapLayerRegistry.instance().addMapLayer(measurements_layer)
@@ -734,7 +738,7 @@ class JRodos:
                             valuemsv = value/1000000
                             attributes.append(valuemsv)
                         else:
-                            attributes.append(-1)
+                            attributes.append(-1) # set value to '-1' not sure if NULL is better...
                             if new_unit_msg:
                                 self.msg(None, "New unit in data: '%s', setting valuemsv to -1" % feature.attribute('unit'))
                                 new_unit_msg = False
@@ -746,13 +750,54 @@ class JRodos:
                             flist = []
                         #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())
                     else:
-                        print "%s            GEEN GEOMETRIE !!! gml_id: %s " % (feature_count, f.attributes())
-                        #self.msg(None, "gmlid: %s" % (f['gml_id']))
-                        #print "%s gml_id: %s" % (feature_count, f['gml_id'])
-                        #break
+                        self.msg(None, "ERROR: # %s no geometry !!! attributes: %s " % (feature_count, f.attributes()))
+                        return
 
             measurements_layer.dataProvider().addFeatures(flist)
             measurements_layer.updateFields()
             measurements_layer.updateExtents()
 
+            # set the display field value
+            measurements_layer.setDisplayField('[% measurement_values()%]')
+            # enable maptips?
+            if not self.iface.actionMapTips().isChecked():
+                self.iface.actionMapTips().toggle()
             self.iface.mapCanvas().refresh()
+
+    # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
+    @qgsfunction(0, "RIVM")
+    def measurement_values(values, feature, parent):
+        """
+        This is a specific function to be used as 'QgsExpression'.
+        The function is to be used in the MapTips:
+        It takes the feature, and creates a simple html with name/value pairs of the attributes.
+        One special field is: 'info', this is actually a json string like:
+           {
+              "fields": [
+                {
+                  "name": "background",
+                  "mnemonic": "Achtergrondniveau",
+                  "value": "-"
+                },
+                {
+                  "name": "reference_date",
+                  "mnemonic": "Geldigheidsdatum/tijd",
+                  "value": "-"
+                }, ...
+            }
+        Which will be decoded and also shown as name/value pairs.
+        """
+        field_string = '<div style="width:300px; font-family: Sans-Serif;font-size: small" >'
+        for field in feature.fields():
+            # skip info
+            if not field.name() == 'info':
+                field_string += field.name() + ': ' + unicode(feature[field.name()]) + '<br/>'
+        # now do the 'info'-field which is a json object
+        info_string = json.loads(feature['info'])
+        if 'fields' in info_string:
+            for field in info_string['fields']:
+                if 'mnemonic' in field:
+                    field_string += field['mnemonic'] + ': ' + field['value'] + '<br/>'
+                elif 'name' in field:
+                    field_string += field['name'] + ': ' + field['value'] + '<br/>'
+        return field_string + '</div>'

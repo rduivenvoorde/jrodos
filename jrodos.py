@@ -20,23 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, Qt, QDate, QTime, Qt
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QCompleter, QStringListModel, QStandardItemModel, QStandardItem
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, QDate, QTime, Qt
+from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem
 import resources
 # Import the code for the dialog
 from qgis.gui import QgsMessageBar
-from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsGeometry, QgsMessageLog
+from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
+    QgsCoordinateTransform, QgsGeometry, QgsMessageLog
 from glob import glob
 import os.path, tempfile, time
 from datetime import date, time, datetime, timedelta
-import urllib, urllib2, shutil
-from jrodos_dialog import JRodosDialog
-from jrodos_measurements_dialog import JRodosMeasurementsDialog
 from utils import Utils
 from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
 from jrodos_soap import do_jrodos_soap_call
-from ui import ExtendedCombo
+from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 
 
 
@@ -119,19 +117,6 @@ class JRodos:
 
         self.development = False
 
-        self.measurements_dlg = JRodosMeasurementsDialog()
-        self.MEASUREMENTS_ENDMINUSTART = ['600', '3600']
-        self.measurements_dlg.combo_endminusstart.addItems(self.MEASUREMENTS_ENDMINUSTART)
-        self.measurements_dlg.combo_endminusstart.setCurrentIndex(1)
-        now = QDateTime.currentDateTime().toUTC()
-        # TODO dev
-        now = QDateTime(QDate(2016, 05, 17), QTime(8, 0))
-
-        # TODO dev
-        self.measurements_dlg.dateTime_start.setDateTime(now.addDays(-1))
-        self.measurements_dlg.dateTime_start.setDateTime(now.addSecs(-(60 * 60 * 6)))
-        self.measurements_dlg.dateTime_end.setDateTime(now)
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&JRodos')
@@ -148,6 +133,9 @@ class JRodos:
 
         # creating a dict for a layer <-> settings mapping
         self.jrodos_settings = {}
+
+        # dialog for measurements
+        self.measurements_dlg = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -264,6 +252,8 @@ class JRodos:
             self.wfs_progress_bar.setFixedWidth(progress_bar_width)
             self.wfs_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.wfs_progress_bar)
+
+        self.measurements_dlg = JRodosMeasurementsDialog()
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -722,6 +712,7 @@ class JRodos:
                 return
             else:
                 features = gml_layer.getFeatures()
+                new_unit_msg = True
                 for feature in features:
                     if features.isClosed():
                         self.msg(None, 'Iterator CLOSED !!!!')
@@ -743,7 +734,10 @@ class JRodos:
                             valuemsv = value/1000000
                             attributes.append(valuemsv)
                         else:
-                            self.msg(None, "New unit in data: %s" % feature.attribute('unit'))
+                            attributes.append(-1)
+                            if new_unit_msg:
+                                self.msg(None, "New unit in data: '%s', setting valuemsv to -1" % feature.attribute('unit'))
+                                new_unit_msg = False
                         f.setAttributes(attributes)
                         f.setGeometry(feature.geometry())
                         flist.append(f)

@@ -40,3 +40,8 @@ class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
+        self.MEASUREMENTS_ENDMINUSTART = ['600', '3600', '86400']
+        self.combo_endminusstart.addItems(self.MEASUREMENTS_ENDMINUSTART)
+        self.combo_endminusstart.setCurrentIndex(1)
+
+

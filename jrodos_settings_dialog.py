@@ -1,8 +1,8 @@
 import os
 
 from PyQt4 import QtGui, uic
-from qgissettingmanager import SettingDialog
 from jrodos_settings import JRodosSettings
+from qgissettingmanager import SettingDialog
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_settings_dialog_base.ui'))

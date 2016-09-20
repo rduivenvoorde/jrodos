@@ -36,8 +36,8 @@ from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
 from jrodos_soap import do_jrodos_soap_call
 from jrodos_settings import JRodosSettings
-from jrodos_settings_dialog import JRodosSettingsDialog
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
+from jrodos_settings_dialog import JRodosSettingsDialog
 
 
 
@@ -388,6 +388,14 @@ class JRodos:
             self.wps_progress(0)
 
     def run(self):
+        # we REALLY need OTF enabled
+        if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
+            QMessageBox.warning(self.iface.mainWindow(), self.MSG_BOX_TITLE, self.tr(
+                "This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.\n\n" +
+                "Please enable OTF for this project or open a project with OTF enabled."),
+                                QMessageBox.Ok, QMessageBox.Ok)
+            return
+
         try:
             # IF there is a layer selected in the legend
             # based on 'currentLayer' in legend, check the settings

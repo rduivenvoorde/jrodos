@@ -35,6 +35,8 @@ from utils import Utils
 from copy import deepcopy
 from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
 from jrodos_soap import do_jrodos_soap_call
+from jrodos_settings import JRodosSettings
+from jrodos_settings_dialog import JRodosSettingsDialog
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 
 
@@ -96,8 +98,7 @@ class JRodos:
         ]
         self.JRODOS_STEP_MINUTES = ['10', '30', '60'] # as in JRodos
 
-        # WFS 2.0: number of features to load when 'paging' data
-        self.WFS_PAGING_SIZE = 10000
+        self.settings = JRodosSettings()
 
         # Create the dialog (after translation) and keep reference
         self.dlg = JRodosDialog()
@@ -236,6 +237,15 @@ class JRodos:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        # settings
+        icon_path = ':/plugins/JRodos/icon.png'
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Show Settings'),
+            callback=self.show_settings,
+            add_to_toolbar=False,
+            parent=self.iface.mainWindow())
+
         progress_bar_width = 100
 
         if self.wps_progress_bar is None:
@@ -255,6 +265,12 @@ class JRodos:
             self.toolbar.addWidget(self.wfs_progress_bar)
 
         self.measurements_dlg = JRodosMeasurementsDialog()
+
+        # Create the settings dialog
+        self.settings_dlg = JRodosSettingsDialog()
+
+    def show_settings(self):
+        self.settings_dlg.show()
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -417,7 +433,7 @@ class JRodos:
         if self.dlg.exec_():  # OK was pressed
             wps_settings = WpsSettings()
             # TODO: get these from ?? dialog?? settings??
-            wps_settings.url = 'http://localhost:8080/geoserver/wps'
+            wps_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
             wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             wps_settings.jrodos_project = self.dlg.combo_project.itemText(self.dlg.combo_project.currentIndex())
@@ -515,7 +531,7 @@ class JRodos:
 
             wfs_settings = WfsSettings()
             # TODO make these come from config
-            wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
+            wfs_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
 
             if self.wps_settings is None:
                 project = "'measurements'"
@@ -524,7 +540,7 @@ class JRodos:
             else:
                 wfs_settings.output_dir = self.wps_settings.output_dir()
 
-            wfs_settings.page_size = self.WFS_PAGING_SIZE
+            wfs_settings.page_size = self.settings.value('measurements_wfs_page_size')
             wfs_settings.start_datetime = start_date.toString(wfs_settings.date_time_format)
             wfs_settings.end_datetime = end_date.toString(wfs_settings.date_time_format)
             wfs_settings.endminusstart = endminusstart

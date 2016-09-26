@@ -1,119 +1,38 @@
 import unittest
-import sys
 import os
 from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
-
-from PyQt4.QtCore import QThread, QCoreApplication
-from PyQt4.QtGui import QApplication
-
-from qgis.core import QgsApplication
-
-class TestJRodosProjectProviderBase(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        os.environ["QGIS_DEBUG"] = str(-1)
-        QCoreApplication.setOrganizationName('QGIS')
-        QCoreApplication.setApplicationName('QGIS2')
-        QgsApplication.setPrefixPath(os.getenv("QGIS_PREFIX_PATH"), True)
-        QgsApplication.setAuthDbDirPath('/home/richard/.qgis2/')
-
-    def setUp(self):
-        #print 'setting up base'
-        self.ran_errored = False
-        self.ran_finished = False
-        self.ran_progress = False
-        self.app = None
-        # Duh... there can only be one QApplication at a time
-        # http: // stackoverflow.com / questions / 10888045 / simple - ipython - example - raises - exception - on - sys - exit
-        #self.app = QApplication.instance()  # checks if QApplication already exists
-        #self.app = QgsApplication(sys.argv, False)
-        if not self.app:  # create QApplication if it doesnt exist
-            #self.app = QApplication(sys.argv, False)
-            self.app = QgsApplication(sys.argv, False)
-            self.app.initQgis()
-            out = self.app.showSettings()
-            print out
-        self.thread = QThread()
-        self.result = None
-
-    def startThread(self):
-        # self.app = QApplication(sys.argv)
-        # self.thread = QThread()
-        self.prov = JRodosProjectProvider(self.conf)
-        self.prov.moveToThread(self.thread)
-        self.prov.finished.connect(self.finished)
-        self.prov.error.connect(self.error)
-        self.prov.progress.connect(self.progress)
-        self.thread.started.connect(self.prov.run)
-        self.thread.start()
-
-    def error(self, exception, basestring):
-        self.ran_errored = True
-
-    def finished(self, ret):
-        #print('finished: {}'.format(ret))
-        self.ran_finished = True
-        self.result = ret
-        self.thread.quit()
-        self.app.quit()
-        # if ret['status']==0:
-        #     project = self.prov.data
-        #     print project['name'] # ['project']['tasks'][0]['dataitems']
-        #     for task in project['tasks']:
-        #         for data_item in task['dataitems']:
-        #             print data_item['datapath']
-
-    def progress(self, part):
-        #print('progress: {}'.format(part))
-        self.ran_progress = True
+from test_provider_base import TestProviderBase
+from PyQt4.QtCore import QCoreApplication
 
 
-class TestJRodosFileOK(TestJRodosProjectProviderBase):
-    def runTest(self):
-        self.conf = JRodosProjectConfig()
-        self.conf.uri = 'file://../data/project1268.json'
-        self.startThread()
-        self.app.exec_()
-        self.assertFalse(self.ran_errored)
-        self.assertTrue(self.ran_finished)
-        self.assertTrue(self.ran_progress)
-        self.assertEquals(self.result['status'], 0)
+class TestJRodosProjectProvider(TestProviderBase):
 
-class TestJRodosUriOK(TestJRodosProjectProviderBase):
-    def runTest(self):
-        self.conf = JRodosProjectConfig()
-        self.conf.uri = 'http://www.duif.net/project1268.json'
-        self.startThread()
-        self.app.exec_()
-        # self.assertFalse(self.ran_errored)
-        # self.assertTrue(self.ran_finished)
-        # self.assertTrue(self.ran_progress)
-        # self.assertEquals(self.result['status'], 0)
+    def test_jrodos_project_url(self):
+        conf = JRodosProjectConfig()
+        conf.url = 'https://duif.net/project1268.json'
+        prov = JRodosProjectProvider(conf)
+        def data_in(data):
+            # data is an dict with 'project' props, whihc has 'tasks' which is a list of 'dataitems'
+            self.assertIsInstance(data, dict)
+            # get first dataitem form first task from first project
+            dataitems = data['project']['tasks'][0]['dataitems']
+            self.assertEquals(478, len(dataitems))
+        prov.finished.connect(data_in)
+        prov.get_data()
+        while not prov.is_finished():
+            QCoreApplication.processEvents()
 
-class TestJRodosFileNOK(TestJRodosProjectProviderBase):
-    def runTest(self):
-        self.conf = JRodosProjectConfig()
-        self.conf.uri = 'file://nonexcistingfile.json'
-        self.startThread()
-        self.app.exec_()
-        self.assertTrue(self.ran_errored)
-        self.assertTrue(self.ran_finished)
-        self.assertTrue(self.ran_progress)
-        self.assertEquals(self.result['status'], 1)
-        self.assertTrue('No such file or directory' in self.result['msg'])
-
-class TestJRodosUriNOK(TestJRodosProjectProviderBase):
-    def runTest(self):
-        self.conf = JRodosProjectConfig()
-        self.conf.uri = 'foo://nonexcistingfile.json'
-        self.startThread()
-        self.app.exec_()
-        self.assertTrue(self.ran_errored)
-        self.assertTrue(self.ran_finished)
-        self.assertTrue(self.ran_progress)
-        self.assertEquals(self.result['status'], 1)
-        self.assertTrue('uri should start with' in self.result['msg'])
+    def test_jrodos_project_file(self):
+        conf = JRodosProjectConfig()
+        # find dir of this class
+        conf.url = 'file://'+os.path.join('file://', os.path.dirname(__file__), 'project1268.json')
+        prov = JRodosProjectProvider(conf)
+        def data_in(data):
+            self.assertIsNotNone(data)
+        prov.finished.connect(data_in)
+        prov.get_data()
+        while not prov.is_finished():
+            QCoreApplication.processEvents()
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,10 +1,8 @@
 import unittest
-import os
+from providers.provider_base import ProviderNetworkException
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
-from utils import Utils
 from test_provider_base import TestProviderBase
-from PyQt4.QtCore import QCoreApplication, QDateTime
-from datetime import datetime
+from PyQt4.QtCore import QCoreApplication
 
 class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
 
@@ -23,6 +21,23 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         while not self.prov.is_finished():
             QCoreApplication.processEvents()
 
+    # @unittest.skip
+    # def test_calnet_measurements_quantities_NOK(self):
+    #     self.config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilServic'
+    #     self.prov = CalnetMeasurementsUtilsProvider(self.config)
+    #     def data_in(data):
+    #         # TODO some better testing here
+    #         print data
+    #         self.assertIsNotNone(data)
+    #     self.prov.finished.connect(data_in)
+    #     self.prov.get_data('Quantities')
+    #     # try:
+    #     #     #with self.assertRaises(ProviderNetworkException):
+    #     #         self.prov.get_data('Quantities')
+    #     # except:
+    #     #     pass
+    #     while not self.prov.is_finished():
+    #         QCoreApplication.processEvents()
 
     def test_calnet_measurements_substances(self):
         def data_in(data):

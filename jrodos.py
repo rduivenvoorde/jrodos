@@ -514,8 +514,11 @@ class JRodos:
         DESCRIPTION_IDX = 0
         CODE_IDX = 1
 
+
+        self.quantities = do_jrodos_soap_call('Quantities')
+        self.substances = do_jrodos_soap_call('Substances')
+
         # QUANTITIES
-        quantities = do_jrodos_soap_call('Quantities')
 
         # Replace the default ComboBox with our better ExtendedCombo
         # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
@@ -524,7 +527,7 @@ class JRodos:
         self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
 
         quantities_model = QStandardItemModel()
-        for q in quantities:
+        for q in self.quantities:
             quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
         self.measurements_dlg.combo_quantity.setModel(quantities_model)
 
@@ -534,7 +537,6 @@ class JRodos:
             self.measurements_dlg.combo_quantity.setCurrentIndex(items[DESCRIPTION_IDX].row())
 
         # SUBSTANCES
-        substances = do_jrodos_soap_call('Substances')
 
         # Replace the default ComboBox with our better ExtendedCombo
         # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
@@ -543,7 +545,7 @@ class JRodos:
         self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
 
         substances_model = QStandardItemModel()
-        for s in substances:
+        for s in self.substances:
             substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
         self.measurements_dlg.combo_substance.setModel(substances_model)
 

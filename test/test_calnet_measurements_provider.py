@@ -34,7 +34,6 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         def data_in(data):
             print "DONE !!!"
         prov.finished.connect(data_in)
-
         prov.get_data()
 
         while not prov.is_finished():

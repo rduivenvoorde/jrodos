@@ -3,6 +3,7 @@ from functools import partial
 from qgis.core import QgsNetworkAccessManager
 from PyQt4.QtCore import QUrl, QCoreApplication, QObject, pyqtSignal
 from PyQt4.QtNetwork import QNetworkRequest
+import traceback
 
 """
 
@@ -74,6 +75,15 @@ class ProviderBase(QObject):
     def is_finished(self):
         return self.ready
 
+    def error(self, err):
+        self.ready = True
+        print "ERROR..."
+        #raise ProviderNetworkException(traceback.format_exc())
+
+
+class ProviderNetworkException(BaseException):
+    #print "Exception"
+    pass
 
 
 class SimpleConfig(ProviderConfig):

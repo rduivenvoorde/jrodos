@@ -50,6 +50,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         request.setHeader(QNetworkRequest.ContentTypeHeader, "application/soap+xml") # or? "text/xml; charset=utf-8"
         reply = self.network_manager.post(request, data)
         reply.finished.connect(partial(self._data_retrieved, reply))
+        reply.error.connect(self.error)
         # this part is needed to be sure we do not return immidiatly
         while not reply.isFinished():
             QCoreApplication.processEvents()

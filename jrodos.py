@@ -38,6 +38,7 @@ from jrodos_soap import do_jrodos_soap_call
 from jrodos_settings import JRodosSettings
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 from jrodos_settings_dialog import JRodosSettingsDialog
+from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 
 
 
@@ -259,7 +260,11 @@ class JRodos:
         if self.wfs_progress_bar is None:
             self.wfs_progress_bar = QProgressBar()
             self.wfs_progress_bar.setToolTip("Measurement data (WFS)")
-            self.wfs_progress_bar.setMaximum(100)
+            self.wfs_progress_bar.setTextVisible(True)
+            self.wfs_progress_bar.setFormat(self.tr('Metingen'))
+            self.wfs_progress_bar.setMinimum(0)
+            self.wfs_progress_bar.setMaximum(100)  # we will use a 'ininite progress bar' by setting max to zero when busy
+            self.wfs_progress_bar.setValue(0)
             self.wfs_progress_bar.setFixedWidth(progress_bar_width)
             self.wfs_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.wfs_progress_bar)
@@ -288,45 +293,70 @@ class JRodos:
         QgsExpression.unregisterFunction("$measurement_values")
         QgsExpression.unregisterFunction("measurement_values")
 
+    # def wfs_start(self):
+    #     # WFS / MEASUREMENTS PART
+    #     # self.msg(None, self.wfs_settings)
+    #     if self.development:
+    #         self.msg(None, "development!!")
+    #         test_data_path = os.path.join(
+    #             self.plugin_dir,
+    #             'data',
+    #             'testdata')
+    #         self.wfs_finished({'output_dir':test_data_path})
+    #         return
+    #     self.wfs_thread = QThread(self.iface)
+    #     self.wfs_worker = WfsDataWorker(self.wfs_settings)
+    #     self.wfs_worker.moveToThread(self.wfs_thread)
+    #     self.wfs_worker.finished.connect(self.wfs_finished)
+    #     self.wfs_worker.error.connect(self.wfs_error)
+    #     self.wfs_worker.progress.connect(self.wfs_progress)
+    #     self.wfs_thread.started.connect(self.wfs_worker.run)
+    #     #self.wfs_progress(0.1)
+    #     self.wfs_progress(1)
+    #     self.wfs_progress_bar.setMaximum(0)
+    #     self.wfs_thread.start()
+    #
+    # def wfs_finished(self, result):
+    #     self.wfs_progress_bar.setValue(0.9)
+    #     self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
+    #     # Load the received gml files
+    #     # TODO: determine qml file based on something coming from the settings/result object
+    #     self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+    #     if self.wfs_thread is not None:
+    #         self.wfs_thread.quit()
+    #     self.wfs_settings = None
+    #     self.wfs_progress_bar.setMaximum(100)
+    #     self.wfs_progress(1)
+    #     self.check_data_received()
+    #
+    # def wfs_progress(self, part):
+    #     self.wfs_progress_bar.setValue(part*100)
+    #
+    # def wfs_error(self, err):
+    #     self.msg(None, err)
+    #     self.wfs_settings = None
+
     def wfs_start(self):
-        # WFS / MEASUREMENTS PART
-        # self.msg(None, self.wfs_settings)
-        if self.development:
-            self.msg(None, "development!!")
-            test_data_path = os.path.join(
-                self.plugin_dir,
-                'data',
-                'testdata')
-            self.wfs_finished({'output_dir':test_data_path})
-            return
-        self.wfs_thread = QThread(self.iface)
-        self.wfs_worker = WfsDataWorker(self.wfs_settings)
-        self.wfs_worker.moveToThread(self.wfs_thread)
-        self.wfs_worker.finished.connect(self.wfs_finished)
-        self.wfs_worker.error.connect(self.wfs_error)
-        self.wfs_worker.progress.connect(self.wfs_progress)
-        self.wfs_thread.started.connect(self.wfs_worker.run)
-        self.wfs_progress(0.1)
-        self.wfs_thread.start()
+        self.wfs_progress_bar.setMaximum(0)
+        prov = CalnetMeasurementsProvider(self.wfs_settings)
+        # TODO!!! for now using urllib, but should move to QgsNetworkManager
+        prov.finished.connect(self.wfs_finished)
+        prov.get_data()
+        while not prov.is_finished():
+            QCoreApplication.processEvents()
 
     def wfs_finished(self, result):
+        self.info(result)
         self.wfs_progress_bar.setValue(0.9)
         self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
         # Load the received gml files
         # TODO: determine qml file based on something coming from the settings/result object
         self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+
         if self.wfs_thread is not None:
             self.wfs_thread.quit()
         self.wfs_settings = None
-        self.wfs_progress(1)
         self.check_data_received()
-
-    def wfs_progress(self, part):
-        self.wfs_progress_bar.setValue(part*100)
-
-    def wfs_error(self, err):
-        self.msg(None, err)
-        self.wfs_settings = None
 
     def wps_start(self):
         # self.msg(None, wps_settings)
@@ -384,7 +414,8 @@ class JRodos:
         if wfs_is_ready and wps_is_ready:
             # TODO
             self.iface.messageBar().pushMessage("JRodos plugin: retrieved and loaded all data ...", self.iface.messageBar().INFO, 5)
-            self.wfs_progress(0)
+            #self.wfs_progress(0)
+            self.wfs_progress_bar.setMaximum(100)
             self.wps_progress(0)
 
     def run(self):
@@ -423,6 +454,9 @@ class JRodos:
         if parent is None:
             parent = self.iface.mainWindow()
         QMessageBox.warning(parent, self.MSG_BOX_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
+
+    def info(self, msg=""):
+        QgsMessageLog.logMessage(str(msg), self.MSG_BOX_TITLE, QgsMessageLog.INFO)
 
     def show_jrodos_wps_dialog(self, wps_settings=None):
         # TODO ?? init dialog based on older values
@@ -537,7 +571,8 @@ class JRodos:
             # make it UTC
             #end_date = end_date.toUTC()
 
-            wfs_settings = WfsSettings()
+            #wfs_settings = WfsSettings()
+            wfs_settings = CalnetMeasurementsConfig()
             # TODO make these come from config
             wfs_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
 

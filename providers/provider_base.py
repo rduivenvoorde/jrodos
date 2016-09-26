@@ -102,3 +102,4 @@ class SimpleProvider(ProviderBase):
         while not reply.isFinished():
             QCoreApplication.processEvents()
 
+

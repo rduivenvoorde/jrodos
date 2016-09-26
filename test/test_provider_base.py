@@ -21,6 +21,9 @@ class TestProviderBase(unittest.TestCase):
         QgsApplication.setPrefixPath(os.getenv("QGIS_PREFIX_PATH"), True)
         QgsApplication.setAuthDbDirPath('/home/richard/.qgis2/')
 
+        # argh... proxy, be sure that you have proxy enabled in QGIS IF you want to test within rivm (behind proxy)
+
+
     def setUp(self):
         self.ran_errored = False
         self.ran_finished = False

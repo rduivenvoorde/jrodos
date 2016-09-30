@@ -1,10 +1,9 @@
-from qgis.core import QgsNetworkAccessManager, QgsApplication
-from PyQt4.QtCore import QThread, QUrl, QCoreApplication
+from qgis.core import QgsApplication  # fake import to force sip version 2
+from PyQt4.QtCore import QUrl, QCoreApplication
 from PyQt4.QtNetwork import QNetworkRequest
 from functools import partial
-from provider_base import ProviderConfig, ProviderBase
+from provider_base import ProviderConfig, ProviderBase, ProviderResult
 import xml.etree.ElementTree as ET
-
 
 
 class CalnetMeasurementsUtilsConfig(ProviderConfig):
@@ -19,20 +18,22 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         ProviderBase.__init__(self, config)
 
     def _data_retrieved(self, reply):
-
-        content = unicode(reply.readAll())
-
-        self.data = []
-        root = ET.fromstring(content)
-        for ret in root.findall(".//return"):
-            code = ret.find('code').text
-            desc = ret.find('description').text
-            # print code, description
-            description = "%s (%s)" % (desc, code)
-            self.data.append({'code': code, 'description': description})
-
+        result = ProviderResult()
+        if reply.error():
+            result.set_error(reply.error(), reply.url().toString(), 'Calnet quantities, substances, units provider')
+        else:
+            content = unicode(reply.readAll())
+            data = []
+            root = ET.fromstring(content)
+            for ret in root.findall(".//return"):
+                code = ret.find('code').text
+                desc = ret.find('description').text
+                # print code, description
+                description = "%s (%s)" % (desc, code)
+                data.append({'code': code, 'description': description})
+            result.set_data(data, reply.url().toString())
         self.ready = True
-        self.finished.emit(self.data)
+        self.finished.emit(result)
 
     def get_data(self, param='Quantities'):
 
@@ -50,7 +51,8 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         request.setHeader(QNetworkRequest.ContentTypeHeader, "application/soap+xml") # or? "text/xml; charset=utf-8"
         reply = self.network_manager.post(request, data)
         reply.finished.connect(partial(self._data_retrieved, reply))
-        reply.error.connect(self.error)
         # this part is needed to be sure we do not return immidiatly
-        while not reply.isFinished():
-            QCoreApplication.processEvents()
+        # while not reply.isFinished():
+        #     #QCoreApplication.processEvents()
+        #     from PyQt4.QtCore import QEventLoop
+        #     QCoreApplication.processEvents(QEventLoop.AllEvents, 100 )

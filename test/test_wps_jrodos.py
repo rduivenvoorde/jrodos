@@ -41,6 +41,7 @@ class TestJRodosWPS(unittest.TestCase):
     #         self.fail('Error in TestJRodosWPS.test_WPS_JRodos %s' % err.reason)
 
 
+    @unittest.skip
     def test_WPS_JRodos(self):
 
         try:

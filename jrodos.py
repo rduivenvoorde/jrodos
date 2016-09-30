@@ -29,17 +29,16 @@ from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature,
     QgsCoordinateTransform, QgsGeometry, QgsMessageLog
 from qgis.utils import qgsfunction, QgsExpression
 from glob import glob
-import os.path, tempfile, time, json
-from datetime import date, time, datetime, timedelta
+import os.path, json
+from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from data_worker import WfsDataWorker, WfsSettings, WpsDataWorker, WpsSettings
-from jrodos_soap import do_jrodos_soap_call
+from data_worker import WpsDataWorker, WpsSettings
 from jrodos_settings import JRodosSettings
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
-
+from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
 
 
 # pycharm debugging
@@ -76,12 +75,16 @@ class JRodos:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.MSG_BOX_TITLE = self.tr("JRodos Plugin")
+        self.MSG_TITLE = self.tr("JRodos Plugin")
 
         # NOTE !!! project names surrounded by single quotes ??????
         self.JRODOS_PROJECTS = ["'wps-13sept-test'"]
 
         self.JRODOS_MODEL_LENGTH_HOURS = ['24', '12', '6', '3']
+
+        # indexes for the data coming from Utils providers
+        self.JRODOS_DESCRIPTION_IDX = 0
+        self.JRODOS_CODE_IDX = 1
 
         # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'"  # 1
         # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135'" # 24
@@ -133,6 +136,9 @@ class JRodos:
         self.wfs_settings = None
         self.wps_thread = None
         self.wfs_thread = None
+
+        self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
+        self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
 
         # creating a dict for a layer <-> settings mapping
         self.jrodos_settings = {}
@@ -269,10 +275,12 @@ class JRodos:
             self.wfs_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.wfs_progress_bar)
 
+        # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
+
 
     def show_settings(self):
         self.settings_dlg.show()
@@ -339,24 +347,30 @@ class JRodos:
     def wfs_start(self):
         self.wfs_progress_bar.setMaximum(0)
         prov = CalnetMeasurementsProvider(self.wfs_settings)
-        # TODO!!! for now using urllib, but should move to QgsNetworkManager
         prov.finished.connect(self.wfs_finished)
         prov.get_data()
         while not prov.is_finished():
             QCoreApplication.processEvents()
 
     def wfs_finished(self, result):
+
+
         self.info(result)
         self.wfs_progress_bar.setValue(0.9)
-        self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
-        # Load the received gml files
-        # TODO: determine qml file based on something coming from the settings/result object
-        self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-
-        if self.wfs_thread is not None:
-            self.wfs_thread.quit()
+        if result.error():
+            self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
+        else:
+            self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
+            # Load the received gml files
+            # TODO: determine qml file based on something coming from the settings/result object
+            if result.data is not None:
+                self.load_measurements(result.data['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+            else:
+                print result
+                print result.data
         self.wfs_settings = None
-        self.check_data_received()
+        #self.check_data_received()
+        self.wfs_progress_bar.setMaximum(100)
 
     def wps_start(self):
         # self.msg(None, wps_settings)
@@ -421,7 +435,7 @@ class JRodos:
     def run(self):
         # we REALLY need OTF enabled
         if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
-            QMessageBox.warning(self.iface.mainWindow(), self.MSG_BOX_TITLE, self.tr(
+            QMessageBox.warning(self.iface.mainWindow(), self.MSG_TITLE, self.tr(
                 "This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.\n\n" +
                 "Please enable OTF for this project or open a project with OTF enabled."),
                                 QMessageBox.Ok, QMessageBox.Ok)
@@ -445,18 +459,85 @@ class JRodos:
             # try to start wps
 #            self.show_jrodos_wps_dialog()
             # try to start wfs (using wps-settings if available as self.wps_settings)
+
+            # we try to retrieve the quantities and substances just once, but not earlier then a user actually
+            # starts using the plugin (that is call this run)...
+            if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
+                config = CalnetMeasurementsUtilsConfig()
+                config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
+
+                q_prov = CalnetMeasurementsUtilsProvider(config)
+
+                def q_prov_finished(result):
+                    if result.error():
+                        self.msg(None, "Problem in JRodos plugin retrieving the Quantities. \nCheck the Log Message Panel for more info")
+                    else:
+                        # QUANTITIES
+                        self.quantities = result.data
+                        # Replace the default ComboBox with our better ExtendedCombo
+                        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+                        self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
+                        self.measurements_dlg.combo_quantity = ExtendedCombo()
+                        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
+                        self.quantities_model = QStandardItemModel()
+                        for q in self.quantities:
+                            self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
+                        self.measurements_dlg.combo_quantity.setModel(self.quantities_model)
+
+                        lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
+                        items = self.quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                        if len(items) > 0:
+                            self.measurements_dlg.combo_quantity.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+
+                q_prov.finished.connect(q_prov_finished)
+                q_prov.get_data('Quantities')
+
+                s_prov = CalnetMeasurementsUtilsProvider(config)
+
+                def s_prov_finished(result):
+                    if result.error():
+                        self.msg(None, "Problem in JRodos plugin retrieving the Substances. \nCheck the Log Message Panel for more info")
+                    else:
+                        # SUBSTANCES
+                        self.substances = result.data
+                        # Replace the default ComboBox with our better ExtendedCombo
+                        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+                        self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
+                        self.measurements_dlg.combo_substance = ExtendedCombo()
+                        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
+
+                        self.substances_model = QStandardItemModel()
+                        for s in self.substances:
+                            self.substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
+                        self.measurements_dlg.combo_substance.setModel(self.substances_model)
+
+                        lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
+                        items = self.substances_model.findItems(lastused_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                        if len(items) > 0:
+                            self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+
+                s_prov.finished.connect(s_prov_finished)
+                s_prov.get_data('Substances')
+
             self.show_measurements_dialog()
 
+        except JRodosError as jre:
+            self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
+            return
+
         except Exception as e:
-            self.msg(None, "Exception: %s" % e)
+            self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
+            raise
+
+
 
     def msg(self, parent=None, msg=""):
         if parent is None:
             parent = self.iface.mainWindow()
-        QMessageBox.warning(parent, self.MSG_BOX_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
+        QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
     def info(self, msg=""):
-        QgsMessageLog.logMessage(str(msg), self.MSG_BOX_TITLE, QgsMessageLog.INFO)
+        QgsMessageLog.logMessage(str(msg), self.MSG_TITLE, QgsMessageLog.INFO)
 
     def show_jrodos_wps_dialog(self, wps_settings=None):
         # TODO ?? init dialog based on older values
@@ -511,59 +592,22 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
 
-        DESCRIPTION_IDX = 0
-        CODE_IDX = 1
-
-
-        self.quantities = do_jrodos_soap_call('Quantities')
-        self.substances = do_jrodos_soap_call('Substances')
-
-        # QUANTITIES
-
-        # Replace the default ComboBox with our better ExtendedCombo
-        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-        self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
-        self.measurements_dlg.combo_quantity = ExtendedCombo()
-        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
-
-        quantities_model = QStandardItemModel()
-        for q in self.quantities:
-            quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
-        self.measurements_dlg.combo_quantity.setModel(quantities_model)
-
-        lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
-        items = quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, CODE_IDX)
-        if len(items)>0:
-            self.measurements_dlg.combo_quantity.setCurrentIndex(items[DESCRIPTION_IDX].row())
-
-        # SUBSTANCES
-
-        # Replace the default ComboBox with our better ExtendedCombo
-        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-        self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
-        self.measurements_dlg.combo_substance = ExtendedCombo()
-        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
-
-        substances_model = QStandardItemModel()
-        for s in self.substances:
-            substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
-        self.measurements_dlg.combo_substance.setModel(substances_model)
-
-        lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
-        items = substances_model.findItems(lastused_substance_code, Qt.MatchExactly, CODE_IDX)
-        if len(items)>0:
-            self.measurements_dlg.combo_substance.setCurrentIndex(items[DESCRIPTION_IDX].row())
-
         self.measurements_dlg.show()
 
         result = self.measurements_dlg.exec_()
         if result:  # OK was pressed
+
+            if len(self.quantities) == 1 or len(self.substances) == 1: # meaning we did not retrieve anything back yet
+                self.msg(None, "No substances and quantities, network problem? \nSee messages panel ...")
+                return
+
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
+
             # selected quantity + save to QSettings
-            quantity = quantities_model.item(self.measurements_dlg.combo_quantity.currentIndex(), CODE_IDX).text()
+            quantity = self.quantities_model.item(self.measurements_dlg.combo_quantity.currentIndex(), self.JRODOS_CODE_IDX).text()
             Utils.set_settings_value("measurements_last_quantity", quantity)
             # selected substance + save to QSettings
-            substance = substances_model.item(self.measurements_dlg.combo_substance.currentIndex(), CODE_IDX).text()
+            substance = self.substances_model.item(self.measurements_dlg.combo_substance.currentIndex(), self.JRODOS_CODE_IDX).text()
             Utils.set_settings_value("measurements_last_substance", substance)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime()
@@ -862,3 +906,26 @@ class JRodos:
                 elif 'name' in field:
                     field_string += field['name'] + ': ' + field['value'] + '<br/>'
         return field_string + '</div>'
+
+class JRodosError(Exception):
+    """JRodos Exception for errors in the plugin.
+
+    Attributes:
+        expression -- input expression in which the error occurred
+        message -- explanation of the error
+    """
+    def __init__(self, expression, message):
+        self.expression = expression
+        self.message = message
+
+
+# this is a way to catch an exception from another (for example networking) thread.
+# https://riverbankcomputing.com/pipermail/pyqt/2009-May/022961.html
+# not shure if this has other implications, note that in qgis/python/utils.py this is also done...
+# import sys
+# def excepthook(excType, excValue, tracebackobj):
+#     print excType
+#     print excValue
+#     print tracebackobj
+#
+# sys.excepthook = excepthook

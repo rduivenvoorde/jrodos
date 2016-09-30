@@ -21,8 +21,8 @@ class TestProviderBase(unittest.TestCase):
         QgsApplication.setPrefixPath(os.getenv("QGIS_PREFIX_PATH"), True)
         QgsApplication.setAuthDbDirPath('/home/richard/.qgis2/')
 
-        # argh... proxy, be sure that you have proxy enabled in QGIS IF you want to test within rivm (behind proxy)
-
+        # ARGH... proxy, be sure that you have proxy enabled in QGIS IF you want to test within rivm (behind proxy)
+        # else it keeps hanging/running after the tests
 
     def setUp(self):
         self.ran_errored = False
@@ -58,11 +58,10 @@ class TestProviderBase(unittest.TestCase):
         conf = SimpleConfig()
         conf.url = 'https://duif.net/'
         prov = SimpleProvider(conf)
-        def data_in(data):
-            self.assertEquals(len(data), 1)
-            it = iter(data)
-            self.assertEquals(it.next().strip(), "ok")
-        prov.finished.connect(data_in)
+        def prov_finished(result):
+            self.assertFalse(result.error())
+            self.assertEquals(result.data.strip(), "ok")
+        prov.finished.connect(prov_finished)
         prov.get_data()
         while not prov.is_finished():
             QCoreApplication.processEvents()
@@ -72,11 +71,10 @@ class TestProviderBase(unittest.TestCase):
         # find dir of this class
         conf.url = 'file://'+os.path.join('file://', os.path.dirname(__file__), 'duif.net')
         prov = SimpleProvider(conf)
-        def data_in(data):
-            self.assertEquals(len(data), 1)
-            it = iter(data)
-            self.assertEquals(it.next().strip(), "ok")
-        prov.finished.connect(data_in)
+        def prov_finished(result):
+            self.assertFalse(result.error())
+            self.assertEquals(result.data.strip(), "ok")
+        prov.finished.connect(prov_finished)
         prov.get_data()
         while not prov.is_finished():
             QCoreApplication.processEvents()

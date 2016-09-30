@@ -1,9 +1,10 @@
-from provider_base import ProviderConfig, ProviderBase
+from provider_base import ProviderConfig, ProviderBase, ProviderResult
+from PyQt4.QtCore import QUrl
+from PyQt4.QtNetwork import QNetworkRequest
+from functools import partial
 import os
 import shutil
 import re
-import urllib
-import urllib2
 import logging
 
 
@@ -34,120 +35,87 @@ class CalnetMeasurementsProvider(ProviderBase):
     def __init__(self, config):
         ProviderBase.__init__(self, config)
 
+        # page_size comes from user config
+        self.page_size = self.config.page_size
+        # the page_count is the number of features returned in one 'page'-request.
+        # It can be found in the 'numberReturned' attribute of the gml response
+        self.page_count = 1
+        # total number of returned features in this run
+        self.total_count = 0
+        # runner number for the file numbers
+        self.file_count = 1
+
+        # create a QUrl object to use with query parameters
+        self.request = QUrl(self.config.url)
+        self.request.addQueryItem('Count', unicode(self.page_size))
+        self.request.addQueryItem('typeName', 'radiation.measurements:MEASUREMENT')
+        self.request.addQueryItem('version', '2.0.0')
+        self.request.addQueryItem('service', 'WFS')
+        self.request.addQueryItem('request', 'GetFeature')
+        # pity, below not working :-( so we have to check ourselves by counting
+        # self.request.addQueryItem('resultType', 'hits')
+        self.request.addQueryItem('startIndex', unicode(self.total_count))
+        # the actual cql filter, something like:
+        # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
+        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}'".format(
+            bbox=self.config.bbox,
+            start_datetime=self.config.start_datetime,
+            end_datetime=self.config.end_datetime,
+            quantity=self.config.quantity,
+            substance=self.config.substance,
+            endminusstart=self.config.endminusstart
+        )
+        self.request.addQueryItem('CQL_FILTER', cql_filter)
+
 
     def _data_retrieved(self, reply):
-        self.data = {'result': 'OK', 'output_dir':self.config.output_dir}
-        self.ready = True
-        self.finished.emit(self.data)
 
-    def get_data(self):
+        result = ProviderResult()
+        if reply.error():
+            result.set_error(reply.error(), reply.url().toString(), 'Calnet measurements provider')
+        else:
+            filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
+            with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
 
-        # request = QUrl(self.config.url)
-        # reply = self.network_manager.get(QNetworkRequest(request))
-        # reply.finished.connect(partial(self._data_retrieved, reply))
-        # # this part is needed to be sure we do not return immidiatly
-        # while not reply.isFinished():
-        #     QCoreApplication.processEvents()
-
-        page_size = self.config.page_size
-        total_count = 0
-        step_count = 1
-        file_count = 0
-
-        wfs_settings_file = self.config.output_dir + '/calnet_measurements__wfs_config.txt'
-        with open(wfs_settings_file, 'wb') as f:
-            f.write(unicode(self.config))
-
-        while total_count % page_size == 0 and step_count > 0:  # and feature_count <= STOP_AT:
-            # for i in range(0, 10):
-            step_count = 0
-            file_count += 1
-
-            wfs_url = self.config.url
-            params = {}
-            params['Count'] = page_size
-            params['startIndex'] = total_count
-            # cql_filter = "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-            cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}'".format(
-                bbox=self.config.bbox,
-                start_datetime=self.config.start_datetime,
-                end_datetime=self.config.end_datetime,
-                quantity=self.config.quantity,
-                substance=self.config.substance,
-                endminusstart=self.config.endminusstart
-            )
-            #print cql_filter
-            # TODO development
-            params[
-                'CQL_FILTER'] = cql_filter
-            params['typeName'] = "radiation.measurements:MEASUREMENT"
-            params['version'] = '2.0.0'
-            params['service'] = 'WFS'
-            params['request'] = 'GetFeature'
-            # pity, below not working :-(
-            # params['resultType'] = 'hits'
-
-            try:
-
-                data = urllib.urlencode(params)
-                request = urllib2.Request(wfs_url, data)
-                logging.debug('Firing WFS request: GET %s' % request.get_full_url() + request.get_data())
-                response = urllib2.urlopen(request)
-                CHUNK = 16 * 1024
-                filename = self.config.output_dir + '/data' + unicode(file_count) + '.gml'
-
-                with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
-                    found = False
-                    for chunk in iter(lambda: response.read(CHUNK), ''):
-                        if not chunk:
-                            break
-                        if not found:
-                            finds = re.findall('numberReturned="([0-9.]+)"', chunk)
-                            if len(finds) > 0:
-                                step_count = int(finds[0])
-                                total_count += step_count
-                                found = True
-                        f.write(chunk)
-            except Exception as e:
-                print e
-                #pass
+                # first read 500 chars to check the 'numberReturned' attribute
+                # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
+                first500chars = reply.read(500)
+                page_count = re.findall('numberReturned="([0-9.]+)"', first500chars)
+                self.page_count = int(page_count[0])
+                self.total_count += self.page_count
+                f.write(first500chars)
+                # now the rest
+                f.write(reply.readAll())
 
             # note: if copying with shutil.copy2 or shutil.copy, QGIS only reads gml when you touch gfs file???
             shutil.copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'schemas', 'measurements.gfs'),
-                            os.path.join(self.config.output_dir, 'data' + unicode(file_count) + '.gfs'))
+                            os.path.join(self.config.output_dir, 'data' + unicode(self.file_count) + '.gfs'))
             # IMPORTANT !!!
             #  OGR only uses the gfs file if the modification time is >= modification time of gml file !!!
             #  set it to NOW with os.utime !!!
-            os.utime(os.path.join(self.config.output_dir, 'data' + unicode(file_count) + '.gfs'), None)
-            # fake progress because we do not know actual total count:
-            # we start at 1/2 then 2/3, 3/4, 4/5 etc
-            #self.progress.emit(file_count / (1.0 + file_count))
+            os.utime(os.path.join(self.config.output_dir, 'data' + unicode(self.file_count) + '.gfs'), None)
 
-        # TODO!!! for now using urllib, but should move to QgsNetworkManager, so for now call this myself:
-        self._data_retrieved(None)
+            # print "self.page_size %s" % self.page_size
+            # print "self.page_count %s" % self.page_count
+            # print "self.total_count: %s" % self.total_count
+
+            logging.debug('Ready saving features, page-size: {}, page-count: {}, total-count: {}'.format(self.page_size, self.page_count, self.total_count))
+
+            if self.total_count % self.page_size == 0 and self.page_count > 0:
+                # silly Qt way to update one query parameter
+                self.request.removeQueryItem('startIndex')
+                self.request.addQueryItem('startIndex', unicode(self.total_count))
+                self.file_count += 1
+                self.get_data()
+            else:
+                logging.debug('All features received; stop fetching, start loading...')
+                result.set_data({'result': 'OK', 'output_dir': self.config.output_dir}, reply.url().toString())
+                # we nee to wait untill all pages are there before to emit the result; so: INSIDE de loop
+                self.ready = True
+                self.finished.emit(result)
 
 
-# if __name__ == '__main__':
-#
-#     from PyQt4.QtCore import QDateTime
-#     from datetime import datetime
-#     from utils import Utils
-#     config = CalnetMeasurementsConfig()
-#     config.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
-#     # we have always an wps_settings.output_dir here:
-#     config.output_dir = Utils.jrodos_dirname('test_WFS_Meaurements', "", datetime.now().strftime("%Y%m%d%H%M%S"))
-#     config.page_size = 10000
-#     config.endminusstart = '3600'
-#     config.quantity = 'T-GAMMA'
-#     config.substance = 'A5'
-#     config.bbox = '55,5,60,15'
-#     end_time = QDateTime.currentDateTime()  # end NOW
-#     start_time = end_time.addSecs(-60 * 60 * 6)  # -6 hours
-#     # config.start_datetime = '2016-04-25T08:00:00.000+00:00'
-#     # config.end_datetime = '2016-04-26T08:00:00.000+00:00
-#     config.start_datetime = start_time.toString(config.date_time_format)
-#     config.end_datetime = end_time.toString(config.date_time_format)
-#
-#     prov = CalnetMeasurementsProvider(config)
-#     prov.get_data()
-
+    def get_data(self):
+        logging.debug('Firing WFS request: GET %s' % self.request)
+        reply = self.network_manager.get(QNetworkRequest(self.request))
+        reply.finished.connect(partial(self._data_retrieved, reply))

@@ -1,8 +1,7 @@
-from qgis.core import QgsNetworkAccessManager, QgsApplication
-from PyQt4.QtCore import QThread, QUrl, QCoreApplication
+from PyQt4.QtCore import QUrl, QCoreApplication
 from PyQt4.QtNetwork import QNetworkRequest
 from functools import partial
-from provider_base import ProviderConfig, ProviderBase
+from provider_base import ProviderConfig, ProviderBase, ProviderResult
 import json
 
 
@@ -18,10 +17,14 @@ class JRodosProjectProvider(ProviderBase):
         ProviderBase.__init__(self, config)
 
     def _data_retrieved(self, reply):
-        content = unicode(reply.readAll())
-        self.data = json.loads(content)
+        result = ProviderResult()
+        if reply.error():
+            result.set_error(reply.error(), reply.request().url(), 'JRodos project provider (rest)')
+        else:
+            content = unicode(reply.readAll())
+            result._data = json.loads(content)
+        self.finished.emit(result)
         self.ready = True
-        self.finished.emit(self.data)
 
     def get_data(self):
         request = QUrl(self.config.url)

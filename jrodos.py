@@ -413,10 +413,10 @@ class JRodos:
             #     else:
             #         self.msg(None, settings)
             #     return
-            # try to start wps
-#            self.show_jrodos_wps_dialog()
-            # try to start wfs (using wps-settings if available as self.wps_settings)
 
+            # try to start wps
+            #self.show_jrodos_wps_dialog()
+            # try to start wfs (using wps-settings if available as self.wps_settings)
             self.show_measurements_dialog()
 
         except JRodosError as jre:
@@ -429,7 +429,7 @@ class JRodos:
 
     def get_quantities_and_substances(self):
         config = CalnetMeasurementsUtilsConfig()
-        config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
+        config.url = self.settings.value('measurements_soap_utils_url') #'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
 
         q_prov = CalnetMeasurementsUtilsProvider(config)
 

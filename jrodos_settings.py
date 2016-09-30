@@ -22,3 +22,5 @@ class JRodosSettings(SettingManager):
         self.add_setting(String('measurements_wfs_url', Scope.Global,
                                 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'))
         self.add_setting(Integer('measurements_wfs_page_size', Scope.Global, 10000))
+        self.add_setting(String('measurements_soap_utils_url', Scope.Global,
+                                'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'))

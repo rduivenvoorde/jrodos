@@ -130,12 +130,11 @@ class JRodos:
         self.toolbar = self.iface.addToolBar(u'JRodos')
         self.toolbar.setObjectName(u'JRodos')
         self.wps_progress_bar = None
-        self.wfs_progress_bar = None
+        self.measurements_progress_bar = None
 
         self.wps_settings = None
-        self.wfs_settings = None
+        self.measurements_settings = None
         self.wps_thread = None
-        self.wfs_thread = None
 
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
@@ -263,17 +262,17 @@ class JRodos:
             self.wps_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.wps_progress_bar)
 
-        if self.wfs_progress_bar is None:
-            self.wfs_progress_bar = QProgressBar()
-            self.wfs_progress_bar.setToolTip("Measurement data (WFS)")
-            self.wfs_progress_bar.setTextVisible(True)
-            self.wfs_progress_bar.setFormat(self.tr('Metingen'))
-            self.wfs_progress_bar.setMinimum(0)
-            self.wfs_progress_bar.setMaximum(100)  # we will use a 'ininite progress bar' by setting max to zero when busy
-            self.wfs_progress_bar.setValue(0)
-            self.wfs_progress_bar.setFixedWidth(progress_bar_width)
-            self.wfs_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.toolbar.addWidget(self.wfs_progress_bar)
+        if self.measurements_progress_bar is None:
+            self.measurements_progress_bar = QProgressBar()
+            self.measurements_progress_bar.setToolTip("Measurement data (WFS)")
+            self.measurements_progress_bar.setTextVisible(True)
+            self.measurements_progress_bar.setFormat(self.tr('Metingen'))
+            self.measurements_progress_bar.setMinimum(0)
+            self.measurements_progress_bar.setMaximum(100)  # we will use a 'ininite progress bar' by setting max to zero when busy
+            self.measurements_progress_bar.setValue(0)
+            self.measurements_progress_bar.setFixedWidth(progress_bar_width)
+            self.measurements_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.toolbar.addWidget(self.measurements_progress_bar)
 
         # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
@@ -294,73 +293,28 @@ class JRodos:
             self.iface.removeToolBarIcon(action)
         # remove progress bars
         del self.wps_progress_bar
-        del self.wfs_progress_bar
+        del self.measurements_progress_bar
         # remove the toolbar
         del self.toolbar
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("$measurement_values")
         QgsExpression.unregisterFunction("measurement_values")
 
-    # def wfs_start(self):
-    #     # WFS / MEASUREMENTS PART
-    #     # self.msg(None, self.wfs_settings)
-    #     if self.development:
-    #         self.msg(None, "development!!")
-    #         test_data_path = os.path.join(
-    #             self.plugin_dir,
-    #             'data',
-    #             'testdata')
-    #         self.wfs_finished({'output_dir':test_data_path})
-    #         return
-    #     self.wfs_thread = QThread(self.iface)
-    #     self.wfs_worker = WfsDataWorker(self.wfs_settings)
-    #     self.wfs_worker.moveToThread(self.wfs_thread)
-    #     self.wfs_worker.finished.connect(self.wfs_finished)
-    #     self.wfs_worker.error.connect(self.wfs_error)
-    #     self.wfs_worker.progress.connect(self.wfs_progress)
-    #     self.wfs_thread.started.connect(self.wfs_worker.run)
-    #     #self.wfs_progress(0.1)
-    #     self.wfs_progress(1)
-    #     self.wfs_progress_bar.setMaximum(0)
-    #     self.wfs_thread.start()
-    #
-    # def wfs_finished(self, result):
-    #     self.wfs_progress_bar.setValue(0.9)
-    #     self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
-    #     # Load the received gml files
-    #     # TODO: determine qml file based on something coming from the settings/result object
-    #     self.load_measurements(result['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-    #     if self.wfs_thread is not None:
-    #         self.wfs_thread.quit()
-    #     self.wfs_settings = None
-    #     self.wfs_progress_bar.setMaximum(100)
-    #     self.wfs_progress(1)
-    #     self.check_data_received()
-    #
-    # def wfs_progress(self, part):
-    #     self.wfs_progress_bar.setValue(part*100)
-    #
-    # def wfs_error(self, err):
-    #     self.msg(None, err)
-    #     self.wfs_settings = None
-
-    def wfs_start(self):
-        self.wfs_progress_bar.setMaximum(0)
-        prov = CalnetMeasurementsProvider(self.wfs_settings)
-        prov.finished.connect(self.wfs_finished)
+    def start_measurements_provider(self):
+        self.measurements_progress_bar.setMaximum(0)
+        prov = CalnetMeasurementsProvider(self.measurements_settings)
+        prov.finished.connect(self.finish_measurements_provider)
         prov.get_data()
         while not prov.is_finished():
             QCoreApplication.processEvents()
 
-    def wfs_finished(self, result):
-
-
+    def finish_measurements_provider(self, result):
         self.info(result)
-        self.wfs_progress_bar.setValue(0.9)
+        self.measurements_progress_bar.setValue(0.9)
         if result.error():
             self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
         else:
-            self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
+            # self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None:
@@ -368,9 +322,9 @@ class JRodos:
             else:
                 print result
                 print result.data
-        self.wfs_settings = None
+        self.measurements_settings = None
         #self.check_data_received()
-        self.wfs_progress_bar.setMaximum(100)
+        self.measurements_progress_bar.setMaximum(100)
 
     def wps_start(self):
         # self.msg(None, wps_settings)
@@ -421,15 +375,13 @@ class JRodos:
     def check_data_received(self):
         wfs_is_ready = True
         wps_is_ready = True
-        if self.wfs_thread is not None:
-            wfs_is_ready = self.wfs_thread.isFinished()
         if self.wps_thread is not None:
             wps_is_ready = self.wps_thread.isFinished()
         if wfs_is_ready and wps_is_ready:
             # TODO
             self.iface.messageBar().pushMessage("JRodos plugin: retrieved and loaded all data ...", self.iface.messageBar().INFO, 5)
             #self.wfs_progress(0)
-            self.wfs_progress_bar.setMaximum(100)
+            self.measurements_progress_bar.setMaximum(100)
             self.wps_progress(0)
 
     def run(self):
@@ -442,6 +394,11 @@ class JRodos:
             return
 
         try:
+            # we try to retrieve the quantities and substances just once, but not earlier then a user actually
+            # starts using the plugin (that is call this run)...
+            if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
+                self.get_quantities_and_substances() # async call, will fill dropdowns when network requests return
+
             # IF there is a layer selected in the legend
             # based on 'currentLayer' in legend, check the settings
             #self.msg(None, self.jrodos_settings)
@@ -460,65 +417,6 @@ class JRodos:
 #            self.show_jrodos_wps_dialog()
             # try to start wfs (using wps-settings if available as self.wps_settings)
 
-            # we try to retrieve the quantities and substances just once, but not earlier then a user actually
-            # starts using the plugin (that is call this run)...
-            if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
-                config = CalnetMeasurementsUtilsConfig()
-                config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
-
-                q_prov = CalnetMeasurementsUtilsProvider(config)
-
-                def q_prov_finished(result):
-                    if result.error():
-                        self.msg(None, "Problem in JRodos plugin retrieving the Quantities. \nCheck the Log Message Panel for more info")
-                    else:
-                        # QUANTITIES
-                        self.quantities = result.data
-                        # Replace the default ComboBox with our better ExtendedCombo
-                        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-                        self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
-                        self.measurements_dlg.combo_quantity = ExtendedCombo()
-                        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
-                        self.quantities_model = QStandardItemModel()
-                        for q in self.quantities:
-                            self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
-                        self.measurements_dlg.combo_quantity.setModel(self.quantities_model)
-
-                        lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
-                        items = self.quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
-                        if len(items) > 0:
-                            self.measurements_dlg.combo_quantity.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
-
-                q_prov.finished.connect(q_prov_finished)
-                q_prov.get_data('Quantities')
-
-                s_prov = CalnetMeasurementsUtilsProvider(config)
-
-                def s_prov_finished(result):
-                    if result.error():
-                        self.msg(None, "Problem in JRodos plugin retrieving the Substances. \nCheck the Log Message Panel for more info")
-                    else:
-                        # SUBSTANCES
-                        self.substances = result.data
-                        # Replace the default ComboBox with our better ExtendedCombo
-                        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-                        self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
-                        self.measurements_dlg.combo_substance = ExtendedCombo()
-                        self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
-
-                        self.substances_model = QStandardItemModel()
-                        for s in self.substances:
-                            self.substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
-                        self.measurements_dlg.combo_substance.setModel(self.substances_model)
-
-                        lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
-                        items = self.substances_model.findItems(lastused_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
-                        if len(items) > 0:
-                            self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
-
-                s_prov.finished.connect(s_prov_finished)
-                s_prov.get_data('Substances')
-
             self.show_measurements_dialog()
 
         except JRodosError as jre:
@@ -529,6 +427,64 @@ class JRodos:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
             raise
 
+    def get_quantities_and_substances(self):
+        config = CalnetMeasurementsUtilsConfig()
+        config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
+
+        q_prov = CalnetMeasurementsUtilsProvider(config)
+
+        def q_prov_finished(result):
+            if result.error():
+                self.msg(None,
+                         "Problem in JRodos plugin retrieving the Quantities. \nCheck the Log Message Panel for more info")
+            else:
+                # QUANTITIES
+                self.quantities = result.data
+                # Replace the default ComboBox with our better ExtendedCombo
+                # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+                self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
+                self.measurements_dlg.combo_quantity = ExtendedCombo()
+                self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
+                self.quantities_model = QStandardItemModel()
+                for q in self.quantities:
+                    self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
+                self.measurements_dlg.combo_quantity.setModel(self.quantities_model)
+
+                lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
+                items = self.quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                if len(items) > 0:
+                    self.measurements_dlg.combo_quantity.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+
+        q_prov.finished.connect(q_prov_finished)
+        q_prov.get_data('Quantities')
+
+        s_prov = CalnetMeasurementsUtilsProvider(config)
+
+        def s_prov_finished(result):
+            if result.error():
+                self.msg(None,
+                         "Problem in JRodos plugin retrieving the Substances. \nCheck the Log Message Panel for more info")
+            else:
+                # SUBSTANCES
+                self.substances = result.data
+                # Replace the default ComboBox with our better ExtendedCombo
+                # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+                self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
+                self.measurements_dlg.combo_substance = ExtendedCombo()
+                self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
+
+                self.substances_model = QStandardItemModel()
+                for s in self.substances:
+                    self.substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
+                self.measurements_dlg.combo_substance.setModel(self.substances_model)
+
+                lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
+                items = self.substances_model.findItems(lastused_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                if len(items) > 0:
+                    self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+
+        s_prov.finished.connect(s_prov_finished)
+        s_prov.get_data('Substances')
 
 
     def msg(self, parent=None, msg=""):
@@ -569,28 +525,31 @@ class JRodos:
             self.wps_settings = wps_settings
             self.wps_start()
 
-    def show_measurements_dialog(self, wfs_settings=None):
+    def show_measurements_dialog(self, measurements_settings=None):
 
-        if wfs_settings is not None:
-            self.wfs_settings = wfs_settings
-            self.find_jrodos_layer(wfs_settings)
-            self.set_wfs_bbox()
-            self.wfs_start()
+        if measurements_settings is not None:
+            self.measurements_settings = measurements_settings
+            self.find_jrodos_layer(measurements_settings)
+            self.set_measurements_bbox()
+            self.start_measurements_provider()
             return
 
-        if self.wfs_settings is not None:
+        if self.measurements_settings is not None:
             self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
             return
 
-        self.wfs_settings = None
+        self.measurements_settings = None
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
         # INIT dialog based on earlier wps dialog
         if self.wps_settings is not None:
             start_time = self.wps_settings.jrodos_datetime_start
             end_time = start_time.addSecs(60 * 60 * int(self.wps_settings.jrodos_model_time)) # model time
+
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
+        self.measurements_dlg.combo_endminusstart.setCurrentIndex(
+            self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
 
         self.measurements_dlg.show()
 
@@ -601,8 +560,9 @@ class JRodos:
                 self.msg(None, "No substances and quantities, network problem? \nSee messages panel ...")
                 return
 
+            # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-
+            Utils.set_settings_value("endminusstart", endminusstart)
             # selected quantity + save to QSettings
             quantity = self.quantities_model.item(self.measurements_dlg.combo_quantity.currentIndex(), self.JRODOS_CODE_IDX).text()
             Utils.set_settings_value("measurements_last_quantity", quantity)
@@ -617,36 +577,35 @@ class JRodos:
             # make it UTC
             #end_date = end_date.toUTC()
 
-            #wfs_settings = WfsSettings()
-            wfs_settings = CalnetMeasurementsConfig()
+            measurements_settings = CalnetMeasurementsConfig()
             # TODO make these come from config
-            wfs_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
+            measurements_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
 
             if self.wps_settings is None:
                 project = "'measurements'"
                 path = "'=;=wfs=;=data'"
-                wfs_settings.output_dir = Utils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
+                measurements_settings.output_dir = Utils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
             else:
-                wfs_settings.output_dir = self.wps_settings.output_dir()
+                measurements_settings.output_dir = self.wps_settings.output_dir()
 
-            wfs_settings.page_size = self.settings.value('measurements_wfs_page_size')
-            wfs_settings.start_datetime = start_date.toString(wfs_settings.date_time_format)
-            wfs_settings.end_datetime = end_date.toString(wfs_settings.date_time_format)
-            wfs_settings.endminusstart = endminusstart
-            wfs_settings.quantity = quantity
-            wfs_settings.substance = substance
-            self.wfs_settings = wfs_settings
-            self.set_wfs_bbox()
-            self.wfs_start()
+            measurements_settings.page_size = self.settings.value('measurements_wfs_page_size')
+            measurements_settings.start_datetime = start_date.toString(measurements_settings.date_time_format)
+            measurements_settings.end_datetime = end_date.toString(measurements_settings.date_time_format)
+            measurements_settings.endminusstart = endminusstart
+            measurements_settings.quantity = quantity
+            measurements_settings.substance = substance
+            self.measurements_settings = measurements_settings
+            self.set_measurements_bbox()
+            self.start_measurements_provider()
 
-    def set_wfs_bbox(self):
+    def set_measurements_bbox(self):
             # bbox in epsg:4326
             crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
             crsTransform = QgsCoordinateTransform(crs_project, crs_4326)
             current_bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
-            # bbox for wfs request, based on current bbox of mapCanvas (OR model)
-            self.wfs_settings.bbox = "{},{},{},{}".format(
+            # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
+            self.measurements_settings.bbox = "{},{},{},{}".format(
                 current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
 
     def find_jrodos_layer(self, settings_object):
@@ -737,14 +696,14 @@ class JRodos:
 
     def load_measurements(self, output_dir, style_file):
         """
-        Fire a wfs request
+        Load the measurements from the output_dir (as gml files), load them in a layer, and style them with style_file
         :param output_dir:
         :param style_file:
         :return:
         """
 
-        # check if for current wfs_settings there is already a layer in the layer list
-        measurements_layer = self.find_jrodos_layer(self.wfs_settings)
+        # check if for current measurements_settings there is already a layer in the layer list
+        measurements_layer = self.find_jrodos_layer(self.measurements_settings)
         # IF there is no memory/measurements layer yet: create it
         if measurements_layer is None:
             # we do NOT want the default behaviour: prompting for a crs
@@ -756,13 +715,14 @@ class JRodos:
             oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
             s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
 
-            # create layer name based on self.wfs_settings
-            start_time = QDateTime.fromString(self.wfs_settings.start_datetime, self.wfs_settings.date_time_format)
-            end_time = QDateTime.fromString(self.wfs_settings.end_datetime, self.wfs_settings.date_time_format)
-            # layer_name = "T-GAMMA, A5, 17/6 23:01 - 20/6 11:01"
-            layer_name = self.wfs_settings.quantity + ", " + self.wfs_settings.substance + ", " + \
-                         start_time.toString(self.wfs_settings.date_time_format_short) + " - " + \
-                         end_time.toString(self.wfs_settings.date_time_format_short)
+            # create layer name based on self.measurements_settings
+            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+            # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
+            layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+                         self.measurements_settings.endminusstart + ", " + \
+                         start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+                         end_time.toString(self.measurements_settings.date_time_format_short)
             measurements_layer = QgsVectorLayer("point", layer_name, "memory")
             # fields = gml_layer.fields()
             # self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
@@ -790,8 +750,8 @@ class JRodos:
 
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
-            # self.jrodos_settings[measurements_layer] = deepcopy(self.wfs_settings)
-            self.jrodos_settings[measurements_layer] = self.wfs_settings
+            # self.jrodos_settings[measurements_layer] = deepcopy(self.measurements_settings)
+            self.jrodos_settings[measurements_layer] = self.measurements_settings
 
             # change back to default action of asking for crs or whatever the old behaviour was!
             s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)
@@ -800,7 +760,7 @@ class JRodos:
             measurements_layer.loadNamedStyle(
                 os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
         else:
-            # there is already a layer for this wfs_settings object, so apparently we got new data for it:
+            # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
             measurements_layer.startEditing()
             measurements_layer.selectAll()

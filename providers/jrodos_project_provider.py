@@ -26,8 +26,11 @@ class JRodosProjectProvider(ProviderBase):
         self.finished.emit(result)
         self.ready = True
 
-    def get_data(self):
-        request = QUrl(self.config.url)
+    def get_data(self, path=None):
+        if path is not None:
+            request = QUrl(self.config.url + path)
+        else:
+            request = QUrl(self.config.url)
         reply = self.network_manager.get(QNetworkRequest(request))
         reply.finished.connect(partial(self._data_retrieved, reply))
         # this part is needed to be sure we do not return immidiatly

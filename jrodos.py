@@ -39,6 +39,7 @@ from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
+from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
 
 
 # pycharm debugging
@@ -105,21 +106,21 @@ class JRodos:
         self.settings = JRodosSettings()
 
         # Create the dialog (after translation) and keep reference
-        self.dlg = JRodosDialog()
+        self.jrodosmodel_dlg = JRodosDialog()
         # add current models to dropdown
-        self.dlg.combo_project.addItems(self.JRODOS_PROJECTS)
-        # self.dlg.combo_model.currentText()
+        self.jrodosmodel_dlg.combo_project.addItems(self.JRODOS_PROJECTS)
+        # self.jrodosmodel_dlg.combo_model.currentText()
         # add current paths to dropdown
         # TODO from yaml or settings?
-        self.dlg.combo_path.addItems(self.JRODOS_PATHS)
-        self.dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
-        self.dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
+        self.jrodosmodel_dlg.combo_path.addItems(self.JRODOS_PATHS)
+        self.jrodosmodel_dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
+        self.jrodosmodel_dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
         utcdatetime = QDateTime(QDate(2016, 9, 13), QTime(8, 0))
-        self.dlg.dateTime_start.setDateTime(utcdatetime)
-        #self.dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
+        self.jrodosmodel_dlg.dateTime_start.setDateTime(utcdatetime)
+        #self.jrodosmodel_dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
         # TODO dev
-        self.dlg.combo_project.setCurrentIndex(0)
-        self.dlg.combo_steps.setCurrentIndex(1)
+        self.jrodosmodel_dlg.combo_project.setCurrentIndex(0)
+        self.jrodosmodel_dlg.combo_steps.setCurrentIndex(1)
 
         self.development = False
 
@@ -415,9 +416,9 @@ class JRodos:
             #     return
 
             # try to start wps
-            #self.show_jrodos_wps_dialog()
+            self.show_jrodos_wps_dialog()
             # try to start wfs (using wps-settings if available as self.wps_settings)
-            self.show_measurements_dialog()
+            #self.show_measurements_dialog()
 
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
@@ -428,6 +429,7 @@ class JRodos:
             raise
 
     def get_quantities_and_substances(self):
+        return  # temp, development
         config = CalnetMeasurementsUtilsConfig()
         config.url = self.settings.value('measurements_soap_utils_url') #'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
 
@@ -486,6 +488,95 @@ class JRodos:
         s_prov.finished.connect(s_prov_finished)
         s_prov.get_data('Substances')
 
+    def get_jrodos_projects(self):
+
+        config = JRodosProjectConfig()
+        #config.url = self.settings.value('jrodos_rest_url')
+        config.url = 'http://duif.net/projects.json' # DEV
+
+        prov = JRodosProjectProvider(config)
+
+        def prov_projects_finished(result):
+            if result.error():
+                self.msg(None,
+                         "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info")
+            else:
+                # Projects
+                # Replace the default ComboBox with our better ExtendedCombo
+                # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+                self.jrodosmodel_dlg.combo_project.close()  # this apparently also removes the widget??
+                self.jrodosmodel_dlg.combo_project = ExtendedCombo()
+                self.jrodosmodel_dlg.gridLayout.addWidget(self.jrodosmodel_dlg.combo_project, 0, 1, 1, 1)
+                self.projects_model = QStandardItemModel()
+
+                projects = result.data['content']
+                for project in projects:
+
+                    link = "NO LINK ?????"
+                    for l in project['links']:
+                        if l['rel'] == 'self':
+                            link = l['href']
+                            break
+
+                    #print project
+                    #print project['project']
+                    # print project['project']['username']
+                    # print project['project']['description']
+                    # print project['project']['projectId']
+                    # print project['project']['name']
+                    # print project['project']['modelchainname']
+                    # print project['project']['dateTimeCreatedString']
+                    # for key in project['project']:
+                    #     print "{}: {}".format(key, project['project'][key])
+                    #print link
+                    #print '------------------------------------------'
+                    id = unicode(project['project']['projectId'])
+                    # ROW = 0:'title' 1:'id' 2:'link'
+                    self.projects_model.appendRow([
+                        QStandardItem(id + ': ' + project['project']['name'] + ' nog iets? ' + link),
+                        QStandardItem(id),
+                        QStandardItem(link)])
+
+                self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
+                # get the last used project from the settings
+                last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
+                items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, 1)
+                if len(items) > 0:
+                    self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row()) # take first from result
+                    # get the data paths of that project and fill dropdown with it's data paths
+                    self.fill_data_path_combo(items[0].row())
+
+                # now connect the change of the project dropdown to a refresh of the data path
+                self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.fill_data_path_combo)
+
+        prov.finished.connect(prov_projects_finished)
+        #prov.get_data('/projects')
+        prov.get_data() # DEV
+
+    def fill_data_path_combo(self, projects_model_idx):
+
+        url = self.projects_model.item(projects_model_idx, 2).text()
+        self.msg(None, "{} {}".format(projects_model_idx, url))
+        config = JRodosProjectConfig()
+        config.url = url
+        prov = JRodosProjectProvider(config)
+        def prov_paths_finished(result):
+            if result.error():
+                self.msg(None,
+                         "Problem in JRodos plugin retrieving the JRodos datapaths for project\n{}. \nCheck the Log Message Panel for more info").format(url)
+            else:
+                data_items = result.data['project']['tasks'][0]['dataitems']
+                self.JRODOS_PATHS = []
+                self.jrodosmodel_dlg.combo_path.clear()
+                for data_item in data_items:
+                    print data_item['datapath']
+                    self.JRODOS_PATHS.append(data_item['datapath'])
+                # TODO use the other extended compo
+                self.jrodosmodel_dlg.combo_path.addItems(self.JRODOS_PATHS)
+
+
+        prov.finished.connect(prov_paths_finished)
+        prov.get_data()
 
     def msg(self, parent=None, msg=""):
         if parent is None:
@@ -508,20 +599,26 @@ class JRodos:
             self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
             return
 
-        self.dlg.show()
-        if self.dlg.exec_():  # OK was pressed
+        # try to get fresh jrodos projects, BUT put 'remembered' values in the dialog
+        self.get_jrodos_projects()
+
+        self.jrodosmodel_dlg.show()
+        if self.jrodosmodel_dlg.exec_():  # OK was pressed
             wps_settings = WpsSettings()
             # TODO: get these from ?? dialog?? settings??
             wps_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
             wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-            wps_settings.jrodos_project = self.dlg.combo_project.itemText(self.dlg.combo_project.currentIndex())
-            wps_settings.jrodos_path = self.dlg.combo_path.itemText(self.dlg.combo_path.currentIndex())
-            wps_settings.jrodos_model_step = self.dlg.combo_steps.itemText(self.dlg.combo_steps.currentIndex())  # steptime (minutes)
-            wps_settings.jrodos_model_time = self.dlg.combo_model_length.itemText(self.dlg.combo_model_length.currentIndex()) # modeltime (hours)
+            wps_settings.jrodos_project = self.jrodosmodel_dlg.combo_project.itemText(self.jrodosmodel_dlg.combo_project.currentIndex())
+            # selected project + save to QSettings
+            last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), 1).text()
+            Utils.set_settings_value("jrodos_last_model_project", last_used_project)
+            wps_settings.jrodos_path = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
+            wps_settings.jrodos_model_step = self.jrodosmodel_dlg.combo_steps.itemText(self.jrodosmodel_dlg.combo_steps.currentIndex())  # steptime (minutes)
+            wps_settings.jrodos_model_time = self.jrodosmodel_dlg.combo_model_length.itemText(self.jrodosmodel_dlg.combo_model_length.currentIndex()) # modeltime (hours)
             # vertical is fixed to 0 now
             wps_settings.jrodos_verticals = 0  # z / layers
-            wps_settings.jrodos_datetime_start = self.dlg.dateTime_start.dateTime()
+            wps_settings.jrodos_datetime_start = self.jrodosmodel_dlg.dateTime_start.dateTime()
             self.wps_settings = wps_settings
             self.wps_start()
 

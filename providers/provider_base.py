@@ -100,12 +100,16 @@ class ProviderResult:
             return "UnknownError"
         elif network_error == 3:
             return "HostNotFoundError"
+        elif network_error == 4:
+            return "TimeoutError"
         elif network_error == 5:
             return "OperationCanceledError"
         elif network_error == 203:
-            return "ContentNotFoundError (404)"
+            return "ContentNotFoundError (server returned 404)"
+        elif network_error == 299:
+            return "UnknownContentError (server returned 500)"
         else:
-            raise TypeError("New NetworkError")
+            raise TypeError("New NetworkError: {} ?".format(network_error))
 
 
 class ProviderBase(QObject):

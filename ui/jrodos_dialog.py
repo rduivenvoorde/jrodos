@@ -22,6 +22,7 @@
 """
 
 import os
+from extended_combo import ExtendedCombo
 
 from PyQt4 import QtGui, uic
 
@@ -39,3 +40,12 @@ class JRodosDialog(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+
+        # Replace the default ComboBox's with our better ExtendedCombo widget
+        self.combo_project.close()  # this apparently also removes the widget??
+        self.combo_project = ExtendedCombo()
+        self.gridLayout.addWidget(self.combo_project, 0, 1, 1, 1)
+
+        self.combo_path.close()  # this apparently also removes the widget??
+        self.combo_path = ExtendedCombo()
+        self.gridLayout.addWidget(self.combo_path, 1, 1, 1, 1)

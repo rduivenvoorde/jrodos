@@ -240,6 +240,10 @@ class WpsDataWorker(QObject):
                 f.write(unicode(self.settings))
 
             for column in range(0, self.settings.jrodos_columns()):
+
+                # NOTE 1 !!! 'project' parameter surrounded by single quotes in this request ??????
+                # NOTE 2 !!! 'path' parameter surrounded by single quotes in this request ??????
+
                 request = """<?xml version="1.0" encoding="UTF-8"?>
                         <wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                           xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs"
@@ -252,13 +256,13 @@ class WpsDataWorker(QObject):
                             <wps:Input>
                               <ows:Identifier>taskArg</ows:Identifier>
                               <wps:Data>
-                                <wps:LiteralData>project="{project}"</wps:LiteralData>
+                                <wps:LiteralData>project="'{project}'"</wps:LiteralData>
                               </wps:Data>
                             </wps:Input>
                             <wps:Input>
                               <ows:Identifier>dataitem</ows:Identifier>
                               <wps:Data>
-                                <wps:LiteralData>path="{path}"</wps:LiteralData>
+                                <wps:LiteralData>path="'{path}'"</wps:LiteralData>
                               </wps:Data>
                             </wps:Input>
                             <wps:Input>

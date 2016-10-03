@@ -87,20 +87,13 @@ class JRodos:
         self.JRODOS_DESCRIPTION_IDX = 0
         self.JRODOS_CODE_IDX = 1
 
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'"  # 1
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135'" # 24
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=Cs-137'" # 24
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=I -135'" # 24
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137'"  # 24
-        # jrodos_path="'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
-        self.JRODOS_PATHS = [
-            "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'",
-            "'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'",
-            "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135'",
-            "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=Cs-137'",
-            "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=I -135'",
-            "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137'"
-        ]
+        # 'standard' column indexes for QStandardModels:
+        self.QMODEL_ID_IDX          = 0 # IF the QStandardModel has a true ID make it column 0 (else double NAME as 0)
+        self.QMODEL_NAME_IDX        = 1 # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
+        self.QMODEL_DESCRIPTION_IDX = 2 # IF the QStandardModel has a description (eg used in dropdowns)
+        self.QMODEL_DATA_IDX        = 3 # IF the QStandardModel has other data
+        self.QMODEL_SEARCH_IDX      = 4 # IF the QStandardModel has a special SEARCH column (optional for tables)
+
         self.JRODOS_STEP_MINUTES = ['10', '30', '60'] # as in JRodos
 
         self.settings = JRodosSettings()
@@ -111,14 +104,15 @@ class JRodos:
         self.jrodosmodel_dlg.combo_project.addItems(self.JRODOS_PROJECTS)
         # self.jrodosmodel_dlg.combo_model.currentText()
         # add current paths to dropdown
-        # TODO from yaml or settings?
-        self.jrodosmodel_dlg.combo_path.addItems(self.JRODOS_PATHS)
         self.jrodosmodel_dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
         self.jrodosmodel_dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
         utcdatetime = QDateTime(QDate(2016, 9, 13), QTime(8, 0))
         self.jrodosmodel_dlg.dateTime_start.setDateTime(utcdatetime)
         #self.jrodosmodel_dlg.dateTime_start.setDateTime(QDateTime(QDate(2016, 05, 17), QTime(6, 0)))
         # TODO dev
+        # QAbstractItems model for the datapaths in the JRodos dialog
+        self.jrodos_paths_model = None
+
         self.jrodosmodel_dlg.combo_project.setCurrentIndex(0)
         self.jrodosmodel_dlg.combo_steps.setCurrentIndex(1)
 
@@ -385,6 +379,22 @@ class JRodos:
             self.measurements_progress_bar.setMaximum(100)
             self.wps_progress(0)
 
+    def setProjectionsBehaviour(self):
+        # we do NOT want the default behaviour: prompting for a crs
+        # we want to set it to epsg:4326, see
+        # http://gis.stackexchange.com/questions/27745/how-can-i-specify-the-crs-of-a-raster-layer-in-pyqgis
+        s = QSettings()
+        self.oldCrsBehaviour = s.value("/Projections/defaultBehaviour", "useGlobal")
+        s.setValue("/Projections/defaultBehaviour", "useGlobal")
+        self.oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
+        s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
+
+    def unsetProjectionsBehaviour(self):
+        # change back to default action of asking for crs or whatever the old behaviour was!
+        s = QSettings()
+        s.setValue("/Projections/defaultBehaviour", self.oldCrsBehaviour)
+        s.setValue("/Projections/layerDefaultCrs", self.oldCrs)
+
     def run(self):
         # we REALLY need OTF enabled
         if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
@@ -393,7 +403,7 @@ class JRodos:
                 "Please enable OTF for this project or open a project with OTF enabled."),
                                 QMessageBox.Ok, QMessageBox.Ok)
             return
-
+        self.setProjectionsBehaviour()
         try:
             # we try to retrieve the quantities and substances just once, but not earlier then a user actually
             # starts using the plugin (that is call this run)...
@@ -420,16 +430,15 @@ class JRodos:
             # try to start wfs (using wps-settings if available as self.wps_settings)
             #self.show_measurements_dialog()
 
-        except JRodosError as jre:
-            self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
-            return
-
+        # except JRodosError as jre:
+        #     self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
+        #     return
         except Exception as e:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
             raise
 
     def get_quantities_and_substances(self):
-        return  # temp, development
+        return  # DEV
         config = CalnetMeasurementsUtilsConfig()
         config.url = self.settings.value('measurements_soap_utils_url') #'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
 
@@ -442,18 +451,20 @@ class JRodos:
             else:
                 # QUANTITIES
                 self.quantities = result.data
+
                 # Replace the default ComboBox with our better ExtendedCombo
                 # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
                 self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
                 self.measurements_dlg.combo_quantity = ExtendedCombo()
                 self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
+
                 self.quantities_model = QStandardItemModel()
                 for q in self.quantities:
                     self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
                 self.measurements_dlg.combo_quantity.setModel(self.quantities_model)
 
-                lastused_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
-                items = self.quantities_model.findItems(lastused_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                last_used_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
+                items = self.quantities_model.findItems(last_used_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
                 if len(items) > 0:
                     self.measurements_dlg.combo_quantity.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
 
@@ -480,8 +491,8 @@ class JRodos:
                     self.substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
                 self.measurements_dlg.combo_substance.setModel(self.substances_model)
 
-                lastused_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
-                items = self.substances_model.findItems(lastused_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
+                last_used_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
+                items = self.substances_model.findItems(last_used_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
                 if len(items) > 0:
                     self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
 
@@ -491,24 +502,16 @@ class JRodos:
     def get_jrodos_projects(self):
 
         config = JRodosProjectConfig()
-        #config.url = self.settings.value('jrodos_rest_url')
-        config.url = 'http://duif.net/projects.json' # DEV
-
+        config.url = self.settings.value('jrodos_rest_url')
+        #config.url = 'http://duif.net/projects.json' # DEV
         prov = JRodosProjectProvider(config)
-
         def prov_projects_finished(result):
             if result.error():
                 self.msg(None,
                          "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info")
             else:
                 # Projects
-                # Replace the default ComboBox with our better ExtendedCombo
-                # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-                self.jrodosmodel_dlg.combo_project.close()  # this apparently also removes the widget??
-                self.jrodosmodel_dlg.combo_project = ExtendedCombo()
-                self.jrodosmodel_dlg.gridLayout.addWidget(self.jrodosmodel_dlg.combo_project, 0, 1, 1, 1)
                 self.projects_model = QStandardItemModel()
-
                 projects = result.data['content']
                 for project in projects:
 
@@ -531,16 +534,18 @@ class JRodos:
                     #print link
                     #print '------------------------------------------'
                     id = unicode(project['project']['projectId'])
-                    # ROW = 0:'title' 1:'id' 2:'link'
+                    name = project['project']['name']
                     self.projects_model.appendRow([
-                        QStandardItem(id + ': ' + project['project']['name'] + ' nog iets? ' + link),
-                        QStandardItem(id),
-                        QStandardItem(link)])
+                        QStandardItem(id),                                                      # self.QMODEL_ID_IDX = 0
+                        QStandardItem(project['project']['name']),                              # self.QMODEL_NAME_IDX = 1
+                        QStandardItem(id + ' - ' + project['project']['name'] + ' - ' + link),   # self.QMODEL_DESCRIPTION_IDX = 2
+                        QStandardItem(link)])                                                   # self.QMODEL_DATA_IDX = 3
 
                 self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
+                self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
                 # get the last used project from the settings
                 last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
-                items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, 1)
+                items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
                 if len(items) > 0:
                     self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row()) # take first from result
                     # get the data paths of that project and fill dropdown with it's data paths
@@ -550,30 +555,50 @@ class JRodos:
                 self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.fill_data_path_combo)
 
         prov.finished.connect(prov_projects_finished)
-        #prov.get_data('/projects')
-        prov.get_data() # DEV
+        prov.get_data('/jrodos//projects')
+        #prov.get_data() # DEV
 
     def fill_data_path_combo(self, projects_model_idx):
-
-        url = self.projects_model.item(projects_model_idx, 2).text()
-        self.msg(None, "{} {}".format(projects_model_idx, url))
+        # temporary text in the combo
+        self.jrodosmodel_dlg.combo_path.clear()
+        self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project paths...")])
+        url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
+        #self.msg(None, "{} {}".format(projects_model_idx, url))
         config = JRodosProjectConfig()
         config.url = url
         prov = JRodosProjectProvider(config)
         def prov_paths_finished(result):
-            if result.error():
-                self.msg(None,
-                         "Problem in JRodos plugin retrieving the JRodos datapaths for project\n{}. \nCheck the Log Message Panel for more info").format(url)
-            else:
-                data_items = result.data['project']['tasks'][0]['dataitems']
-                self.JRODOS_PATHS = []
-                self.jrodosmodel_dlg.combo_path.clear()
-                for data_item in data_items:
-                    print data_item['datapath']
-                    self.JRODOS_PATHS.append(data_item['datapath'])
-                # TODO use the other extended compo
-                self.jrodosmodel_dlg.combo_path.addItems(self.JRODOS_PATHS)
 
+            # DEV
+            self.jrodosmodel_dlg.combo_path.clear()
+            jrodos_project_paths = [
+                "Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective",
+                "Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time",
+                "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135",
+                "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=Cs-137",
+                "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=I -135",
+                "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137"
+            ]
+            self.jrodosmodel_dlg.combo_path.addItems(jrodos_project_paths)
+            return
+
+            # if result.error():
+            #     self.msg(None,
+            #         "Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n".format(result.url) +
+            #         "Check the Log Message Panel for more info")
+            # else:
+            #     self.jrodos_paths_model = QStandardItemModel()  # TODO: should this declared only once?
+            #     data_items = result.data['project']['tasks'][0]['dataitems']
+            #     for data_item in data_items:
+            #         #print data_item['datapath']
+            #         #jrodos_project_paths.append(data_item['datapath'])
+            #         self.jrodos_paths_model.appendRow([QStandardItem(data_item['datapath'])])
+            #     self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_paths_model)
+            #     # set last used datapath or nothing if this project does not have this datapath
+            #     last_used_datapath = Utils.get_settings_value("jrodos_last_model_datapath", "")
+            #     items = self.jrodos_paths_model.findItems(last_used_datapath, Qt.MatchExactly, 0)
+            #     if len(items) > 0:
+            #         self.jrodosmodel_dlg.combo_path.setCurrentIndex(items[0].row())
 
         prov.finished.connect(prov_paths_finished)
         prov.get_data()
@@ -599,26 +624,33 @@ class JRodos:
             self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
             return
 
-        # try to get fresh jrodos projects, BUT put 'remembered' values in the dialog
+        self.jrodosmodel_dlg.show()
+
+        # try to get fresh jrodos projects, AND put 'remembered' values in the dialog
         self.get_jrodos_projects()
 
-        self.jrodosmodel_dlg.show()
         if self.jrodosmodel_dlg.exec_():  # OK was pressed
             wps_settings = WpsSettings()
             # TODO: get these from ?? dialog?? settings??
             wps_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
             wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-            wps_settings.jrodos_project = self.jrodosmodel_dlg.combo_project.itemText(self.jrodosmodel_dlg.combo_project.currentIndex())
-            # selected project + save to QSettings
-            last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), 1).text()
+            # selected project + save the project id (model col 1) to QSettings
+            wps_settings.jrodos_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()
+            # for storing in settings we do not use the non unique name, but the if of the project
+            last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
+            #self.msg(None, "last_used_project: " + last_used_project)
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
             wps_settings.jrodos_path = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
+            last_used_datapath = wps_settings.jrodos_path
+            #self.msg(None, last_used_datapath)
+            Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
             wps_settings.jrodos_model_step = self.jrodosmodel_dlg.combo_steps.itemText(self.jrodosmodel_dlg.combo_steps.currentIndex())  # steptime (minutes)
             wps_settings.jrodos_model_time = self.jrodosmodel_dlg.combo_model_length.itemText(self.jrodosmodel_dlg.combo_model_length.currentIndex()) # modeltime (hours)
             # vertical is fixed to 0 now
             wps_settings.jrodos_verticals = 0  # z / layers
             wps_settings.jrodos_datetime_start = self.jrodosmodel_dlg.dateTime_start.dateTime()
+
             self.wps_settings = wps_settings
             self.wps_start()
 
@@ -803,15 +835,6 @@ class JRodos:
         measurements_layer = self.find_jrodos_layer(self.measurements_settings)
         # IF there is no memory/measurements layer yet: create it
         if measurements_layer is None:
-            # we do NOT want the default behaviour: prompting for a crs
-            # we want to set it to epsg:4326, see
-            # http://gis.stackexchange.com/questions/27745/how-can-i-specify-the-crs-of-a-raster-layer-in-pyqgis
-            s = QSettings()
-            oldCrsBehaviour = s.value("/Projections/defaultBehaviour", "useGlobal")
-            s.setValue("/Projections/defaultBehaviour", "useGlobal")
-            oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
-            s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
-
             # create layer name based on self.measurements_settings
             start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
             end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
@@ -849,10 +872,6 @@ class JRodos:
             # IF we want to be able to load a layer several times based on the same settings
             # self.jrodos_settings[measurements_layer] = deepcopy(self.measurements_settings)
             self.jrodos_settings[measurements_layer] = self.measurements_settings
-
-            # change back to default action of asking for crs or whatever the old behaviour was!
-            s.setValue("/Projections/defaultBehaviour", oldCrsBehaviour)
-            s.setValue("/Projections/layerDefaultCrs", oldCrs)
 
             measurements_layer.loadNamedStyle(
                 os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!

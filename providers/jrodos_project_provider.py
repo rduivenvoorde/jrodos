@@ -19,7 +19,7 @@ class JRodosProjectProvider(ProviderBase):
     def _data_retrieved(self, reply):
         result = ProviderResult()
         if reply.error():
-            result.set_error(reply.error(), reply.request().url(), 'JRodos project provider (rest)')
+            result.set_error(reply.error(), reply.request().url().toString(), 'JRodos project provider (REST)')
         else:
             content = unicode(reply.readAll())
             result._data = json.loads(content)

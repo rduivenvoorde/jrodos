@@ -3,7 +3,7 @@
 /***************************************************************************
  JRodos
                                  A QGIS plugin
- Plugin to connect to JRodos via WPS
+ Plugin to connect to JRodos via WPS and Retrieve measurements via WFS
                               -------------------
         begin                : 2016-04-18
         git sha              : $Format:%H$
@@ -20,26 +20,26 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QThread, QDate, QTime, Qt
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QDate, QTime, Qt
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem
 import resources
-# Import the code for the dialog
-from qgis.gui import QgsMessageBar
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
-    QgsCoordinateTransform, QgsGeometry, QgsMessageLog
+    QgsCoordinateTransform, QgsMessageLog
 from qgis.utils import qgsfunction, QgsExpression
 from glob import glob
-import os.path, json
+import os.path
+import json
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from jrodos_settings import JRodosSettings
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
+from jrodos_settings import JRodosSettings
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
 from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
 from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider
+from providers.utils import Utils as ProviderUtils
 
 
 # pycharm debugging
@@ -85,7 +85,7 @@ class JRodos:
         self.MSG_TITLE = self.tr("JRodos Plugin")
 
         # NOTE !!! project names surrounded by single quotes ??????
-        self.JRODOS_PROJECTS = ["'wps-13sept-test'"]
+        self.JRODOS_PROJECTS = ["wps-13sept-test"]
 
         self.JRODOS_MODEL_LENGTH_HOURS = ['48', '24', '12', '6', '3']
 
@@ -128,24 +128,24 @@ class JRodos:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&JRodos')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'JRodos')
         self.toolbar.setObjectName(u'JRodos')
-        self.wps_progress_bar = None
+
+        self.jrodos_output_progress_bar = None
+        self.jrodos_output_settings = None
+
+        # dialog for measurements
+        self.measurements_dlg = None
         self.measurements_progress_bar = None
-
-        self.wps_settings = None
         self.measurements_settings = None
-        self.wps_thread = None
-
+        self.measurements_provider = None
+        # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
 
         # creating a dict for a layer <-> settings mapping
         self.jrodos_settings = {}
 
-        # dialog for measurements
-        self.measurements_dlg = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -257,18 +257,18 @@ class JRodos:
         progress_bar_width = 100
 
         self.BAR_LOADING_TITLE = self.tr('Loading data...')
-        self.JRODOS_BAR_TITLE = self.tr('Jrodos Model')
-        if self.wps_progress_bar is None:
-            self.wps_progress_bar = QProgressBar()
-            self.wps_progress_bar.setToolTip("Model data (WPS)")
-            self.wps_progress_bar.setTextVisible(True)
-            self.wps_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
-            self.wps_progress_bar.setMinimum(0)
-            self.wps_progress_bar.setMaximum(100)  # we will use a 'infinite progress bar' by setting max to zero when busy
-            self.wps_progress_bar.setValue(0)
-            self.wps_progress_bar.setFixedWidth(progress_bar_width)
-            self.wps_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.toolbar.addWidget(self.wps_progress_bar)
+        self.JRODOS_BAR_TITLE = self.tr('JRodos Model')
+        if self.jrodos_output_progress_bar is None:
+            self.jrodos_output_progress_bar = QProgressBar()
+            self.jrodos_output_progress_bar.setToolTip("Model data (WPS)")
+            self.jrodos_output_progress_bar.setTextVisible(True)
+            self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
+            self.jrodos_output_progress_bar.setMinimum(0)
+            self.jrodos_output_progress_bar.setMaximum(100)  # we will use a 'infinite progress bar' by setting max to zero when busy
+            self.jrodos_output_progress_bar.setValue(0)
+            self.jrodos_output_progress_bar.setFixedWidth(progress_bar_width)
+            self.jrodos_output_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.toolbar.addWidget(self.jrodos_output_progress_bar)
 
         self.MEASUREMENTS_BAR_TITLE = self.tr('Meaurements')
         if self.measurements_progress_bar is None:
@@ -301,7 +301,7 @@ class JRodos:
                 action)
             self.iface.removeToolBarIcon(action)
         # remove progress bars
-        del self.wps_progress_bar
+        del self.jrodos_output_progress_bar
         del self.measurements_progress_bar
         # remove the toolbar
         del self.toolbar
@@ -341,10 +341,8 @@ class JRodos:
             #         self.msg(None, settings)
             #     return
 
-            # try to start wps
-            self.show_jrodos_wps_dialog()
+            self.show_jrodos_output_dialog()
 
-            # try to start wfs (using wps-settings if available as self.wps_settings)
             self.show_measurements_dialog()
 
         except JRodosError as jre:
@@ -353,38 +351,6 @@ class JRodos:
         except Exception as e:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
             raise
-
-    def start_measurements_provider(self):
-        self.measurements_progress_bar.setMaximum(0)
-        prov = CalnetMeasurementsProvider(self.measurements_settings)
-        prov.finished.connect(self.finish_measurements_provider)
-        prov.get_data()
-        while not prov.is_finished():
-            QCoreApplication.processEvents()
-
-    def finish_measurements_provider(self, result):
-        self.info(result)
-        self.measurements_progress_bar.setMaximum(100)
-        self.measurements_progress_bar.setFormat(self.BAR_LOADING_TITLE)
-        QCoreApplication.processEvents() # to be sure we have the loading msg
-        # WFS response can take a long time. Time out is handled by QGIS-network settings time out
-        # so IF error_code = 5 (http://doc.qt.io/qt-4.8/qnetworkreply.html#NetworkError-enum)
-        # provide the user feed back to rise the timeout value
-        if result.error_code == 5:
-            self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
-        elif result.error():
-            self.msg(None, result.error_code)
-            self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
-        else:
-            # self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
-            # Load the received gml files
-            # TODO: determine qml file based on something coming from the settings/result object
-            if result.data is not None and result.data['count'] > 0:
-                self.load_measurements(result.data['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
-            else:
-                self.msg(None, "No Measurements data? {}".format(result.data))
-        self.measurements_settings = None
-        self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
     def setProjectionsBehaviour(self):
         # we do NOT want the default behaviour: prompting for a crs
@@ -581,16 +547,17 @@ class JRodos:
     def info(self, msg=""):
         QgsMessageLog.logMessage(str(msg), self.MSG_TITLE, QgsMessageLog.INFO)
 
-    def show_jrodos_wps_dialog(self, wps_settings=None):
+    def show_jrodos_output_dialog(self, jrodos_output_settings=None):
         # TODO ?? init dialog based on older values
 
-        if wps_settings is not None:
-            self.wps_settings = wps_settings
-            self.wps_start()
+        if jrodos_output_settings is not None:
+            self.jrodos_output_settings = jrodos_output_settings
+            #TODO: (re)start the provider?
+            self.msg(None, "REstarting provider?")
             return
 
         # WPS / MODEL PART
-        if self.wps_settings is not None:
+        if self.jrodos_output_settings is not None:
             self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
             return
 
@@ -600,37 +567,42 @@ class JRodos:
         self.get_jrodos_projects()
 
         if self.jrodosmodel_dlg.exec_():  # OK was pressed
-            wps_settings = JRodosModelOutputConfig()
+            jrodos_output_settings = JRodosModelOutputConfig()
             # TODO: get these from ?? dialog?? settings??
-            wps_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
+            jrodos_output_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
-            wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
+            jrodos_output_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             # selected project + save the project id (model col 1) to QSettings
-            wps_settings.jrodos_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()
+            jrodos_output_settings.jrodos_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()
             # for storing in settings we do not use the non unique name, but the if of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             #self.msg(None, "last_used_project: " + last_used_project)
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
-            wps_settings.jrodos_path = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
-            last_used_datapath = wps_settings.jrodos_path
+            jrodos_output_settings.jrodos_path = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
+            last_used_datapath = jrodos_output_settings.jrodos_path
             #self.msg(None, last_used_datapath)
             Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
-            wps_settings.jrodos_model_step = self.jrodosmodel_dlg.combo_steps.itemText(self.jrodosmodel_dlg.combo_steps.currentIndex())  # steptime (minutes)
-            wps_settings.jrodos_model_time = self.jrodosmodel_dlg.combo_model_length.itemText(self.jrodosmodel_dlg.combo_model_length.currentIndex()) # modeltime (hours)
+            jrodos_output_settings.jrodos_model_step = self.jrodosmodel_dlg.combo_steps.itemText(self.jrodosmodel_dlg.combo_steps.currentIndex())  # steptime (minutes)
+            jrodos_output_settings.jrodos_model_time = self.jrodosmodel_dlg.combo_model_length.itemText(self.jrodosmodel_dlg.combo_model_length.currentIndex()) # modeltime (hours)
             # vertical is fixed to 0 now
-            wps_settings.jrodos_verticals = 0  # z / layers
-            wps_settings.jrodos_datetime_start = self.jrodosmodel_dlg.dateTime_start.dateTime()
+            jrodos_output_settings.jrodos_verticals = 0  # z / layers
+            jrodos_output_settings.jrodos_datetime_start = self.jrodosmodel_dlg.dateTime_start.dateTime()
+            self.jrodos_output_settings = jrodos_output_settings
+            self.start_jrodos_model_output_provider()
 
-            self.wps_progress_bar.setMaximum(0)
-            self.wps_settings = wps_settings
-            prov = JRodosModelOutputProvider(self.wps_settings)
-            prov.finished.connect(self.finish_jrodos_model_output_provider)
-            prov.get_data()
+    def start_jrodos_model_output_provider(self):
+        self.jrodos_output_progress_bar.setMaximum(0)
+        self.jrodos_output_settings = self.jrodos_output_settings
+        self.jrodos_output_provider = JRodosModelOutputProvider(self.jrodos_output_settings)
+        self.jrodos_output_provider.finished.connect(self.finish_jrodos_model_output_provider)
+        self.jrodos_output_provider.get_data()
+        # while not jrodos_output_provider.is_finished():
+        #     QCoreApplication.processEvents()
 
     def finish_jrodos_model_output_provider(self, result):
         self.info(result)
-        self.wps_progress_bar.setMaximum(100)
-        self.wps_progress_bar.setFormat(self.BAR_LOADING_TITLE)
+        self.jrodos_output_progress_bar.setMaximum(100)
+        self.jrodos_output_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents() # to be sure we have the loading msg
         if result.error():
             self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
@@ -641,8 +613,8 @@ class JRodos:
                 self.load_shapes(result.data['output_dir'], 'totalpotentialdoseeffective.qml')
             else:
                 self.msg(None, "No Jrodos Model Output data? {}".format(result.data))
-        self.wps_settings = None
-        self.wps_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
+        self.jrodos_output_settings = None
+        self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
 
     def show_measurements_dialog(self, measurements_settings=None):
@@ -662,9 +634,9 @@ class JRodos:
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
         # INIT dialog based on earlier wps dialog
-        if self.wps_settings is not None:
-            start_time = self.wps_settings.jrodos_datetime_start
-            end_time = start_time.addSecs(60 * 60 * int(self.wps_settings.jrodos_model_time)) # model time
+        if self.jrodos_output_settings is not None:
+            start_time = self.jrodos_output_settings.jrodos_datetime_start
+            end_time = start_time.addSecs(60 * 60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
 
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
@@ -701,12 +673,12 @@ class JRodos:
             # TODO make these come from config
             measurements_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
 
-            if self.wps_settings is None:
+            if self.jrodos_output_settings is None:
                 project = "'measurements'"
                 path = "'=;=wfs=;=data'"
-                measurements_settings.output_dir = Utils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
+                measurements_settings.output_dir = ProviderUtils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
             else:
-                measurements_settings.output_dir = self.wps_settings.output_dir
+                measurements_settings.output_dir = self.jrodos_output_settings.output_dir
 
             measurements_settings.page_size = self.settings.value('measurements_wfs_page_size')
             measurements_settings.start_datetime = start_date.toString(measurements_settings.date_time_format)
@@ -717,6 +689,38 @@ class JRodos:
             self.measurements_settings = measurements_settings
             self.set_measurements_bbox()
             self.start_measurements_provider()
+
+    def start_measurements_provider(self):
+        self.measurements_progress_bar.setMaximum(0)
+        self.measurements_provider = CalnetMeasurementsProvider(self.measurements_settings)
+        self.measurements_provider.finished.connect(self.finish_measurements_provider)
+        self.measurements_provider.get_data()
+        while not self.measurements_provider.is_finished():
+            QCoreApplication.processEvents()
+
+    def finish_measurements_provider(self, result):
+        self.info(result)
+        self.measurements_progress_bar.setMaximum(100)
+        self.measurements_progress_bar.setFormat(self.BAR_LOADING_TITLE)
+        QCoreApplication.processEvents() # to be sure we have the loading msg
+        # WFS response can take a long time. Time out is handled by QGIS-network settings time out
+        # so IF error_code = 5 (http://doc.qt.io/qt-4.8/qnetworkreply.html#NetworkError-enum)
+        # provide the user feed back to rise the timeout value
+        if result.error_code == 5:
+            self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
+        elif result.error():
+            self.msg(None, result.error_code)
+            self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
+        else:
+            # self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
+            # Load the received gml files
+            # TODO: determine qml file based on something coming from the settings/result object
+            if result.data is not None and result.data['count'] > 0:
+                self.load_measurements(result.data['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
+            else:
+                self.msg(None, "No Measurements data? {}".format(result.data))
+        self.measurements_settings = None
+        self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
     def set_measurements_bbox(self):
             # bbox in epsg:4326
@@ -787,12 +791,12 @@ class JRodos:
                 features = vlayer.getFeatures()
 
                 step = int(shpfile.split('_')[0])
-                tstamp = QDateTime(self.wps_settings.jrodos_datetime_start)
+                tstamp = QDateTime(self.jrodos_output_settings.jrodos_datetime_start)
                 # every zip get's a column with a timestamp based on the 'step/column' from the model
                 # so 0_0.zip is column 0, vertical 0
                 # BUT column 0 is from the first model step!!
                 # SO WE HAVE TO ADD ONE STEP OF SECONDS TO THE TSTAMP (step+1+
-                tstamp = tstamp.addSecs(60*(step+1)*int(self.wps_settings.jrodos_model_step))
+                tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
                 tstamp = tstamp.toString("yyyy-MM-dd HH:mm")
                 for feature in features:
                     # only features with Value > 0, to speed up QGIS
@@ -812,7 +816,7 @@ class JRodos:
             self.iface.mapCanvas().refresh()
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
-            self.jrodos_settings[vector_layer] = deepcopy(self.wps_settings)
+            self.jrodos_settings[vector_layer] = deepcopy(self.jrodos_output_settings)
 
     def load_measurements(self, output_dir, style_file):
         """

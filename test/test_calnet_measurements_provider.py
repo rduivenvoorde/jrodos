@@ -13,7 +13,7 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
 
         self.config = CalnetMeasurementsConfig()
         self.config.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
-        # we have always an wps_settings.output_dir here:
+        # we have always an jrodos_output_settings.output_dir here:
         self.config.output_dir = Utils.jrodos_dirname('test_WFS_Meaurements', "", datetime.now().strftime("%Y%m%d%H%M%S"))
         self.config.page_size = 10000  # 10000
         self.config.quantity = 'T-GAMMA'

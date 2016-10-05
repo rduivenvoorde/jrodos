@@ -107,7 +107,7 @@ class JRodosModelOutputProvider(ProviderBase):
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(reply.readAll())
 
-        # note self.column will live long enough to be used here
+        # note self.column will live long enough to be used here?
         self.column += 1
         if self.column < self.config.jrodos_columns:
             self.get_data()
@@ -119,10 +119,9 @@ class JRodosModelOutputProvider(ProviderBase):
             self.finished.emit(result)
 
     def get_data(self):
-
         if self.column == 0:
             # write settings to file in output dir to be able to do some checking
-            wps_settings_file = self.config.output_dir + '/wps_settings.txt'
+            wps_settings_file = self.config.output_dir + '/jrodos_output_settings.txt'
             with open(wps_settings_file, 'wb') as f:
                 f.write(unicode(self.config))
 

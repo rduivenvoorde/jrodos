@@ -24,7 +24,7 @@ from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVa
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem
 import resources
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
-    QgsCoordinateTransform, QgsMessageLog
+    QgsCoordinateTransform, QgsMessageLog, QgsProject
 from qgis.utils import qgsfunction, QgsExpression
 from glob import glob
 import os.path
@@ -145,6 +145,8 @@ class JRodos:
 
         # creating a dict for a layer <-> settings mapping
         self.jrodos_settings = {}
+
+        self.layer_group = None
 
 
     # noinspection PyMethodMayBeStatic
@@ -341,8 +343,9 @@ class JRodos:
             #         self.msg(None, settings)
             #     return
 
+            # create a group always on TOP == 0
+            self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('Data group'))
             self.show_jrodos_output_dialog()
-
             self.show_measurements_dialog()
 
         except JRodosError as jre:
@@ -610,7 +613,7 @@ class JRodos:
             # Load the received shp-zip files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None:
-                self.load_shapes(result.data['output_dir'], 'totalpotentialdoseeffective.qml')
+                self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml')
             else:
                 self.msg(None, "No Jrodos Model Output data? {}".format(result.data))
         self.jrodos_output_settings = None
@@ -741,7 +744,7 @@ class JRodos:
     # now, open all shapefiles one by one, s from 0 till x
     # starting with a startdate 20160101000000 t
     # add an attribute 'time' and set it to t+s
-    def load_shapes(self, shape_dir, style_file):
+    def load_jrodos_output(self, shape_dir, style_file):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
         from given shape_dir.
@@ -760,16 +763,19 @@ class JRodos:
         # TODO: epsg:32631
         # http: // docs.qgis.org / testing / en / docs / pyqgis_developer_cookbook / vector.html  # writing-vector-layers
         # create layer
-        vector_layer = QgsVectorLayer("Polygon", "Model", "memory")
-        pr = vector_layer.dataProvider()
+        jrodos_datapath = self.jrodos_output_settings.jrodos_path
+        jrodos_output_layer = QgsVectorLayer("Polygon", jrodos_datapath, "memory")
+        pr = jrodos_output_layer.dataProvider()
         # add fields
         pr.addAttributes([QgsField("Datetime", QVariant.String),
                           QgsField("Cell", QVariant.Int),
                           QgsField("Value", QVariant.Double)])
-        vector_layer.updateFields()  # tell the vector layer to fetch changes from the provider
+        jrodos_output_layer.updateFields()  # tell the vector layer to fetch changes from the provider
 
         # add layer to the map
-        QgsMapLayerRegistry.instance().addMapLayer(vector_layer)
+        QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer, False)  # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
+
         layer_crs = None
 
         shps = glob(os.path.join(shape_dir, "*.zip"))
@@ -786,7 +792,7 @@ class JRodos:
                 if layer_crs ==None:
                     # find out source crs of shp and set our memory layer to the same crs
                     layer_crs = vlayer.crs()
-                    vector_layer.setCrs(layer_crs)
+                    jrodos_output_layer.setCrs(layer_crs)
 
                 features = vlayer.getFeatures()
 
@@ -809,14 +815,14 @@ class JRodos:
                         f.setGeometry(feature.geometry())
                         flist.append(f)
 
-            vector_layer.dataProvider().addFeatures(flist)
-            vector_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
-            vector_layer.updateFields()
-            vector_layer.updateExtents()
+            jrodos_output_layer.dataProvider().addFeatures(flist)
+            jrodos_output_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
+            jrodos_output_layer.updateFields()
+            jrodos_output_layer.updateExtents()
             self.iface.mapCanvas().refresh()
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
-            self.jrodos_settings[vector_layer] = deepcopy(self.jrodos_output_settings)
+            self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
 
     def load_measurements(self, output_dir, style_file):
         """
@@ -861,7 +867,10 @@ class JRodos:
                               QgsField("valuemsv", QVariant.Double)
                               ])
             measurements_layer.updateFields()
-            QgsMapLayerRegistry.instance().addMapLayer(measurements_layer)
+
+            QgsMapLayerRegistry.instance().addMapLayer(measurements_layer, False) # False, meaning not ready to add to legend
+            self.layer_group.insertLayer(0, measurements_layer) # now add to legend in current layer group
+            self.layer_group.setName('Data retrieved: ' + QDateTime.currentDateTime().toString('MM/dd HH:mm'))
 
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
@@ -942,6 +951,7 @@ class JRodos:
             # enable maptips?
             if not self.iface.actionMapTips().isChecked():
                 self.iface.actionMapTips().toggle()
+            self.iface.legendInterface().setCurrentLayer(measurements_layer)
             self.iface.mapCanvas().refresh()
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/

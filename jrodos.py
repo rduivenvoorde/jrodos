@@ -33,7 +33,6 @@ import os.path, json
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from data_worker import WpsDataWorker, WpsSettings
 from jrodos_settings import JRodosSettings
 from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
 from jrodos_settings_dialog import JRodosSettingsDialog

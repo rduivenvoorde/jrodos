@@ -32,7 +32,7 @@ import json
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from ui import ExtendedCombo, JRodosMeasurementsDialog, JRodosDialog
+from ui import JRodosMeasurementsDialog, JRodosDialog
 from jrodos_settings import JRodosSettings
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
@@ -392,12 +392,6 @@ class JRodos:
             # QUANTITIES
             self.quantities = result.data
 
-            # Replace the default ComboBox with our better ExtendedCombo
-            # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-            self.measurements_dlg.combo_quantity.close()  # this apparently also removes the widget??
-            self.measurements_dlg.combo_quantity = ExtendedCombo()
-            self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_quantity, 3, 1, 1, 2)
-
             self.quantities_model = QStandardItemModel()
             for q in self.quantities:
                 self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
@@ -415,11 +409,6 @@ class JRodos:
         else:
             # SUBSTANCES
             self.substances = result.data
-            # Replace the default ComboBox with our better ExtendedCombo
-            # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-            self.measurements_dlg.combo_substance.close()  # this apparently also removes the widget??
-            self.measurements_dlg.combo_substance = ExtendedCombo()
-            self.measurements_dlg.gridLayout.addWidget(self.measurements_dlg.combo_substance, 5, 1, 1, 2)
 
             self.substances_model = QStandardItemModel()
             for s in self.substances:

@@ -24,6 +24,7 @@
 import os
 
 from PyQt4 import QtGui, uic
+from extended_combo import ExtendedCombo
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_measurements_dialog_base.ui'))
@@ -43,5 +44,17 @@ class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
         self.MEASUREMENTS_ENDMINUSTART = ['600', '3600', '86400']
         self.combo_endminusstart.addItems(self.MEASUREMENTS_ENDMINUSTART)
         self.combo_endminusstart.setCurrentIndex(1)
+
+        # Replace the default ComboBox with our better ExtendedCombo
+        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        self.combo_quantity.close()  # this apparently also removes the widget??
+        self.combo_quantity = ExtendedCombo()
+        self.gridLayout.addWidget(self.combo_quantity, 3, 1, 1, 2)
+
+        # Replace the default ComboBox with our better ExtendedCombo
+        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        self.combo_substance.close()  # this apparently also removes the widget??
+        self.combo_substance = ExtendedCombo()
+        self.gridLayout.addWidget(self.combo_substance, 5, 1, 1, 2)
 
 

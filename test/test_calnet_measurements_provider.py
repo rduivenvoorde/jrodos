@@ -1,6 +1,6 @@
 import unittest
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
-from utils import Utils
+from providers.utils import Utils
 from test_provider_base import TestProviderBase
 from PyQt4.QtCore import QCoreApplication, QDateTime
 from datetime import datetime

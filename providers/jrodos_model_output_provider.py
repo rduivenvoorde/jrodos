@@ -3,7 +3,7 @@ from PyQt4.QtNetwork import QNetworkRequest
 from datetime import datetime
 from functools import partial
 from provider_base import ProviderConfig, ProviderBase, ProviderResult
-from .. utils import Utils
+from utils import Utils
 import logging
 
 

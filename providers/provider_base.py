@@ -104,10 +104,14 @@ class ProviderResult:
             return "TimeoutError"
         elif network_error == 5:
             return "OperationCanceledError"
+        elif network_error == 202:
+            return "ContentOperationNotPermittedError"
         elif network_error == 203:
             return "ContentNotFoundError (server returned 404)"
         elif network_error == 299:
             return "UnknownContentError (server returned 500)"
+        elif network_error == 301:
+            return "ProtocolUnknownError"
         else:
             raise TypeError("New NetworkError: {} ?".format(network_error))
 

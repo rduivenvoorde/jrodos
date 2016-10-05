@@ -17,7 +17,7 @@ class JRodosSettings(SettingManager):
 
         # JRodos Models WPS service url
         self.add_setting(String('jrodos_wps_url', Scope.Global, 'http://localhost:8080/geoserver/wps'))
-        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service'))
+        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos'))
 
 
         # CalNet Measurements WFS service url

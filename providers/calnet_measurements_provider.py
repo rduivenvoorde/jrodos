@@ -14,7 +14,8 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.url = ''
         self.output_dir = None
         # check and set defaults
-        self.page_size = 10000
+        self.page_size = 5000
+        # start en endtime are strings in self.date_time_format (UTC)
         self.start_datetime = ''
         self.end_datetime = ''
         self.quantity = ''
@@ -34,7 +35,6 @@ class CalnetMeasurementsProvider(ProviderBase):
 
     def __init__(self, config):
         ProviderBase.__init__(self, config)
-
         # page_size comes from user config
         self.page_size = self.config.page_size
         # the page_count is the number of features returned in one 'page'-request.
@@ -73,6 +73,10 @@ class CalnetMeasurementsProvider(ProviderBase):
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.url().toString(), 'Calnet measurements provider')
+            # OK, we have an error... emit the result + error here and quit the loading loop
+            self.ready = True
+            self.finished.emit(result)
+            return
         else:
             filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
@@ -99,7 +103,8 @@ class CalnetMeasurementsProvider(ProviderBase):
             # print "self.page_count %s" % self.page_count
             # print "self.total_count: %s" % self.total_count
 
-            logging.debug('Ready saving features, page-size: {}, page-count: {}, total-count: {}'.format(self.page_size, self.page_count, self.total_count))
+            logging.debug('Ready saving measure features, page-size: {}, page-count: {}, total-count: {}, start {} / end {}'.format(
+                self.page_size, self.page_count, self.total_count, self.config.start_datetime, self.config.end_datetime))
 
             if self.total_count % self.page_size == 0 and self.page_count > 0:
                 # silly Qt way to update one query parameter
@@ -108,14 +113,19 @@ class CalnetMeasurementsProvider(ProviderBase):
                 self.file_count += 1
                 self.get_data()
             else:
-                logging.debug('All features received; stop fetching, start loading...')
-                result.set_data({'result': 'OK', 'output_dir': self.config.output_dir}, reply.url().toString())
+                logging.debug('Finishing measurement retrieval: {} measurements received... start loading...'.format(self.total_count))
+                result.set_data({'result': 'OK', 'output_dir': self.config.output_dir, 'count': self.total_count}, reply.url().toString())
                 # we nee to wait untill all pages are there before to emit the result; so: INSIDE de loop
                 self.ready = True
                 self.finished.emit(result)
 
 
     def get_data(self):
-        logging.debug('Firing WFS request: GET %s' % self.request)
+        logging.debug('Getting measurments, firing WFS request: GET %s' % self.request)
+        # write config for debug/checks
+        config_file = self.config.output_dir + '/wfs_settings.txt'
+        with open(config_file, 'wb') as f:
+            f.write(unicode(self.config))
+
         reply = self.network_manager.get(QNetworkRequest(self.request))
         reply.finished.connect(partial(self._data_retrieved, reply))

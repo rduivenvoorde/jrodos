@@ -304,6 +304,7 @@ class WpsDataWorker(QObject):
                 response = opener.open(request)
                 CHUNK = 16 * 1024
                 filename = self.settings.output_dir() + '/' + unicode(column) + '_' + unicode(self.settings.jrodos_verticals) + '.zip'
+                #filename = self.settings.output_dir() + '/' + unicode(column) + '_' + unicode(self.settings.jrodos_verticals) + '.txt'
                 # using 'with open', then file is explicitly closed
                 with open(filename, 'wb') as f:
                     for chunk in iter(lambda: response.read(CHUNK), ''):
@@ -361,6 +362,8 @@ def test():
 
     app = QApplication(sys.argv)
 
+
+
     wps_settings = WpsSettings()
     wps_settings.url = 'http://localhost:8080/geoserver/wps'
     # jrodos_path=  "'Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time'"  # 1
@@ -377,6 +380,8 @@ def test():
     wps_settings.jrodos_verticals = 0  # z / layers
     wps_settings.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
 
+
+
     wps_thread = QThread()
     w2 = WpsDataWorker(wps_settings)
     w2.moveToThread(wps_thread)
@@ -388,30 +393,30 @@ def test():
     print wps_settings
     wps_thread.start()
 
-    wfs_settings = WfsSettings()
-    wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
-    # we have always an wps_settings.output_dir here:
-    wfs_settings.output_dir = wps_settings.output_dir()
-    wfs_settings.page_size = 10000
-    #wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
-    #wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
-    wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
-    #wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
-    wfs_settings.endminusstart =  '3600'
-    wfs_settings.quantity = 'T-GAMMA'
-    wfs_settings.substance = 'A5'
-    wfs_settings.bbox = '55,5,60,15'
-
-    wfs_thread = QThread()
-    w = WfsDataWorker(wfs_settings)
-    w.moveToThread(wfs_thread)
-    w.finished.connect(wfs_finished)
-    w.error.connect(error)
-    w.progress.connect(wfs_progress)
-    wfs_thread.started.connect(w.run)
-
-    print wfs_settings
-    wfs_thread.start()
+    # wfs_settings = WfsSettings()
+    # wfs_settings.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
+    # # we have always an wps_settings.output_dir here:
+    # wfs_settings.output_dir = wps_settings.output_dir()
+    # wfs_settings.page_size = 10000
+    # #wfs_settings.start_datetime = '2016-04-25T08:00:00.000+00:00'
+    # #wfs_settings.end_datetime = '2016-04-26T08:00:00.000+00:00'
+    # wfs_settings.start_datetime = '2016-05-16T06:52:00.000+00:00'
+    # #wfs_settings.end_datetime = '2016-05-17T06:52:00.000+00:00'
+    # wfs_settings.endminusstart =  '3600'
+    # wfs_settings.quantity = 'T-GAMMA'
+    # wfs_settings.substance = 'A5'
+    # wfs_settings.bbox = '55,5,60,15'
+    #
+    # wfs_thread = QThread()
+    # w = WfsDataWorker(wfs_settings)
+    # w.moveToThread(wfs_thread)
+    # w.finished.connect(wfs_finished)
+    # w.error.connect(error)
+    # w.progress.connect(wfs_progress)
+    # wfs_thread.started.connect(w.run)
+    #
+    # print wfs_settings
+    # wfs_thread.start()
 
     # NOT WORKING in parallel neither
     # combined_thread = QThread()

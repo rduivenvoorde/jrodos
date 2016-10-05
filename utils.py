@@ -10,12 +10,12 @@ class Utils:
     @staticmethod
     def jrodos_dirname(project, path, timestamp):
         # path.split('=;=')[-2]+'_'+path.split('=;=')[-1]
-        dirname = tempfile.gettempdir() + os.sep
+        dirname = tempfile.gettempdir() + os.sep + timestamp + '_'
         dirname += Utils.slugify(unicode(project)) + '_'
         if len(path.split('=;=')) >= 2:
             dirname += Utils.slugify(unicode(path.split('=;=')[-2])) + '_'
-            dirname += Utils.slugify(unicode(path.split('=;=')[-1])) + '_'
-        dirname += timestamp
+            dirname += Utils.slugify(unicode(path.split('=;=')[-1]))
+
         if not os.path.exists(dirname):
             os.mkdir(dirname)
         # else:

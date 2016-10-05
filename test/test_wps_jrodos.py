@@ -25,7 +25,9 @@ class TestJRodosWPS(unittest.TestCase):
         # jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         wps_settings.jrodos_project = "'wps-test-3'"
         wps_settings.jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
+        #wps_settings.jrodos_path = "'Model data=;=Input=;=UI-input=;=Input summary'"
         wps_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
+        #wps_settings.jrodos_format = "text/xml; subtype=wfs-collection/1.0"
         #wps_settings.jrodos_model_time = 24
         wps_settings.jrodos_model_time = 2
         wps_settings.jrodos_model_step = 60
@@ -41,7 +43,7 @@ class TestJRodosWPS(unittest.TestCase):
     #         self.fail('Error in TestJRodosWPS.test_WPS_JRodos %s' % err.reason)
 
 
-    @unittest.skip
+    #@unittest.skip
     def test_WPS_JRodos(self):
 
         try:

@@ -87,7 +87,15 @@ class JRodosModelOutputProvider(ProviderBase):
         ProviderBase.__init__(self, config)
         self.column = 0
 
-    def _data_retrieved(self, reply):
+    def _data_retrieved(self, reply, filename):
+        """
+        Private method which concurrently calls the get_data while not all needed timesteps are in.
+        Note: looks like in this signal method the self.config is not available anymore in the last run... That is
+        why we add the full filename in the call
+        :param reply: ProviderResult object
+        :param filename: is build earlier and added here in the call because it got cleaned up (by garbage collection?)
+        :return:
+        """
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
@@ -96,10 +104,10 @@ class JRodosModelOutputProvider(ProviderBase):
             self.finished.emit(result)
             return
         else:
-            filename = self.config.output_dir + '/' + unicode(self.column) + '_' + unicode(self.config.jrodos_verticals) + '.zip'
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(reply.readAll())
 
+        # note self.column will live long enough to be used here
         self.column += 1
         if self.column < self.config.jrodos_columns:
             self.get_data()
@@ -171,7 +179,9 @@ class JRodosModelOutputProvider(ProviderBase):
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, 'text/xml')  # or? "text/xml; charset=utf-8"
         reply = self.network_manager.post(request, data)
-        reply.finished.connect(partial(self._data_retrieved, reply))
+        filename = self.config.output_dir + '/' + unicode(self.column) + '_' + unicode(
+            self.config.jrodos_verticals) + '.zip'
+        reply.finished.connect(partial(self._data_retrieved, reply, filename))
         # # this part is needed to be sure we do not return immidiatly
         # while not reply.isFinished():
         #     QCoreApplication.processEvents()

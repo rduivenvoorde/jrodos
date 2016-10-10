@@ -655,9 +655,11 @@ class JRodos:
             Utils.set_settings_value("measurements_last_substance", substance)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime()
+            print "###### start: %s" % start_date
             # make it UTC
             #start_date = start_date.toUTC()
             end_date = self.measurements_dlg.dateTime_end.dateTime()
+            print "######   end: %s" % end_date
             # make it UTC
             #end_date = end_date.toUTC()
 
@@ -809,9 +811,67 @@ class JRodos:
             jrodos_output_layer.updateFields()
             jrodos_output_layer.updateExtents()
             self.iface.mapCanvas().refresh()
-            # put a copy of the settings into our map<=>settings dict
-            # IF we want to be able to load a layer several times based on the same settings
-            self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
+
+        # put a copy of the settings into our map<=>settings dict
+        # IF we want to be able to load a layer several times based on the same settings
+        self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
+
+        # add this layer to the TimeManager
+        self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
+
+    def add_layer_to_timemanager(self, layer, time_column, frame_size=60, frame_type='minutes'):
+
+        # TODO try catch this, and put this to top of file
+        from timemanager.layer_settings import LayerSettings
+        from timemanager.timevectorlayer import TimeVectorLayer
+        from qgis.utils import plugins
+        #from timemanager.tmlogging import info
+
+        if not 'timemanager' in plugins:
+            self.iface.messageBar().pushWarning ("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
+            return
+
+        timemanager = plugins['timemanager']
+
+        #TODO click on button if not enabled
+        if not timemanager.getController().getTimeLayerManager().isEnabled():
+            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
+        # for testing: just remove all timelayers
+        #timemanager.getController().timeLayerManager.clearTimeLayerList()
+
+        jrodos_settings = self.jrodos_settings[layer] # we keep (deep)copies of the settings of the layers here
+
+        timelayer_settings = LayerSettings()
+        timelayer_settings.layer = layer
+        timelayer_settings.startTimeAttribute = time_column
+        #timelayer_settings.startTimeAttribute = jrodos_settings.start_datetime
+        #timelayer_settings.endTimeAttribute = jrodos_settings.end_datetime
+
+        timelayer = TimeVectorLayer(timelayer_settings, self.iface)
+
+        print timelayer
+        print timelayer.getTimeExtents()
+
+        animationFrameLength = 2000
+        frame_size = frame_size
+        frame_type = frame_type
+        timemanager.getController().setPropagateGuiChanges(False)
+        timemanager.getController().setAnimationOptions(animationFrameLength, False, False)
+
+        # via gui should not be nessecary!!!
+        # tm.getController().getGui().setTimeFrameType(frame_type)
+        timemanager.getController().setTimeFrameType(frame_type)
+        # via gui should not be nessecary!!!
+        # tm.getController().getGui().setTimeFrameSize(frame_size)
+        timemanager.getController().setTimeFrameSize(frame_size)
+
+        timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
+        timemanager.getController().refreshGuiTimeFrameProperties()
+
+        # set layer to zero
+        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
+        timemanager.getController().refreshGuiTimeFrameProperties()
+
 
     def load_measurements(self, output_dir, style_file):
         """
@@ -942,6 +1002,9 @@ class JRodos:
                 self.iface.actionMapTips().toggle()
             self.iface.legendInterface().setCurrentLayer(measurements_layer)
             self.iface.mapCanvas().refresh()
+
+        # add this layer to the TimeManager
+        self.add_layer_to_timemanager(measurements_layer, 'time')
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")

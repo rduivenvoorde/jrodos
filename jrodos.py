@@ -348,8 +348,12 @@ class JRodos:
 
             # create a group always on TOP == 0
             self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('Data group'))
-            self.show_jrodos_output_dialog()
-            self.show_measurements_dialog()
+            if self.settings.value('jrodos_enabled'):
+                self.show_jrodos_output_dialog()
+            if self.settings.value('measurements_enabled'):
+                self.show_measurements_dialog()
+
+
 
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
@@ -610,7 +614,6 @@ class JRodos:
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
-
     def show_measurements_dialog(self, measurements_settings=None):
 
         if measurements_settings is not None:
@@ -819,7 +822,7 @@ class JRodos:
         # add this layer to the TimeManager
         self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
 
-    def add_rainradar_to_timemanager(self, measurement_layer):
+    def add_rainradar_to_timemanager(self, layer_for_settings):
 
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
@@ -835,7 +838,7 @@ class JRodos:
         QgsMapLayerRegistry.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
         self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
 
-        measurements_settings = self.jrodos_settings[measurement_layer]  # we keep (deep)copies of the settings of the layers here
+        measurements_settings = self.jrodos_settings[layer_for_settings]  # we keep (deep)copies of the settings of the layers here
 
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = rain_layer
@@ -1029,8 +1032,9 @@ class JRodos:
         # add this layer to the TimeManager
         self.add_layer_to_timemanager(measurements_layer, 'time')
 
-
-        self.add_rainradar_to_timemanager(measurements_layer)
+        # add rainradar and to the TimeManager IF enabled
+        if self.settings.value('rainradar_enabled'):
+            self.add_rainradar_to_timemanager(measurements_layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")

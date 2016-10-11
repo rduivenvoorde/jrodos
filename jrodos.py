@@ -24,8 +24,8 @@ from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVa
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem
 import resources
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
-    QgsCoordinateTransform, QgsMessageLog, QgsProject
-from qgis.utils import qgsfunction, QgsExpression
+    QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer
+from qgis.utils import qgsfunction, plugins, QgsExpression
 from glob import glob
 import os.path
 import json
@@ -40,6 +40,9 @@ from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtils
 from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
 from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider
 from providers.utils import Utils as ProviderUtils
+from timemanager.layer_settings import LayerSettings
+from timemanager.timevectorlayer import TimeVectorLayer
+from timemanager.raster.wmstlayer import WMSTRasterLayer
 
 
 # pycharm debugging
@@ -560,7 +563,6 @@ class JRodos:
 
         if self.jrodosmodel_dlg.exec_():  # OK was pressed
             jrodos_output_settings = JRodosModelOutputConfig()
-            # TODO: get these from ?? dialog?? settings??
             jrodos_output_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
             jrodos_output_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
@@ -655,11 +657,9 @@ class JRodos:
             Utils.set_settings_value("measurements_last_substance", substance)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime()
-            print "###### start: %s" % start_date
             # make it UTC
             #start_date = start_date.toUTC()
             end_date = self.measurements_dlg.dateTime_end.dateTime()
-            print "######   end: %s" % end_date
             # make it UTC
             #end_date = end_date.toUTC()
 
@@ -819,13 +819,39 @@ class JRodos:
         # add this layer to the TimeManager
         self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
 
-    def add_layer_to_timemanager(self, layer, time_column, frame_size=60, frame_type='minutes'):
+    def add_rainradar_to_timemanager(self, measurement_layer):
 
-        # TODO try catch this, and put this to top of file
-        from timemanager.layer_settings import LayerSettings
-        from timemanager.timevectorlayer import TimeVectorLayer
-        from qgis.utils import plugins
-        #from timemanager.tmlogging import info
+        settings = JRodosSettings()
+        name = settings.value("rainradar_wmst_name")
+        url = settings.value("rainradar_wmst_url")
+        layers = settings.value("rainradar_wmst_layers")
+        styles = settings.value("rainradar_wmst_styles")
+        imgformat = settings.value("rainradar_wmst_imgformat")
+        crs = settings.value("rainradar_wmst_crs")
+
+        uri = "crs=" + crs + "&layers=" + layers + "&styles=" + styles + "&format=" + imgformat + "&url=" + url;
+
+        rain_layer = QgsRasterLayer(uri, name, "wms")
+        QgsMapLayerRegistry.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
+
+        measurements_settings = self.jrodos_settings[measurement_layer]  # we keep (deep)copies of the settings of the layers here
+
+        timelayer_settings = LayerSettings()
+        timelayer_settings.layer = rain_layer
+        start = QDateTime.fromString(measurements_settings.start_datetime, measurements_settings.date_time_format)
+        datetime_format = 'yyyy-MM-ddThh:mm:ss'
+        timelayer_settings.startTimeAttribute = start.toString(datetime_format)
+        end = QDateTime.fromString(measurements_settings.end_datetime, measurements_settings.date_time_format)
+        timelayer_settings.endTimeAttribute = end.toString(datetime_format)
+
+        timelayer = WMSTRasterLayer(timelayer_settings, self.iface)
+
+        timemanager = plugins['timemanager']
+        timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
+
+
+    def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
 
         if not 'timemanager' in plugins:
             self.iface.messageBar().pushWarning ("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
@@ -848,9 +874,6 @@ class JRodos:
         #timelayer_settings.endTimeAttribute = jrodos_settings.end_datetime
 
         timelayer = TimeVectorLayer(timelayer_settings, self.iface)
-
-        print timelayer
-        print timelayer.getTimeExtents()
 
         animationFrameLength = 2000
         frame_size = frame_size
@@ -1005,6 +1028,9 @@ class JRodos:
 
         # add this layer to the TimeManager
         self.add_layer_to_timemanager(measurements_layer, 'time')
+
+
+        self.add_rainradar_to_timemanager(measurements_layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")

@@ -26,3 +26,25 @@ class JRodosSettings(SettingManager):
         self.add_setting(Integer('measurements_wfs_page_size', Scope.Global, 10000))
         self.add_setting(String('measurements_soap_utils_url', Scope.Global,
                                 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'))
+
+
+        # Rainradar WMS-T service
+        # rainradar_wmst_name
+        self.add_setting(String('rainradar_wmst_name', Scope.Global,
+                                'KNMI'))
+        # rainradar_wmst_url
+        self.add_setting(String('rainradar_wmst_url', Scope.Global,
+                                'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi'))
+        # rainradar_wmst_layers
+        self.add_setting(String('rainradar_wmst_layers', Scope.Global,
+                                'RADNL_OPER_R___25PCPRR_L3_COLOR'))
+        # rainradar_wmst_styles
+        self.add_setting(String('rainradar_wmst_styles', Scope.Global,
+                                ''))
+        # rainradar_wmst_imgformat
+        self.add_setting(String('rainradar_wmst_imgformat', Scope.Global,
+                                'image/png'))
+        # rainradar_wmst_crs
+        self.add_setting(String('rainradar_wmst_crs', Scope.Global,
+                                'EPSG:28992'))
+

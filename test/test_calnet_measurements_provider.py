@@ -14,7 +14,7 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         self.config = CalnetMeasurementsConfig()
         self.config.url = 'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
         # we have always an jrodos_output_settings.output_dir here:
-        self.config.output_dir = Utils.jrodos_dirname('test_WFS_Meaurements', "", datetime.now().strftime("%Y%m%d%H%M%S"))
+        self.config.output_dir = Utils.jrodos_dirname('test_WFS_Measurements', "", datetime.now().strftime("%Y%m%d%H%M%S"))
         self.config.page_size = 10000  # 10000
         self.config.quantity = 'T-GAMMA'
         self.config.substance = 'A5'
@@ -28,7 +28,6 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
 
     def test_calnet_measurements_config(self):
         c = unicode(self.config)
-
         self.assertIsNotNone(c)
         self.assertIsNot(len(c), 0)
         print c
@@ -86,8 +85,10 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         prov = CalnetMeasurementsProvider(self.config)
 
         def prov_finished(result):
-            self.assertFalse(result.error())
-            self.assertIsNot(result.data['count'], 0, "No 86400 measurements in EU, last 36 hours")
+            if result.error():
+                self.assertIsNot(result.data['count'], 0, "No 86400 measurements in EU, last 36 hours")
+            else:
+                self.assertFalse(result.error())
 
         prov.finished.connect(prov_finished)
         prov.get_data()

@@ -98,6 +98,10 @@ class ProviderResult:
             return "NOT a network error (Qt returned 0)"
         elif network_error == -1:
             return "UnknownError"
+        elif network_error == 1:
+            return "ConnectionRefusedError (server not accepting requests, is it up?)"
+        elif network_error == 2:
+            return "RemoteHostClosedError (server returned 500)"
         elif network_error == 3:
             return "HostNotFoundError"
         elif network_error == 4:

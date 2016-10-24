@@ -38,7 +38,7 @@ from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
 from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
-from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider
+from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
 from providers.utils import Utils as ProviderUtils
 from timemanager.layer_settings import LayerSettings
 from timemanager.timevectorlayer import TimeVectorLayer
@@ -90,8 +90,6 @@ class JRodos:
         # NOTE !!! project names surrounded by single quotes ??????
         self.JRODOS_PROJECTS = ["wps-13sept-test"]
 
-        self.JRODOS_MODEL_LENGTH_HOURS = ['48', '24', '12', '6', '3']
-
         # indexes for the data coming from Utils providers
         self.JRODOS_DESCRIPTION_IDX = 0
         self.JRODOS_CODE_IDX = 1
@@ -103,30 +101,10 @@ class JRodos:
         self.QMODEL_DATA_IDX        = 3 # IF the QStandardModel has other data
         self.QMODEL_SEARCH_IDX      = 4 # IF the QStandardModel has a special SEARCH column (optional for tables)
 
-        self.JRODOS_STEP_MINUTES = ['10', '30', '60'] # as in JRodos
-
         self.settings = JRodosSettings()
 
-        # Create the dialog (after translation) and keep reference
-        self.jrodosmodel_dlg = JRodosDialog()
-        # add current models to dropdown
-        self.jrodosmodel_dlg.combo_project.addItems(self.JRODOS_PROJECTS)
-        # self.jrodosmodel_dlg.combo_model.currentText()
-        # add current paths to dropdown
-        self.jrodosmodel_dlg.combo_steps.addItems(self.JRODOS_STEP_MINUTES)
-        self.jrodosmodel_dlg.combo_model_length.addItems(self.JRODOS_MODEL_LENGTH_HOURS)
-
-        # DEMO TIME !!!
-        #self.jrodosmodel_dlg.combo_project.setCurrentIndex(1)
-        self.jrodosmodel_dlg.combo_steps.setCurrentIndex(2)
-        self.jrodosmodel_dlg.combo_model_length.setCurrentIndex(1)
-        utcdatetime = QDateTime(QDate(2016, 10, 2), QTime(8, 0))
-        self.jrodosmodel_dlg.dateTime_start.setDateTime(utcdatetime)
         # QAbstractItems model for the datapaths in the JRodos dialog
         self.jrodos_paths_model = None
-
-        # now connect the change of the project dropdown to a refresh of the data path
-        self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.fill_data_path_combo)
 
         # Declare instance attributes
         self.actions = []
@@ -275,7 +253,7 @@ class JRodos:
             self.jrodos_output_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.jrodos_output_progress_bar)
 
-        self.MEASUREMENTS_BAR_TITLE = self.tr('Meaurements')
+        self.MEASUREMENTS_BAR_TITLE = self.tr('Measurements')
         if self.measurements_progress_bar is None:
             self.measurements_progress_bar = QProgressBar()
             self.measurements_progress_bar.setToolTip("Measurement data (WFS)")
@@ -288,12 +266,16 @@ class JRodos:
             self.measurements_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.measurements_progress_bar)
 
+        # Create the dialog (after translation) and keep reference
+        self.jrodosmodel_dlg = JRodosDialog()
+        # connect the change of the project dropdown to a refresh of the data path
+        self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
+
         # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
-
 
     def show_settings(self):
         self.settings_dlg.show()
@@ -352,9 +334,6 @@ class JRodos:
                 self.show_jrodos_output_dialog()
             if self.settings.value('measurements_enabled'):
                 self.show_measurements_dialog()
-
-
-
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
             return
@@ -428,11 +407,9 @@ class JRodos:
                 self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
 
     def get_jrodos_projects(self):
-
         config = JRodosProjectConfig()
         config.url = self.settings.value('jrodos_rest_url')
-        #config.url = 'http://duif.net/projects.json' # DEV
-        prov = JRodosProjectProvider(config)
+        projects_provider = JRodosProjectProvider(config)
         def prov_projects_finished(result):
             if result.error():
                 self.msg(None,
@@ -442,13 +419,11 @@ class JRodos:
                 self.projects_model = QStandardItemModel()
                 projects = result.data['content']
                 for project in projects:
-
                     link = "NO LINK ?????"
                     for l in project['links']:
                         if l['rel'] == 'self':
                             link = l['href']
                             break
-
                     #print project
                     #print project['project']
                     # print project['project']['username']
@@ -464,35 +439,32 @@ class JRodos:
                     id = unicode(project['project']['projectId'])
                     name = project['project']['name']
                     self.projects_model.appendRow([
-                        QStandardItem(id),                                                      # self.QMODEL_ID_IDX = 0
-                        QStandardItem(project['project']['name']),                              # self.QMODEL_NAME_IDX = 1
-                        QStandardItem(id + ' - ' + project['project']['name'] + ' - ' + link),   # self.QMODEL_DESCRIPTION_IDX = 2
-                        QStandardItem(link)])                                                   # self.QMODEL_DATA_IDX = 3
+                        QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
+                        QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
+                        QStandardItem(id + ' - ' + name + ' - ' + link),  # self.QMODEL_DESCRIPTION_IDX = 2
+                        QStandardItem(link)])                             # self.QMODEL_DATA_IDX = 3
 
+                # disconnect the change of the project dropdown to a refresh of the data path
+                self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
                 self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
                 self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
                 # get the last used project from the settings
+                # connect the change of the project dropdown to a refresh of the data path
+                self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
                 last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
                 items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
                 if len(items) > 0:
                     self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row()) # take first from result
-                    # get the data paths of that project and fill dropdown with it's data paths
-                    #self.fill_data_path_combo(items[0].row())
 
-                # now connect the change of the project dropdown to a refresh of the data path
-                # self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.fill_data_path_combo)
+        projects_provider.finished.connect(prov_projects_finished)
+        projects_provider.get_data('/projects')
 
-        prov.finished.connect(prov_projects_finished)
-        prov.get_data('/projects')
-        #prov.get_data() # DEV
-
-    def fill_data_path_combo(self, projects_model_idx):
-
-        # temporary text in the combo
+    def project_selected(self, projects_model_idx):
+        # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
         self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project paths...")])
         self.jrodos_paths_model = QStandardItemModel()  # TODO: should this declared only once?
-
+        # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
         #self.msg(None, "{} {}".format(projects_model_idx, url))
         config = JRodosProjectConfig()
@@ -502,29 +474,14 @@ class JRodos:
         datapaths_provider.get_data()
 
     def datapaths_provider_finished(self, result):
-
-        # DEV
-        # self.jrodosmodel_dlg.combo_path.clear()
-        # jrodos_project_paths = [
-        #     "Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective",
-        #     "Model data=;=Output=;=Prognostic Results=;=Cloud arrival time=;=Cloud arrival time",
-        #     "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=I -135",
-        #     "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Air concentration, time integrated near ground surface=;=Cs-137",
-        #     "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=I -135",
-        #     "Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137"
-        # ]
-        # self.jrodosmodel_dlg.combo_path.addItems(jrodos_project_paths)
-        # return
-
         if result.error():
             self.msg(None,
                      "Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n".format(result.url) +
                      "Check the Log Message Panel for more info")
-
-            self.jrodos_paths_model.appendRow([QStandardItem(
-                "Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective")])
+            # set (empty) paths_model in combo: clean up
             self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_paths_model)
-
+            # cleanup the starttime, step etc in the dialog too
+            self.set_dialog_project_info(None, None, None)
         else:
             data_items = result.data['project']['tasks'][0]['dataitems']
             for data_item in data_items:
@@ -537,6 +494,64 @@ class JRodos:
             items = self.jrodos_paths_model.findItems(last_used_datapath, Qt.MatchExactly, 0)
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_path.setCurrentIndex(items[0].row())
+
+            # Also retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
+            conf = JRodosModelOutputConfig()
+            conf.url = self.settings.value('jrodos_wps_url')
+            conf.jrodos_project = result.data['project']['name']
+            conf.jrodos_path = "Model data=;=Input=;=UI-input=;=RodosLight"
+            conf.jrodos_format = 'application/json'  # format = 'application/json' 'application/zip' 'text/xml; subtype=wfs-collection/1.0'
+            project_info_provider = JRodosModelProvider(conf)
+            project_info_provider.finished.connect(self.provide_project_info_finished)
+            project_info_provider.get_data()
+
+    def provide_project_info_finished(self, result):
+        """
+        Called when the WPS service returns the JRodos project information about the used timeStep,
+        durationOfPrognosis and releaseStart times (ALL in seconds)
+        :param result: JSON object like:
+            {u'type': u'FeatureCollection',
+             u'features': [
+               {u'type': u'Feature',
+                u'properties': {u'Value': u'{timeStep:3600,durationOfPrognosis:21600,releaseStart:1433224800000}'},
+                u'id': u'RodosLight'}]
+            }
+        :return:
+        """
+        self.set_dialog_project_info(
+            result.data['timeStep'],
+            result.data['durationOfPrognosis'],
+            result.data['releaseStart'])
+
+    def set_dialog_project_info(self, time_step, model_time, model_start):
+        """
+        Used to set AND REset (to None) the 3 params in the dialog
+        :param time_step: model Timestep in the dialog is shown in minutes (as in JRodos), but retrieved seconds!!
+        :param model_time: model time / duration of prognosis is shown in hours (as in JRodos), but retrieved in seconds!!
+        :param model_start: model start / start of release is in milli(!)seconds since 1970 UTC
+        :return:
+        """
+        if time_step is None:
+            self.jrodosmodel_dlg.lbl_steps2.setText('-')
+            self.jrodosmodel_dlg.le_steps.setText('')
+        else:
+            # model Timestep in the dialog is shown in minutes (as in JRodos), but retrieved seconds!!
+            self.jrodosmodel_dlg.lbl_steps2.setText(unicode(time_step / 60) + self.tr(" minutes"))
+            self.jrodosmodel_dlg.le_steps.setText(unicode(time_step))  # steptime (seconds to minutes)
+        if model_time is None:
+            self.jrodosmodel_dlg.lbl_model_length2.setText('-')
+            self.jrodosmodel_dlg.le_model_length.setText('')
+        else:
+            # model time / duration of prognosis is shown in hours (as in JRodos), but retrieved in seconds!!
+            self.jrodosmodel_dlg.lbl_model_length2.setText(unicode(model_time / 3600) + self.tr(" hours"))  # modeltime (seconds to hours)
+            self.jrodosmodel_dlg.le_model_length.setText(unicode(model_time))  # modeltime (seconds to hours)
+        if model_start is None:
+            self.jrodosmodel_dlg.lbl_start2.setText('-')
+            self.jrodosmodel_dlg.le_start.setText('')  # modeltime (hours)
+        else:
+            # model start / start of release is in milli(!)seconds since 1970 UTC
+            self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
+            self.jrodosmodel_dlg.le_start.setText(unicode(model_start))  # modeltime (hours)
 
     def msg(self, parent=None, msg=""):
         if parent is None:
@@ -580,22 +595,30 @@ class JRodos:
             last_used_datapath = jrodos_output_settings.jrodos_path
             #self.msg(None, last_used_datapath)
             Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
-            jrodos_output_settings.jrodos_model_step = self.jrodosmodel_dlg.combo_steps.itemText(self.jrodosmodel_dlg.combo_steps.currentIndex())  # steptime (minutes)
-            jrodos_output_settings.jrodos_model_time = self.jrodosmodel_dlg.combo_model_length.itemText(self.jrodosmodel_dlg.combo_model_length.currentIndex()) # modeltime (hours)
+
+            # model time / duration of prognosis is shown in hours, but retrieved in minutes, and in JRodos in hours!!
+            # modeltime (seconds!)
+            model_time_secs = int(self.jrodosmodel_dlg.le_model_length.text())
+            jrodos_output_settings.jrodos_model_time = model_time_secs / 60  # jrodos_model_time is in minutes!!
+            # model Timestep in the dialog is shown in minutes, BUT retrieved in seconds, and in JRodos in minutes!!
+            # steptime (seconds!)
+            model_step_secs = int(self.jrodosmodel_dlg.le_steps.text())
+            jrodos_output_settings.jrodos_model_step = model_step_secs
+            # columns = number of steps in the model
+            jrodos_output_settings.jrodos_columns = model_time_secs / model_step_secs
+
             # vertical is fixed to 0 now
             jrodos_output_settings.jrodos_verticals = 0  # z / layers
-            jrodos_output_settings.jrodos_datetime_start = self.jrodosmodel_dlg.dateTime_start.dateTime()
+            jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000)
+
             self.jrodos_output_settings = jrodos_output_settings
             self.start_jrodos_model_output_provider()
 
     def start_jrodos_model_output_provider(self):
         self.jrodos_output_progress_bar.setMaximum(0)
-        self.jrodos_output_settings = self.jrodos_output_settings
         self.jrodos_output_provider = JRodosModelOutputProvider(self.jrodos_output_settings)
         self.jrodos_output_provider.finished.connect(self.finish_jrodos_model_output_provider)
         self.jrodos_output_provider.get_data()
-        # while not jrodos_output_provider.is_finished():
-        #     QCoreApplication.processEvents()
 
     def finish_jrodos_model_output_provider(self, result):
         self.info(result)
@@ -610,7 +633,7 @@ class JRodos:
             if result.data is not None:
                 self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml')
             else:
-                self.msg(None, "No Jrodos Model Output data? {}".format(result.data))
+                self.msg(None, "No Jrodos Model Output data? Got: {}".format(result.data))
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
@@ -630,10 +653,11 @@ class JRodos:
         self.measurements_settings = None
         end_time = QDateTime.currentDateTime() # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
-        # INIT dialog based on earlier wps dialog
+
+        # BUT if we just received a model, INIT the measurements dialog based on this
         if self.jrodos_output_settings is not None:
-            start_time = self.jrodos_output_settings.jrodos_datetime_start
-            end_time = start_time.addSecs(60 * 60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
+            start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC() # we REALLY want UTC
+            end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
 
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
@@ -659,16 +683,11 @@ class JRodos:
             substance = self.substances_model.item(self.measurements_dlg.combo_substance.currentIndex(), self.JRODOS_CODE_IDX).text()
             Utils.set_settings_value("measurements_last_substance", substance)
 
-            start_date = self.measurements_dlg.dateTime_start.dateTime()
-            # make it UTC
-            #start_date = start_date.toUTC()
-            end_date = self.measurements_dlg.dateTime_end.dateTime()
-            # make it UTC
-            #end_date = end_date.toUTC()
+            start_date = self.measurements_dlg.dateTime_start.dateTime() # UTC
+            end_date = self.measurements_dlg.dateTime_end.dateTime() # UTC
 
             measurements_settings = CalnetMeasurementsConfig()
-            # TODO make these come from config
-            measurements_settings.url = self.settings.value('measurements_wfs_url') #'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'
+            measurements_settings.url = self.settings.value('measurements_wfs_url')
 
             if self.jrodos_output_settings is None:
                 project = "'measurements'"
@@ -765,21 +784,17 @@ class JRodos:
                           QgsField("Cell", QVariant.Int),
                           QgsField("Value", QVariant.Double)])
         jrodos_output_layer.updateFields()  # tell the vector layer to fetch changes from the provider
-
-        # add layer to the map
-        QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer, False)  # False, meaning not ready to add to legend
-        self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
-
         layer_crs = None
 
         shps = glob(os.path.join(shape_dir, "*.zip"))
+        features_added = False
 
         for shp in shps:
             (shpdir, shpfile) = os.path.split(shp)
             vlayer = QgsVectorLayer(shp, shpfile, "ogr")
             flist = []
             if not vlayer.isValid():
-                self.msg(None, "Layer(s) failed to load!")
+                self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
                 break
             else:
                 #self.msg(None, "Layer loaded %s" % shp)
@@ -796,7 +811,8 @@ class JRodos:
                 # so 0_0.zip is column 0, vertical 0
                 # BUT column 0 is from the first model step!!
                 # SO WE HAVE TO ADD ONE STEP OF SECONDS TO THE TSTAMP (step+1+
-                tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
+                #tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
+                tstamp = tstamp.addSecs((step + 1) * int(self.jrodos_output_settings.jrodos_model_step))
                 tstamp = tstamp.toString("yyyy-MM-dd HH:mm")
                 for feature in features:
                     # only features with Value > 0, to speed up QGIS
@@ -808,19 +824,25 @@ class JRodos:
                         f.setAttributes([tstamp, feature.attribute('Cell'), feature.attribute('Value')])
                         f.setGeometry(feature.geometry())
                         flist.append(f)
-
+            if len(flist)>0:
+                features_added = True
             jrodos_output_layer.dataProvider().addFeatures(flist)
             jrodos_output_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
             jrodos_output_layer.updateFields()
             jrodos_output_layer.updateExtents()
             self.iface.mapCanvas().refresh()
 
-        # put a copy of the settings into our map<=>settings dict
-        # IF we want to be able to load a layer several times based on the same settings
-        self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
-
-        # add this layer to the TimeManager
-        self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
+        # ONLY when we received features back add the layer to the timemanager etc
+        if features_added:
+            # add layer to the map
+            QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer,
+                                                       False)  # False, meaning not ready to add to legend
+            self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
+            # put a copy of the settings into our map<=>settings dict
+            # IF we want to be able to load a layer several times based on the same settings
+            self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
+            # add this layer to the TimeManager
+            self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
 
     def add_rainradar_to_timemanager(self, layer_for_settings):
 

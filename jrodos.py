@@ -410,54 +410,55 @@ class JRodos:
         config = JRodosProjectConfig()
         config.url = self.settings.value('jrodos_rest_url')
         projects_provider = JRodosProjectProvider(config)
-        def prov_projects_finished(result):
-            if result.error():
-                self.msg(None,
-                         self.tr("Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info"))
-            else:
-                # Projects
-                self.projects_model = QStandardItemModel()
-                projects = result.data['content']
-                for project in projects:
-                    link = "NO LINK ?????"
-                    for l in project['links']:
-                        if l['rel'] == 'self':
-                            link = l['href']
-                            break
-                    #print project
-                    #print project['project']
-                    # print project['project']['username']
-                    # print project['project']['description']
-                    # print project['project']['projectId']
-                    # print project['project']['name']
-                    # print project['project']['modelchainname']
-                    # print project['project']['dateTimeCreatedString']
-                    # for key in project['project']:
-                    #     print "{}: {}".format(key, project['project'][key])
-                    #print link
-                    #print '------------------------------------------'
-                    id = unicode(project['project']['projectId'])
-                    name = project['project']['name']
-                    self.projects_model.appendRow([
-                        QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
-                        QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
-                        QStandardItem(id + ' - ' + name + ' - ' + link),  # self.QMODEL_DESCRIPTION_IDX = 2
-                        QStandardItem(link)])                             # self.QMODEL_DATA_IDX = 3
-
-                # disconnect the change of the project dropdown to a refresh of the data path
-                self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
-                self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
-                self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
-                # get the last used project from the settings
-                # connect the change of the project dropdown to a refresh of the data path
-                self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
-                last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
-                items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
-                if len(items) > 0:
-                    self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row()) # take first from result
-
-        projects_provider.finished.connect(prov_projects_finished)
+        projects_provider.finished.connect(self.projects_provider_finished)
         projects_provider.get_data('/projects')
+
+    def projects_provider_finished(self, result):
+        if result.error():
+            self.msg(None,
+                     self.tr(
+                         "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info"))
+        else:
+            # Projects
+            self.projects_model = QStandardItemModel()
+            projects = result.data['content']
+            for project in projects:
+                link = "NO LINK ?????"
+                for l in project['links']:
+                    if l['rel'] == 'self':
+                        link = l['href']
+                        break
+                # print project
+                # print project['project']
+                # print project['project']['username']
+                # print project['project']['description']
+                # print project['project']['projectId']
+                # print project['project']['name']
+                # print project['project']['modelchainname']
+                # print project['project']['dateTimeCreatedString']
+                # for key in project['project']:
+                #     print "{}: {}".format(key, project['project'][key])
+                # print link
+                # print '------------------------------------------'
+                id = unicode(project['project']['projectId'])
+                name = project['project']['name']
+                self.projects_model.appendRow([
+                    QStandardItem(id),  # self.QMODEL_ID_IDX = 0
+                    QStandardItem(name),  # self.QMODEL_NAME_IDX = 1
+                    QStandardItem(id + ' - ' + name + ' - ' + link),  # self.QMODEL_DESCRIPTION_IDX = 2
+                    QStandardItem(link)])  # self.QMODEL_DATA_IDX = 3
+
+            # disconnect the change of the project dropdown to a refresh of the data path
+            self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
+            self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
+            self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
+            # get the last used project from the settings
+            # connect the change of the project dropdown to a refresh of the data path
+            self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
+            last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
+            items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
+            if len(items) > 0:
+                self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row())  # take first from result
 
     def project_selected(self, projects_model_idx):
         # temporary text in the datapath combo

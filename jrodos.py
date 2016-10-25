@@ -373,7 +373,7 @@ class JRodos:
     def quantities_provider_finished(self, result):
         if result.error():
             self.msg(None,
-                     "Problem in JRodos plugin retrieving the Quantities. \nCheck the Log Message Panel for more info")
+             self.tr("Problem in JRodos plugin retrieving the Quantities. \nCheck the Log Message Panel for more info"))
         else:
             # QUANTITIES
             self.quantities = result.data
@@ -391,7 +391,7 @@ class JRodos:
     def substance_provider_finished(self, result):
         if result.error():
             self.msg(None,
-                     "Problem in JRodos plugin retrieving the Substances. \nCheck the Log Message Panel for more info")
+                     self.tr("Problem in JRodos plugin retrieving the Substances. \nCheck the Log Message Panel for more info"))
         else:
             # SUBSTANCES
             self.substances = result.data
@@ -413,7 +413,7 @@ class JRodos:
         def prov_projects_finished(result):
             if result.error():
                 self.msg(None,
-                         "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info")
+                         self.tr("Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info"))
             else:
                 # Projects
                 self.projects_model = QStandardItemModel()
@@ -476,8 +476,8 @@ class JRodos:
     def datapaths_provider_finished(self, result):
         if result.error():
             self.msg(None,
-                     "Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n".format(result.url) +
-                     "Check the Log Message Panel for more info")
+                     self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n").format(result.url) +
+                     self.tr("Check the Log Message Panel for more info"))
             # set (empty) paths_model in combo: clean up
             self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_paths_model)
             # cleanup the starttime, step etc in the dialog too
@@ -518,10 +518,14 @@ class JRodos:
             }
         :return:
         """
-        self.set_dialog_project_info(
-            result.data['timeStep'],
-            result.data['durationOfPrognosis'],
-            result.data['releaseStart'])
+        if result.error():
+            self.msg(None,
+                     self.tr("Problem in JRodos plugin retrieving the Project info. \nCheck the Log Message Panel for more info"))
+        else:
+            self.set_dialog_project_info(
+                result.data['timeStep'],
+                result.data['durationOfPrognosis'],
+                result.data['releaseStart'])
 
     def set_dialog_project_info(self, time_step, model_time, model_start):
         """
@@ -626,7 +630,8 @@ class JRodos:
         self.jrodos_output_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents() # to be sure we have the loading msg
         if result.error():
-            self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
+            self.msg(None,
+                     self.tr("Problem in JRodos plugin retrieving the JRodos model output. \nCheck the Log Message Panel for more info"))
         else:
             # Load the received shp-zip files
             # TODO: determine qml file based on something coming from the settings/result object

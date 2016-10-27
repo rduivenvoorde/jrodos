@@ -44,8 +44,12 @@ class JRodosDialog(QtGui.QDialog, FORM_CLASS):
         # Replace the default ComboBox's with our better ExtendedCombo widget
         self.combo_project.close()  # this apparently also removes the widget??
         self.combo_project = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_project, 0, 0, 1, 5) # x, y, rows, cols
+        self.gridLayout.addWidget(self.combo_project, 0, 1, 1, 4) # row, col, #rows, #cols
+
+        # self.combo_task.close()  # this apparently also removes the widget??
+        # self.combo_task = ExtendedCombo()
+        # self.gridLayout.addWidget(self.combo_task, 1, 1, 1, 4) # row, col, #rows, #cols
 
         self.combo_path.close()  # this apparently also removes the widget??
         self.combo_path = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_path, 1, 0, 1, 5) # x, y, rows, cols
+        self.gridLayout.addWidget(self.combo_path, 2, 1, 1, 4) # row, col, #rows, #cols

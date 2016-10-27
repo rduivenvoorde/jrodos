@@ -87,8 +87,8 @@ class JRodosModelProvider(ProviderBase):
         else:
             # this means there is probable a range of columns given, we receive them in one batch
             self.column = config.jrodos_columns
-        # NOTE 1 !!! 'project' parameter surrounded by single quotes in this request ??????
-        # NOTE 2 !!! 'path' parameter surrounded by single quotes in this request ??????
+        # NOTE 1 !!! 'project' parameter value surrounded by single quotes in this request ??????
+        # NOTE 2 !!! 'path' parameter value surrounded by single quotes in this request ??????
         self._xml = """<?xml version="1.0" encoding="UTF-8"?>
  <wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs"
@@ -101,13 +101,13 @@ class JRodosModelProvider(ProviderBase):
      <wps:Input>
        <ows:Identifier>taskArg</ows:Identifier>
        <wps:Data>
-         <wps:LiteralData>project="'{project}'"</wps:LiteralData>
+         <wps:LiteralData>{project}</wps:LiteralData>
        </wps:Data>
      </wps:Input>
      <wps:Input>
        <ows:Identifier>dataitem</ows:Identifier>
        <wps:Data>
-         <wps:LiteralData>path="'{path}'"</wps:LiteralData>
+         <wps:LiteralData>{path}</wps:LiteralData>
        </wps:Data>
      </wps:Input>
      <wps:Input>
@@ -155,6 +155,8 @@ class JRodosModelProvider(ProviderBase):
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = unicode(reply.readAll())
+            print "JRodosModelProvider # 158 content: {}".format(content)
+            print "JRodosModelProvider # 158 content: {}".format(reply.request().url().toString())
             obj = json.loads(content)
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)

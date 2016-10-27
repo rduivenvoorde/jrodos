@@ -94,7 +94,7 @@ class JRodos:
         self.JRODOS_DESCRIPTION_IDX = 0
         self.JRODOS_CODE_IDX = 1
 
-        # 'standard' column indexes for QStandardModels:
+        # 'standard' column indexes for QStandardModels to be used instead of magic numbers for data columns:
         self.QMODEL_ID_IDX          = 0 # IF the QStandardModel has a true ID make it column 0 (else double NAME as 0)
         self.QMODEL_NAME_IDX        = 1 # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
         self.QMODEL_DESCRIPTION_IDX = 2 # IF the QStandardModel has a description (eg used in dropdowns)
@@ -104,7 +104,7 @@ class JRodos:
         self.settings = JRodosSettings()
 
         # QAbstractItems model for the datapaths in the JRodos dialog
-        self.jrodos_paths_model = None
+        self.jrodos_project_data = []
 
         # Declare instance attributes
         self.actions = []
@@ -271,6 +271,8 @@ class JRodos:
         # connect the change of the project dropdown to a refresh of the data path
         self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
 
+        self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
+
         # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
 
@@ -419,7 +421,7 @@ class JRodos:
                      self.tr(
                          "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info"))
         else:
-            # Projects
+            # Projects: create a dropdown with name, description, id and link for every project
             self.projects_model = QStandardItemModel()
             projects = result.data['content']
             for project in projects:
@@ -464,7 +466,8 @@ class JRodos:
         # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
         self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project paths...")])
-        self.jrodos_paths_model = QStandardItemModel()  # TODO: should this declared only once?
+        self.jrodos_project_data = None  # ?thourough cleanup?
+        self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
         #self.msg(None, "{} {}".format(projects_model_idx, url))
@@ -480,31 +483,70 @@ class JRodos:
                      self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n").format(result.url) +
                      self.tr("Check the Log Message Panel for more info"))
             # set (empty) paths_model in combo: clean up
-            self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_paths_model)
+            self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_project_data)
             # cleanup the starttime, step etc in the dialog too
             self.set_dialog_project_info(None, None, None)
         else:
-            data_items = result.data['project']['tasks'][0]['dataitems']
-            for data_item in data_items:
-                # print data_item['datapath']
-                # jrodos_project_paths.append(data_item['datapath'])
-                self.jrodos_paths_model.appendRow([QStandardItem(data_item['datapath'])])
-            self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_paths_model)
-            # set last used datapath or nothing if this project does not have this datapath
-            last_used_datapath = Utils.get_settings_value("jrodos_last_model_datapath", "")
-            items = self.jrodos_paths_model.findItems(last_used_datapath, Qt.MatchExactly, 0)
-            if len(items) > 0:
-                self.jrodosmodel_dlg.combo_path.setCurrentIndex(items[0].row())
+            # a project has 1-4 tasks (model calculations?)
+            # every task has dataitems (both output and input)
+            # a dataitem is actually a 'path' to an 'output-node' in the output tree of JRodos
+            self.task_model = QStandardItemModel()
+            for task in result.data['project']['tasks']:
+                # "uid": "527fcd2c-ac13-7293-5563-bb409a0362f5",
+                # "modelwrappername": "LSMC",
+                # "description": "run:Tameka",
+                # "state": "successful",
+                # "rootresultnode": "eAHtV81OF...",
+                # "dataitem_id": 0,
+                # "id": 1251
+                self.task_model.appendRow([
+                    QStandardItem('0'),                                                  # self.QMODEL_ID_IDX
+                    QStandardItem(task['modelwrappername']),                             # self.QMODEL_NAME_IDX
+                    QStandardItem(task['modelwrappername'] + ' ' + task['description']), # self.QMODEL_DESCRIPTION_IDX
+                    QStandardItem(task['modelwrappername'])                              # self.QMODEL_DATA_IDX
+                ])
+                # create a QStandardItemModel per task
+                data_items_model = QStandardItemModel()
+                data_items = task['dataitems']
+                for data_item in data_items:
+                    # print data_item['datapath']
+                    # jrodos_project_paths.append(data_item['datapath'])
+                    # ONLY if the data_item has a reporttable?
+                    if data_item['reporttable'] is not None:
+                        data_items_model.appendRow([QStandardItem(data_item['datapath'])])
+                    else:
+                        print "Skipping {}".format(data_item['datapath'])
+
+                # add the task model to the project data
+                self.jrodos_project_data.append(data_items_model)
+
+            self.jrodosmodel_dlg.combo_task.setModel(self.task_model)
+            self.jrodosmodel_dlg.combo_task.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
 
             # Also retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = result.data['project']['name']
-            conf.jrodos_path = "Model data=;=Input=;=UI-input=;=RodosLight"
+            # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
+            conf.jrodos_project = "project='"+result.data['project']['name']+"'&amp;model='LSMC'"
+            conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
             conf.jrodos_format = 'application/json'  # format = 'application/json' 'application/zip' 'text/xml; subtype=wfs-collection/1.0'
             project_info_provider = JRodosModelProvider(conf)
             project_info_provider.finished.connect(self.provide_project_info_finished)
             project_info_provider.get_data()
+
+    def task_selected(self, tasks_model_idx):
+        """
+        On change of the Task in the dialog, recreate the Dataitems.combo_path combobox with the model of that Task
+        :param tasks_model_idx:
+        :return:
+        """
+        self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_project_data[tasks_model_idx])
+        # set last used datapath or nothing if this project does not have this datapath
+        last_used_datapath = Utils.get_settings_value("jrodos_last_model_datapath", "")
+        items = self.jrodos_project_data[tasks_model_idx].findItems(last_used_datapath, Qt.MatchExactly, 0)
+        if len(items) > 0:
+            self.jrodosmodel_dlg.combo_path.setCurrentIndex(items[0].row())
+
 
     def provide_project_info_finished(self, result):
         """
@@ -591,12 +633,15 @@ class JRodos:
             # FORMAT is fixed to zip with shapes
             jrodos_output_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             # selected project + save the project id (model col 1) to QSettings
-            jrodos_output_settings.jrodos_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()
+            # +"'&amp;model='EMERSIM'"
+            jrodos_output_settings.jrodos_project = "project='"+self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()+"'"
+            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(),self.QMODEL_DATA_IDX ).text())
             # for storing in settings we do not use the non unique name, but the if of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             #self.msg(None, "last_used_project: " + last_used_project)
+
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
-            jrodos_output_settings.jrodos_path = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
+            jrodos_output_settings.jrodos_path = "path='"+self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())+"'"
             last_used_datapath = jrodos_output_settings.jrodos_path
             #self.msg(None, last_used_datapath)
             Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)

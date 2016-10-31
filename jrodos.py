@@ -523,6 +523,12 @@ class JRodos:
             self.jrodosmodel_dlg.combo_task.setModel(self.task_model)
             self.jrodosmodel_dlg.combo_task.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
 
+            # check the last remembered Task
+            last_used_task = Utils.get_settings_value("jrodos_last_task", "")
+            items = self.task_model.findItems(last_used_task, Qt.MatchExactly, self.QMODEL_NAME_IDX)
+            if len(items) > 0:
+                self.jrodosmodel_dlg.combo_task.setCurrentIndex(items[0].row())
+
             # Also retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
@@ -636,15 +642,17 @@ class JRodos:
             # +"'&amp;model='EMERSIM'"
             jrodos_output_settings.jrodos_project = "project='"+self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()+"'"
             jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(),self.QMODEL_DATA_IDX ).text())
-            # for storing in settings we do not use the non unique name, but the if of the project
+            # for storing in settings we do not use the non unique name, but the ID of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             #self.msg(None, "last_used_project: " + last_used_project)
-
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
-            jrodos_output_settings.jrodos_path = "path='"+self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())+"'"
             last_used_datapath = jrodos_output_settings.jrodos_path
             #self.msg(None, last_used_datapath)
             Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
+            jrodos_output_settings.jrodos_path = "path='"+self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())+"'"
+
+            last_used_task = self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_NAME_IDX).text()
+            Utils.set_settings_value("jrodos_last_task", last_used_task)
 
             # model time / duration of prognosis is shown in hours, but retrieved in minutes, and in JRodos in hours!!
             # modeltime (seconds!)

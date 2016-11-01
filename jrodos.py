@@ -532,15 +532,16 @@ class JRodos:
             items = self.task_model.findItems(last_used_task, Qt.MatchExactly, self.QMODEL_NAME_IDX)
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_task.setCurrentIndex(items[0].row())
-
-            # Also retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
+            # Retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
+            conf.jrodos_project = "project='"+result.data['project']['name']
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
-            # TODO! only when there is >1 task in the project
-            conf.jrodos_project = "project='"+result.data['project']['name']+"'&amp;model='LSMC'"
+            # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
+            if self.task_model.rowCount()>1:
+                conf.jrodos_project += "'&amp;model='LSMC'"
             conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
-            conf.jrodos_format = 'application/json'  # format = 'application/json' 'application/zip' 'text/xml; subtype=wfs-collection/1.0'
+            conf.jrodos_format = 'application/json'
             project_info_provider = JRodosModelProvider(conf)
             project_info_provider.finished.connect(self.provide_project_info_finished)
             project_info_provider.get_data()

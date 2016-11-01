@@ -454,9 +454,9 @@ class JRodos:
             self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
             self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
             self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
-            # get the last used project from the settings
             # connect the change of the project dropdown to a refresh of the data path
             self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
+            # get the last used project from the settings
             last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
             items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
             if len(items) > 0:
@@ -510,18 +510,34 @@ class JRodos:
                 data_items = task['dataitems']
                 for data_item in data_items:
                     # print data_item['datapath']
-                    # ONLY if the data_item has a reporttable?
-                    if data_item['reporttable'] is not None:
-                        # 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
+                    # dataitem_id		    1
+                    # dataitem_type		    "Complex"
+                    # groupname		        null
+                    # name			        "Model data"
+                    # description		    "Root of model DEPOM, pro...-7293-5563-bb40a1e2cfb0"
+                    # unit			        "rO0ABXNyAB5qYXZheC5tZWFz...CvnLvFoGAIAAHhwAAAAAA=="
+                    # substance		        ""
+                    # datapath		        "Model data"
+                    # reporttable		    null
+                    # showunit		        false
+                    # showparents		    0
+                    # parent_dataitem_id	0
+                    # grid_id			    0
+                    # dataitem_index		0
+
+                    # Some hardcoded 'filtering' of the datapaths # unfiltered  '123 478 39 131'
+                    # ONLY if the data_item has a reporttable?                  '99 429 21 93'
+                    # if data_item['reporttable'] is not None:
+                    # ONLY if dataitem_type is 'GridSeries' or 'Series'         '93 409 13 91'
+                    if data_item['dataitem_type'] in ['GridSeries', 'Series']:
+                        # example datapath:
+                        # Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective
                         data_items_model.appendRow([
                             QStandardItem('0'),                    # self.QMODEL_ID_IDX (not used)
                             QStandardItem(data_item['datapath']),  # self.QMODEL_NAME_IDX
                             QStandardItem(data_item['datapath']),  # self.QMODEL_DESCRIPTION_IDX
                             QStandardItem(data_item['datapath'])   # self.QMODEL_DATA_IDX
                         ])
-                    #else:
-                        #print "Skipping {}".format(data_item['datapath'])
-
                 # add the task model to the project data
                 self.jrodos_project_data.append(data_items_model)
 

@@ -20,15 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, QDate, QTime, Qt
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem
-import resources
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
+from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, QDesktopServices
+
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer
 from qgis.utils import qgsfunction, plugins, QgsExpression
+
 from glob import glob
-import os.path
-import json
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
@@ -43,6 +42,9 @@ from providers.utils import Utils as ProviderUtils
 from timemanager.layer_settings import LayerSettings
 from timemanager.timevectorlayer import TimeVectorLayer
 from timemanager.raster.wmstlayer import WMSTRasterLayer
+
+import os.path
+import json
 
 
 # pycharm debugging
@@ -237,6 +239,15 @@ class JRodos:
             add_to_toolbar=False,
             parent=self.iface.mainWindow())
 
+        # documentation
+        icon_path = ':/plugins/JRodos/icon.png'
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Documentation'),
+            callback=self.show_help,
+            add_to_toolbar=False,
+            parent=self.iface.mainWindow())
+
         progress_bar_width = 100
 
         self.BAR_LOADING_TITLE = self.tr('Loading data...')
@@ -281,6 +292,10 @@ class JRodos:
 
     def show_settings(self):
         self.settings_dlg.show()
+
+    def show_help(self):
+        docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
+        QDesktopServices.openUrl(QUrl("file:" + docs))
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""

@@ -43,6 +43,8 @@ from timemanager.layer_settings import LayerSettings
 from timemanager.timevectorlayer import TimeVectorLayer
 from timemanager.raster.wmstlayer import WMSTRasterLayer
 
+import resources # for button images
+
 import os.path
 import json
 

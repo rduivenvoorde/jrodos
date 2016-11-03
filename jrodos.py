@@ -43,7 +43,7 @@ from timemanager.layer_settings import LayerSettings
 from timemanager.timevectorlayer import TimeVectorLayer
 from timemanager.raster.wmstlayer import WMSTRasterLayer
 
-import resources # for button images
+import resources # needed for button images!
 
 import os.path
 import json
@@ -642,11 +642,13 @@ class JRodos:
             self.jrodosmodel_dlg.lbl_start2.setText('-')
             self.jrodosmodel_dlg.le_start.setText('')  # modeltime (hours)
         else:
-            # OLD model start / start of release is in milli(!)seconds since 1970 UTC like: "1477146000000"
-            # self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
-            # NEW model start / start of release is string like: "2016-04-25T08:00:00.000+0000"
-            self.jrodosmodel_dlg.lbl_start2.setText(model_start)
             self.jrodosmodel_dlg.le_start.setText(unicode(model_start))  # modeltime (hours)
+            if type(model_start) == int:
+                # OLD model start / start of release is in milli(!)seconds since 1970 UTC like: "1477146000000"
+                self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
+            else:
+                # NEW model start / start of release is string like: "2016-04-25T08:00:00.000+0000"
+                self.jrodosmodel_dlg.lbl_start2.setText(unicode(model_start))
 
     def msg(self, parent=None, msg=""):
         if parent is None:
@@ -703,15 +705,19 @@ class JRodos:
             # steptime (seconds!)
             model_step_secs = int(self.jrodosmodel_dlg.le_steps.text())
             jrodos_output_settings.jrodos_model_step = model_step_secs
-            # columns = number of steps in the model
-            jrodos_output_settings.jrodos_columns = model_time_secs / model_step_secs
-
-            # vertical is fixed to 0 now
+            # vertical is fixed to 0 for now (we do not 3D models)
             jrodos_output_settings.jrodos_verticals = 0  # z / layers
-            # OLD: start text was a secondssinceepoch
-            # jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000)
-            # new: time is now a string like: "2016-04-25T08:00:00.000+0000"
-            jrodos_output_settings.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+            OLD_VERSION = False # old version received the start as seconds_since_epoch
+            if OLD_VERSION:
+                # OLD: start text was a secondssinceepoch
+                jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000).toUTC() # FORCE UTC!!
+                # OLD: columns = number of steps in the model (integer)
+                jrodos_output_settings.jrodos_columns = model_time_secs / model_step_secs
+            else:
+                # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
+                jrodos_output_settings.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+                # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
+                jrodos_output_settings.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
             self.jrodos_output_settings = jrodos_output_settings
             self.start_jrodos_model_output_provider()
 
@@ -856,9 +862,6 @@ class JRodos:
                 return layer
         return None
 
-    # now, open all shapefiles one by one, s from 0 till x
-    # starting with a startdate 20160101000000 t
-    # add an attribute 'time' and set it to t+s
     def load_jrodos_output(self, shape_dir, style_file):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
@@ -882,7 +885,7 @@ class JRodos:
         jrodos_output_layer = QgsVectorLayer("Polygon", jrodos_datapath, "memory")
         pr = jrodos_output_layer.dataProvider()
         # add fields
-        pr.addAttributes([QgsField("Datetime", QVariant.String),
+        pr.addAttributes([QgsField("Time", QVariant.String),
                           QgsField("Cell", QVariant.Int),
                           QgsField("Value", QVariant.Double)])
         jrodos_output_layer.updateFields()  # tell the vector layer to fetch changes from the provider
@@ -891,50 +894,70 @@ class JRodos:
         shps = glob(os.path.join(shape_dir, "*.zip"))
         features_added = False
 
-        for shp in shps:
-            (shpdir, shpfile) = os.path.split(shp)
-            vlayer = QgsVectorLayer(shp, shpfile, "ogr")
-            flist = []
-            if not vlayer.isValid():
-                self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
-                break
-            else:
-                #self.msg(None, "Layer loaded %s" % shp)
-                if layer_crs ==None:
-                    # find out source crs of shp and set our memory layer to the same crs
-                    layer_crs = vlayer.crs()
-                    jrodos_output_layer.setCrs(layer_crs)
+        if len(shps) > 1:  # OLD way: a directory of zips
+            for shp in shps:
+                (shpdir, shpfile) = os.path.split(shp)
+                vlayer = QgsVectorLayer(shp, shpfile, "ogr")
+                flist = []
+                if not vlayer.isValid():
+                    self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
+                    break
+                else:
+                    #self.msg(None, "Layer loaded %s" % shp)
+                    if layer_crs ==None:
+                        # find out source crs of shp and set our memory layer to the same crs
+                        layer_crs = vlayer.crs()
+                        jrodos_output_layer.setCrs(layer_crs)
 
-                features = vlayer.getFeatures()
+                    features = vlayer.getFeatures()
 
-                step = int(shpfile.split('_')[0])
-                tstamp = QDateTime(self.jrodos_output_settings.jrodos_datetime_start)
-                # every zip get's a column with a timestamp based on the 'step/column' from the model
-                # so 0_0.zip is column 0, vertical 0
-                # BUT column 0 is from the first model step!!
-                # SO WE HAVE TO ADD ONE STEP OF SECONDS TO THE TSTAMP (step+1+
-                #tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
-                tstamp = tstamp.addSecs((step + 1) * int(self.jrodos_output_settings.jrodos_model_step))
-                tstamp = tstamp.toString("yyyy-MM-dd HH:mm")
-                for feature in features:
-                    # only features with Value > 0, to speed up QGIS
-                    if feature.attribute('Value') > 0:
-                        fields = feature.fields()
-                        fields.append(QgsField("Datetime"))
-                        f = QgsFeature(fields)
-                        # timestamp as first attribute, easier to config with timemanager plugin (default first column)
-                        f.setAttributes([tstamp, feature.attribute('Cell'), feature.attribute('Value')])
-                        f.setGeometry(feature.geometry())
-                        flist.append(f)
-            if len(flist)>0:
-                features_added = True
-            jrodos_output_layer.dataProvider().addFeatures(flist)
-            jrodos_output_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
-            jrodos_output_layer.updateFields()
-            jrodos_output_layer.updateExtents()
-            self.iface.mapCanvas().refresh()
+                    step = int(shpfile.split('_')[0])
+                    tstamp = QDateTime(self.jrodos_output_settings.jrodos_datetime_start)
+                    # every zip get's a column with a timestamp based on the 'step/column' from the model
+                    # so 0_0.zip is column 0, vertical 0
+                    # BUT column 0 is from the first model step!!
+                    # SO WE HAVE TO ADD ONE STEP OF SECONDS TO THE TSTAMP (step+1+
+                    #tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
+                    tstamp = tstamp.addSecs((step + 1) * int(self.jrodos_output_settings.jrodos_model_step))
+                    tstamp = tstamp.toString("yyyy-MM-dd HH:mm")
+                    for feature in features:
+                        # only features with Value > 0, to speed up QGIS
+                        if feature.attribute('Value') > 0:
+                            fields = feature.fields()
+                            fields.append(QgsField("Time"))
+                            f = QgsFeature(fields)
+                            # timestamp as first attribute, easier to config with timemanager plugin (default first column)
+                            f.setAttributes([tstamp, feature.attribute('Cell'), feature.attribute('Value')])
+                            f.setGeometry(feature.geometry())
+                            flist.append(f)
+                if len(flist)>0:
+                    features_added = True
+                jrodos_output_layer.dataProvider().addFeatures(flist)
 
-        # ONLY when we received features back add the layer to the timemanager etc
+
+                jrodos_output_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
+                jrodos_output_layer.updateFields()
+                jrodos_output_layer.updateExtents()
+                self.iface.mapCanvas().refresh()
+
+        if len(shps) == 1:  # new way: one zip with one shapefile, the shape containing a column Time
+            for shp in shps:
+                (shpdir, shpfile) = os.path.split(shp)
+                jrodos_output_layer = QgsVectorLayer(shp, shpfile, "ogr")
+                if not jrodos_output_layer.isValid():
+                    self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
+                    break
+                else:
+                    # self.msg(None, "Layer loaded %s" % shp)
+                    if jrodos_output_layer.getFeatures().nextFeature(QgsFeature()):  # just checking if we have at least one feature
+                        features_added = True
+                jrodos_output_layer.loadNamedStyle(
+                    os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+                jrodos_output_layer.updateFields()
+                jrodos_output_layer.updateExtents()
+                self.iface.mapCanvas().refresh()
+
+        # ONLY when we received features back, registre the layer to the timemanager etc
         if features_added:
             # add layer to the map
             QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer,
@@ -944,7 +967,8 @@ class JRodos:
             # IF we want to be able to load a layer several times based on the same settings
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
             # add this layer to the TimeManager
-            self.add_layer_to_timemanager(jrodos_output_layer, 'Datetime')
+            step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # model step is in seconds!!!
+            self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     def add_rainradar_to_timemanager(self, layer_for_settings):
 

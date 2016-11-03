@@ -640,8 +640,10 @@ class JRodos:
             self.jrodosmodel_dlg.lbl_start2.setText('-')
             self.jrodosmodel_dlg.le_start.setText('')  # modeltime (hours)
         else:
-            # model start / start of release is in milli(!)seconds since 1970 UTC
-            self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
+            # OLD model start / start of release is in milli(!)seconds since 1970 UTC like: "1477146000000"
+            # self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
+            # NEW model start / start of release is string like: "2016-04-25T08:00:00.000+0000"
+            self.jrodosmodel_dlg.lbl_start2.setText(model_start)
             self.jrodosmodel_dlg.le_start.setText(unicode(model_start))  # modeltime (hours)
 
     def msg(self, parent=None, msg=""):
@@ -704,8 +706,10 @@ class JRodos:
 
             # vertical is fixed to 0 now
             jrodos_output_settings.jrodos_verticals = 0  # z / layers
-            jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000)
-
+            # OLD: start text was a secondssinceepoch
+            # jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000)
+            # new: time is now a string like: "2016-04-25T08:00:00.000+0000"
+            jrodos_output_settings.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
             self.jrodos_output_settings = jrodos_output_settings
             self.start_jrodos_model_output_provider()
 

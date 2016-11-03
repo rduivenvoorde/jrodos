@@ -155,18 +155,48 @@ class JRodosModelProvider(ProviderBase):
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = unicode(reply.readAll())
-            print "JRodosModelProvider # 158 content: {}".format(content)
-            print "JRodosModelProvider # 158 content: {}".format(reply.request().url().toString())
+            #print "JRodosModelProvider # 158 content: {}".format(content)
+            #print "JRodosModelProvider # 158 content: {}".format(reply.request().url().toString())
             obj = json.loads(content)
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)
-            #print obj
-            if 'features' in obj and len(obj['features'])>0 and 'properties' in obj['features'][0]:
+
+            # NEW:
+            # {"type": "FeatureCollection", "features": [
+            #     {"type": "Feature",
+            #      "properties": {"timeStep": 3600, "durationOfPrognosis": 86400,
+            #                     "releaseStart": "2016-04-25T08:00:00.000+0000"},
+            #      "id": "RodosLight"}]
+            # }
+
+            if 'features' in obj and len(obj['features'])>0 and 'properties' in obj['features'][0] \
+                    and 'Value' in obj['features'][0]['properties']:
+                # TODO remove this one?
+                # {u'type': u'FeatureCollection', u'features': [
+                #     {u'type': u'Feature',
+                #      u'properties': {u'Value': u'{
+                #                           timeStep:1800,
+                #                           durationOfPrognosis:43200,
+                #                           releaseStart:1477146000000}'},
+                #      u'id': u'RodosLight'}]}
                 values = obj['features'][0]['properties']['Value']
                 # preprocess the data to a nice object
                 data = {'result': 'OK', 'project':self.config.jrodos_project}
                 for prop in values[1:-1].split(','):
                     data[prop.split(':')[0]] = int(prop.split(':')[1])
+                result.set_data(data, self.config.url)
+            elif 'features' in obj and len(obj['features'])>0 and 'properties' in obj['features'][0] \
+                    and 'timeStep' in obj['features'][0]['properties']:
+                # NEW:
+                # {"type": "FeatureCollection", "features": [
+                #     {"type": "Feature",
+                #      "properties": {"timeStep": 3600,
+                #                     "durationOfPrognosis": 86400,
+                #                     "releaseStart": "2016-04-25T08:00:00.000+0000"},
+                #      "id": "RodosLight"}]}
+                data = {'result': 'OK', 'project':obj['features'][0]['properties']}
+                for prop in obj['features'][0]['properties']:
+                    data[prop] = obj['features'][0]['properties'][prop]
                 result.set_data(data, self.config.url)
             else:
                 result.set_error(-1, self.config.url, "Wong json: " + content)

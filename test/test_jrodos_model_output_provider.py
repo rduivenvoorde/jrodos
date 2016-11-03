@@ -47,7 +47,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
     # To run just this test:
     # nosetests test / test_jrodos_model_output_provider.py:TestJRodosModelOutputProvider.test_jrodos_model_shapezip_range_output_url_zip
     def test_jrodos_model_shapezip_range_output_url_zip(self):
-        # 2 zipped shapefiles of given model
+        # one zipped shapefile of given model of a set of timesteps
         self.conf.jrodos_path = "path='Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         # self.conf.jrodos_model_time = 24*60  # modeltime = durationOfPrognosis; in Minutes
         self.conf.jrodos_columns = '0-23'
@@ -100,7 +100,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
     # To run just this test:
     # nosetests test / test_jrodos_model_output_provider.py:TestJRodosModelOutputProvider.test_jrodos_model_json_24cols_output_url
     def test_jrodos_model_json_24cols_output_url(self):
-        # 2 zipped shapefiles of given model
+        # a set of json files of given model
         self.conf.jrodos_path = "path='Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         self.conf.jrodos_columns = 24
         self.conf.jrodos_format = 'application/json'  # format = 'application/json' 'application/zip' 'text/xml; subtype=wfs-collection/1.0'
@@ -117,7 +117,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
     # To run just this test:
     # nosetests test / test_jrodos_model_output_provider.py:TestJRodosModelOutputProvider.test_jrodos_model_json_range_output_url
     def test_jrodos_model_json_range_output_url(self):
-        # 2 zipped shapefiles of given model
+        # json of a timerange of given model
         self.conf.jrodos_path = "path='Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         self.conf.jrodos_columns = '0-23'
         self.conf.jrodos_format = 'application/json'  # format = 'application/json' 'application/zip' 'text/xml; subtype=wfs-collection/1.0'

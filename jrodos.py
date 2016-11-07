@@ -439,35 +439,49 @@ class JRodos:
                          "Problem in JRodos plugin retrieving the JRodos projects. \nCheck the Log Message Panel for more info"))
         else:
             # Projects: create a dropdown with name, description, id and link for every project
+
+            # {
+            #     "links"    [Object { rel="self",  href="http://jrodos.dev.cal-ne...service/jrodos/projects"}]
+            #       0
+            #         rel                   "self"
+            #         href                  "http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos/projects"
+            #     "content"  [Object { projectId=142,  uid="0af53237-ac13-7293-0e16-2a357943d075",  name="test",  more...}, 216 more...]
+            #       0 Object { projectId=142,  uid="0af53237-ac13-7293-0e16-2a357943d075",  name="test",  more...}
+            #         projectId             142
+            #         uid                   "0af53237-ac13-7293-0e16-2a357943d075"
+            #         name                  "test"
+            #         description	          ""
+            #         username              "heezenp"
+            #         modelchainname        "Emergency"
+            #         tasks                 []
+            #         dateTimeCreatedString "2015-06-19T10:35:18.200+02:00"
+            #         dateTimeModifiedString"2015-06-19T10:35:18.200+02:00"
+            #         links                 [Object { rel="self",  href="http://jrodos.dev.cal-ne...ice/jrodos/projects/142"}]
+            #           0  	Object { rel="self",  href="http://jrodos.dev.cal-ne...ice/jrodos/projects/142"}
+            #             rel   "self"
+            #             href  "http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos/projects/142"
+            #       1 Object { projectId=143,  uid="0af53237-ac13-7293-0e16-2a357943d078",  name="test",  more...}
+            #     ...
+            # }
             self.projects_model = QStandardItemModel()
+            # content in output is an array of projects
             projects = result.data['content']
             for project in projects:
+                # retrieve the link of this project
                 link = "NO LINK ?????"
                 for l in project['links']:
                     if l['rel'] == 'self':
                         link = l['href']
                         break
-                # print project
-                # print project['project']
-                # print project['project']['username']
-                # print project['project']['description']
-                # print project['project']['projectId']
-                # print project['project']['name']
-                # print project['project']['modelchainname']
-                # print project['project']['dateTimeCreatedString']
-                # for key in project['project']:
-                #     print "{}: {}".format(key, project['project'][key])
-                # print link
-                # print '------------------------------------------'
-                id = unicode(project['project']['projectId'])
-                name = project['project']['name']
+                id = unicode(project['projectId'])
+                name = project['name']
                 self.projects_model.appendRow([
                     QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
                     QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
                     QStandardItem(id + ' - ' + name + ' - ' + link),  # self.QMODEL_DESCRIPTION_IDX = 2
                     QStandardItem(link)])                             # self.QMODEL_DATA_IDX = 3
 
-            # disconnect the change of the project dropdown to a refresh of the data path
+            # disconnect the change of the project dropdown to be able to do a refresh
             self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
             self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
             self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
@@ -508,7 +522,7 @@ class JRodos:
             # every task has dataitems (both output and input)
             # a dataitem is actually a 'path' to an 'output-node' in the output tree of JRodos
             self.task_model = QStandardItemModel()
-            for task in result.data['project']['tasks']:
+            for task in result.data['tasks']:
                 # "uid": "527fcd2c-ac13-7293-5563-bb409a0362f5",
                 # "modelwrappername": "LSMC",
                 # "description": "run:Tameka",
@@ -568,7 +582,7 @@ class JRodos:
             # Retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = "project='"+result.data['project']['name']
+            conf.jrodos_project = "project='"+result.data['name']
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
             # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
             if self.task_model.rowCount()>1:

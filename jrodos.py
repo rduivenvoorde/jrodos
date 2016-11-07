@@ -893,7 +893,7 @@ class JRodos:
 
         shps = glob(os.path.join(shape_dir, "*.zip"))
         features_added = False
-
+        features_have_valid_time = False
         if len(shps) > 1:  # OLD way: a directory of zips
             for shp in shps:
                 (shpdir, shpfile) = os.path.split(shp)
@@ -940,7 +940,7 @@ class JRodos:
                 jrodos_output_layer.updateExtents()
                 self.iface.mapCanvas().refresh()
 
-        if len(shps) == 1:  # new way: one zip with one shapefile, the shape containing a column Time
+        if len(shps) == 1:  # new way: one zip with one shapefile, the shape containing a column Time (seconds since epoch)
             for shp in shps:
                 (shpdir, shpfile) = os.path.split(shp)
                 jrodos_output_layer = QgsVectorLayer(shp, shpfile, "ogr")
@@ -949,20 +949,30 @@ class JRodos:
                     break
                 else:
                     # self.msg(None, "Layer loaded %s" % shp)
-                    if jrodos_output_layer.getFeatures().nextFeature(QgsFeature()):  # just checking if we have at least one feature
-                        features_added = True
+                    f = QgsFeature()
+                    if jrodos_output_layer.getFeatures().nextFeature(f):
+                        # checked that we have at least one feature
+                        features_added = True # OK
+                        # check if we have a valid time in this features
+                        time = f.attribute('Time')
+                        if time is not None and time != "" and time > 0:
+                            features_have_valid_time = True
+                        else:
+                            self.msg(None, self.tr('Found a feature with Time value {}\nSo not registring as TimeManager layer').format(time))
                 jrodos_output_layer.loadNamedStyle(
                     os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
                 jrodos_output_layer.updateFields()
                 jrodos_output_layer.updateExtents()
                 self.iface.mapCanvas().refresh()
 
-        # ONLY when we received features back, registre the layer to the timemanager etc
+        # ONLY when we received features back load it as a layer
         if features_added:
             # add layer to the map
             QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer,
                                                        False)  # False, meaning not ready to add to legend
             self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
+        # ONLY when we received features back AND the time component is valid: register the layer to the timemanager etc
+        if features_have_valid_time:
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)

@@ -4,9 +4,14 @@ class Utils:
 
     @staticmethod
     def jrodos_dirname(project, path, timestamp):
-        # path.split('=;=')[-2]+'_'+path.split('=;=')[-1]
+        # timestamp part
         dirname = tempfile.gettempdir() + os.sep + timestamp + '_'
+        # projectname part, some trickery because of the project name trickery :-(
+        # we sometimes use &model= / &amp;model= in the project's, let's remove it
+        project = project.replace('&amp;model=', '_')
+        project = project.replace('project=', '')
         dirname += Utils.slugify(unicode(project)) + '_'
+        # path part
         if len(path.split('=;=')) >= 2:
             dirname += Utils.slugify(unicode(path.split('=;=')[-2])) + '_'
             dirname += Utils.slugify(unicode(path.split('=;=')[-1]))

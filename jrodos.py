@@ -1221,7 +1221,9 @@ class JRodos:
 
             QgsMapLayerRegistry.instance().addMapLayer(measurements_layer, False) # False, meaning not ready to add to legend
             self.layer_group.insertLayer(0, measurements_layer) # now add to legend in current layer group
-            self.layer_group.setName(self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            #self.layer_group.setName(self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            self.set_legend_node_name(self.layer_group,
+                self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
 
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
@@ -1233,7 +1235,9 @@ class JRodos:
         else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
-            self.layer_group.setName(self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            #self.layer_group.setName(self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            self.set_legend_node_name(self.layer_group,
+                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
             measurements_layer.startEditing()
             measurements_layer.selectAll()
             measurements_layer.deleteSelectedFeatures()
@@ -1312,6 +1316,17 @@ class JRodos:
         # add rainradar and to the TimeManager IF enabled
         if self.settings.value('rainradar_enabled'):
             self.add_rainradar_to_timemanager(measurements_layer)
+
+    def set_legend_node_name(self, treenode, name):
+        """
+        This is a workaround for this issue: http://hub.qgis.org/issues/15844
+        :param treenode: treenode to change
+        :param name:     new name
+        :return:
+        """
+        model = self.iface.layerTreeView().model()
+        index = model.node2index(treenode)
+        model.setData(index, name)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")

@@ -45,6 +45,7 @@ PLUGINNAME = JRodos
 PY_FILES = \
 	*.py \
 	qgissettingmanager \
+	providers \
 	ui
 
 UI_FILES = \

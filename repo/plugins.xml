@@ -20,7 +20,7 @@
      <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/RegenRadar.zip</download_url>
    </pyqgis_plugin>
 
-   <pyqgis_plugin name="JRodos" version="0.1">
+   <pyqgis_plugin name="JRodos" version="0.3">
      <description>This plugin </description>
      <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
      <qgis_minimum_version>2.12</qgis_minimum_version>

@@ -1163,11 +1163,16 @@ class JRodos:
         timemanager.getController().setTimeFrameSize(frame_size)
 
         timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
-        timemanager.getController().refreshGuiTimeFrameProperties()
-
         # set layer to zero
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
-        timemanager.getController().refreshGuiTimeFrameProperties()
+        # TODO: temporarily in if clause (untill upstream has it too)
+        if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
+            self.info("calling refreshGuiTimeFrameProperties")
+            timemanager.getController().refreshGuiTimeFrameProperties()
+        else:
+            self.info("calling refreshGuiTimeExtents")
+            timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
+            self.guiControl.dock.spinBoxTimeExtent.setValue(self.getTimeLayerManager().timeFrameSize)
 
 
     def load_measurements(self, output_dir, style_file):
@@ -1295,9 +1300,9 @@ class JRodos:
 
             # set the display field value
             measurements_layer.setDisplayField('[% measurement_values()%]')
-            # enable maptips?
+            # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
-                self.iface.actionMapTips().toggle()
+                self.iface.actionMapTips().trigger() # trigger action
             self.iface.legendInterface().setCurrentLayer(measurements_layer)
             self.iface.mapCanvas().refresh()
 

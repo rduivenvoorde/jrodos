@@ -342,17 +342,18 @@ class JRodos:
             # IF there is a layer selected in the legend
             # based on 'currentLayer' in legend, check the settings
             #self.msg(None, self.jrodos_settings)
-            # if self.iface.mapCanvas().currentLayer() is not None \
-            #         and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
-            #     #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
-            #     settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
-            #     if isinstance(settings, WpsSettings):
-            #         self.show_jrodos_wps_dialog(settings)
-            #     elif isinstance(settings, WfsSettings):
-            #         self.show_measurements_dialog(settings)
-            #     else:
-            #         self.msg(None, settings)
-            #     return
+            if self.iface.mapCanvas().currentLayer() is not None \
+                    and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
+                #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
+                #return
+                settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
+                if isinstance(settings, JRodosModelOutputConfig):
+                    self.show_jrodos_output_dialog(settings)
+                elif isinstance(settings, CalnetMeasurementsConfig):
+                    self.show_measurements_dialog(settings)
+                else:
+                    self.msg(None, settings)
+                return
 
             # create a group always on TOP == 0
             self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('Data group'))
@@ -681,7 +682,6 @@ class JRodos:
         QgsMessageLog.logMessage(str(msg), self.MSG_TITLE, QgsMessageLog.INFO)
 
     def show_jrodos_output_dialog(self, jrodos_output_settings=None):
-        # TODO ?? init dialog based on older values
 
         if jrodos_output_settings is not None:
             self.jrodos_output_settings = jrodos_output_settings
@@ -1046,7 +1046,7 @@ class JRodos:
 
                 self.iface.mapCanvas().refresh()
 
-        self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
+        #self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
         # ONLY when we received features back load it as a layer
         if features_added:
             # add layer to the map
@@ -1216,7 +1216,7 @@ class JRodos:
 
             QgsMapLayerRegistry.instance().addMapLayer(measurements_layer, False) # False, meaning not ready to add to legend
             self.layer_group.insertLayer(0, measurements_layer) # now add to legend in current layer group
-            self.layer_group.setName('Data retrieved: ' + QDateTime.currentDateTime().toString('MM/dd HH:mm'))
+            self.layer_group.setName(self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
 
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
@@ -1228,6 +1228,7 @@ class JRodos:
         else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
+            self.layer_group.setName(self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
             measurements_layer.startEditing()
             measurements_layer.selectAll()
             measurements_layer.deleteSelectedFeatures()

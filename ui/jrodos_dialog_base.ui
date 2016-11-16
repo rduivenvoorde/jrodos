@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1227</width>
-    <height>232</height>
+    <height>268</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -132,7 +132,7 @@
    <item row="5" column="3">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>MilliSecondsSinceEpoch</string>
+      <string>UTC</string>
      </property>
     </widget>
    </item>

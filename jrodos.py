@@ -25,7 +25,7 @@ from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItem
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
-    QgsRuleBasedRendererV2
+    QgsRuleBasedRendererV2, edit
 from qgis.utils import qgsfunction, plugins, QgsExpression
 
 from glob import glob
@@ -131,6 +131,8 @@ class JRodos:
         self.measurements_progress_bar = None
         self.measurements_settings = None
         self.measurements_provider = None
+
+        self.measurements_layer = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
@@ -884,6 +886,12 @@ class JRodos:
                 return layer
         return None
 
+    def remove_jrodos_layer(self, settings_object):
+        for layer in self.jrodos_settings:
+            if self.jrodos_settings[layer] == settings_object:
+                del self.jrodos_settings[layer]
+                return
+
     def load_jrodos_output(self, shape_dir, style_file):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
@@ -1162,17 +1170,15 @@ class JRodos:
         # tm.getController().getGui().setTimeFrameSize(frame_size)
         timemanager.getController().setTimeFrameSize(frame_size)
 
-        timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
+        timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
         # set layer to zero
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (untill upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
-            self.info("calling refreshGuiTimeFrameProperties")
             timemanager.getController().refreshGuiTimeFrameProperties()
         else:
-            self.info("calling refreshGuiTimeExtents")
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
-            self.guiControl.dock.spinBoxTimeExtent.setValue(self.getTimeLayerManager().timeFrameSize)
+        timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
 
 
     def load_measurements(self, output_dir, style_file):
@@ -1183,65 +1189,85 @@ class JRodos:
         :return:
         """
 
-        # check if for current measurements_settings there is already a layer in the layer list
-        measurements_layer = self.find_jrodos_layer(self.measurements_settings)
         # IF there is no memory/measurements layer yet: create it
-        if measurements_layer is None:
-            # create layer name based on self.measurements_settings
-            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
-            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
-            # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
-            layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-                         self.measurements_settings.endminusstart + ", " + \
-                         start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-                         end_time.toString(self.measurements_settings.date_time_format_short)
-            measurements_layer = QgsVectorLayer("point", layer_name, "memory")
-            # fields = gml_layer.fields()
-            # self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
-            # for field in fields:
-            #    temp_layer.addAttribute(field)
-            #    temp_layer.commitChanges()
-            #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
-
-            # add fields
-            pr = measurements_layer.dataProvider()
-            pr.addAttributes([QgsField("gml_id", QVariant.String),
-                              QgsField("startTime", QVariant.String),
-                              QgsField("endTime", QVariant.String),
-                              QgsField("quantity", QVariant.String),
-                              QgsField("substance", QVariant.String),
-                              QgsField("unit", QVariant.String),
-                              QgsField("value", QVariant.Double),
-                              QgsField("time", QVariant.String),
-                              QgsField("info", QVariant.String),
-                              QgsField("device", QVariant.String),
-                              QgsField("valuemsv", QVariant.Double)
-                              ])
-            measurements_layer.updateFields()
-
-            QgsMapLayerRegistry.instance().addMapLayer(measurements_layer, False) # False, meaning not ready to add to legend
-            self.layer_group.insertLayer(0, measurements_layer) # now add to legend in current layer group
-            #self.layer_group.setName(self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+        if self.measurements_layer is not None:
+            self.info("removing layer with id: {}".format(self.measurements_layer.id()))
             self.set_legend_node_name(self.layer_group,
-                self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-
-            # put a copy of the settings into our map<=>settings dict
-            # IF we want to be able to load a layer several times based on the same settings
-            # self.jrodos_settings[measurements_layer] = deepcopy(self.measurements_settings)
-            self.jrodos_settings[measurements_layer] = self.measurements_settings
-
-            measurements_layer.loadNamedStyle(
-                os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            # also update our internal list of layers:
+            self.remove_jrodos_layer(self.measurements_layer)
+            # remove it from registry, and thereby from timelayer
+            QgsMapLayerRegistry.instance().removeMapLayer(self.measurements_layer.id())
+            self.measurements_layer = None
         else:
+            self.set_legend_node_name(self.layer_group,
+                                      self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString(
+                                          'MM/dd HH:mm:ss'))
+
+
+        # create layer name based on self.measurements_settings
+        start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+        end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+        # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
+        layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+                     self.measurements_settings.endminusstart + ", " + \
+                     start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+                     end_time.toString(self.measurements_settings.date_time_format_short)
+        self.measurements_layer = QgsVectorLayer("point", layer_name, "memory")
+        # fields = gml_layer.fields()
+        # self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
+        # for field in fields:
+        #    temp_layer.addAttribute(field)
+        #    temp_layer.commitChanges()
+        #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
+
+        # add fields
+        pr = self.measurements_layer.dataProvider()
+        pr.addAttributes([QgsField("gml_id", QVariant.String),
+                          QgsField("startTime", QVariant.String),
+                          QgsField("endTime", QVariant.String),
+                          QgsField("quantity", QVariant.String),
+                          QgsField("substance", QVariant.String),
+                          QgsField("unit", QVariant.String),
+                          QgsField("value", QVariant.Double),
+                          QgsField("time", QVariant.String),
+                          QgsField("info", QVariant.String),
+                          QgsField("device", QVariant.String),
+                          QgsField("valuemsv", QVariant.Double)
+                          ])
+        self.measurements_layer.updateFields()
+
+        QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False) # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(0, self.measurements_layer) # now add to legend in current layer group
+
+        # put a copy of the settings into our map<=>settings dict
+        # IF we want to be able to load a layer several times based on the same settings
+        # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
+        self.jrodos_settings[self.measurements_layer] = self.measurements_settings
+
+        self.measurements_layer.loadNamedStyle(
+            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+        #else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
             #self.layer_group.setName(self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            self.set_legend_node_name(self.layer_group,
-                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            measurements_layer.startEditing()
-            measurements_layer.selectAll()
-            measurements_layer.deleteSelectedFeatures()
-            measurements_layer.commitChanges()
+            # self.set_legend_node_name(self.layer_group,
+            #                             self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            # QgsMapLayerRegistry.instance().removeMapLayer(self.measurements_layer.id())
+
+            # self.measurements_layer.startEditing()
+            # self.measurements_layer.selectAll()
+            # self.measurements_layer.deleteSelectedFeatures()
+            # self.measurements_layer.commitChanges()
+
+            # http://www.opengis.ch/2015/08/12/with-edit-layer/#avoid-using-dataprovider-methods
+            # NOPE: this only deletes the features which are in current (time query)
+            # with edit(self.measurements_layer):
+            #
+            #     ids = [feat.id() for feat in self.measurements_layer.getFeatures()]
+            #     self.info("Deleting features: {}\n{}".format(ids, self.measurements_layer.featureCount()))
+            #     self.measurements_layer.deleteFeatures(ids)
+            #     self.info("Deleted features, fcount now: {}".format(self.measurements_layer.featureCount()))
 
 
         feature_count = 0
@@ -1285,7 +1311,7 @@ class JRodos:
                         f.setGeometry(feature.geometry())
                         flist.append(f)
                         if len(flist)>1000:
-                            measurements_layer.dataProvider().addFeatures(flist)
+                            self.measurements_layer.dataProvider().addFeatures(flist)
                             flist = []
                         #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())
                     else:
@@ -1298,24 +1324,24 @@ class JRodos:
             else:
                 self.info(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
-            measurements_layer.dataProvider().addFeatures(flist)
-            measurements_layer.updateFields()
-            measurements_layer.updateExtents()
+            self.measurements_layer.dataProvider().addFeatures(flist)
+            self.measurements_layer.updateFields()
+            self.measurements_layer.updateExtents()
 
             # set the display field value
-            measurements_layer.setDisplayField('[% measurement_values()%]')
+            self.measurements_layer.setDisplayField('[% measurement_values()%]')
             # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
                 self.iface.actionMapTips().trigger() # trigger action
-            self.iface.legendInterface().setCurrentLayer(measurements_layer)
+            self.iface.legendInterface().setCurrentLayer(self.measurements_layer)
             self.iface.mapCanvas().refresh()
 
         # add this layer to the TimeManager
-        self.add_layer_to_timemanager(measurements_layer, 'time')
+        self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
         # add rainradar and to the TimeManager IF enabled
         if self.settings.value('rainradar_enabled'):
-            self.add_rainradar_to_timemanager(measurements_layer)
+            self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def set_legend_node_name(self, treenode, name):
         """

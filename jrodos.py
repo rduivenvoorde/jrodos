@@ -774,25 +774,27 @@ class JRodos:
 
     def show_measurements_dialog(self, measurements_settings=None):
 
-        if measurements_settings is not None:
-            self.measurements_settings = measurements_settings
-            self.find_jrodos_layer(measurements_settings)
-            self.set_measurements_bbox()
-            self.start_measurements_provider()
-            return
+        # if measurements_settings is not None:
+        #     self.measurements_settings = measurements_settings
+        #     self.update_measurements_bbox()
+        #     self.start_measurements_provider()
+        #     return
 
         if self.measurements_settings is not None:
             self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
             return
 
-        self.measurements_settings = None
-        end_time = QDateTime.currentDateTime() # end NOW
+        end_time = QDateTime.currentDateTime()  # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
-
-        # BUT if we just received a model, INIT the measurements dialog based on this
-        if self.jrodos_output_settings is not None:
-            start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC() # we REALLY want UTC
-            end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
+        if measurements_settings is not None:
+            self.measurements_settings = measurements_settings
+            start_time = QDateTime.fromString(measurements_settings.start_datetime, measurements_settings.date_time_format)
+            end_time = QDateTime.fromString(measurements_settings.end_datetime, measurements_settings.date_time_format)
+        else:
+            # BUT if we just received a model, INIT the measurements dialog based on this
+            if self.jrodos_output_settings is not None:
+                start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC() # we REALLY want UTC
+                end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
 
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
@@ -838,8 +840,10 @@ class JRodos:
             measurements_settings.quantity = quantity
             measurements_settings.substance = substance
             self.measurements_settings = measurements_settings
-            self.set_measurements_bbox()
+            self.update_measurements_bbox()
             self.start_measurements_provider()
+        else: # cancel pressed
+            self.measurements_settings = None
 
     def start_measurements_provider(self):
         self.measurements_progress_bar.setMaximum(0)
@@ -873,7 +877,7 @@ class JRodos:
         self.measurements_settings = None
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
-    def set_measurements_bbox(self):
+    def update_measurements_bbox(self):
             # bbox in epsg:4326
             crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
@@ -1194,6 +1198,14 @@ class JRodos:
         :return:
         """
         register_layers = False
+        start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+        end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+        # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
+        layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+                     self.measurements_settings.endminusstart + ", " + \
+                     start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+                     end_time.toString(self.measurements_settings.date_time_format_short)
+
         if self.measurements_layer is None:
             register_layers = True
             self.set_legend_node_name(self.layer_group,
@@ -1201,13 +1213,6 @@ class JRodos:
                                           'MM/dd HH:mm:ss'))
 
             # create layer name based on self.measurements_settings
-            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
-            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
-            # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
-            layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-                         self.measurements_settings.endminusstart + ", " + \
-                         start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-                         end_time.toString(self.measurements_settings.date_time_format_short)
             self.measurements_layer = QgsVectorLayer("point", layer_name, "memory")
 
             # add fields
@@ -1249,6 +1254,7 @@ class JRodos:
             # set current timestamp in the group node of the legend
             self.set_legend_node_name(self.layer_group,
                                         self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+            self.measurements_layer.setName(layer_name)
 
         feature_count = 0
         flist = []

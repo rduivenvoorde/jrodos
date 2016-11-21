@@ -301,6 +301,8 @@ class JRodos:
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
 
+        QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
+
     def show_settings(self):
         self.settings_dlg.show()
 
@@ -321,8 +323,9 @@ class JRodos:
         # remove the toolbar
         del self.toolbar
         # deregister our custom QgsExpression function
-        QgsExpression.unregisterFunction("$measurement_values")
         QgsExpression.unregisterFunction("measurement_values")
+
+        QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
 
 
     def run(self):
@@ -886,9 +889,11 @@ class JRodos:
                 return layer
         return None
 
-    def remove_jrodos_layer(self, settings_object):
-        for layer in self.jrodos_settings:
-            if self.jrodos_settings[layer] == settings_object:
+    def remove_jrodos_layer(self, layer2remove):
+        for layer in self.jrodos_settings.keys():
+            if layer2remove == layer.id():
+                if self.measurements_layer == layer:
+                    self.measurements_layer = None
                 del self.jrodos_settings[layer]
                 return
 
@@ -1188,87 +1193,62 @@ class JRodos:
         :param style_file:
         :return:
         """
-
-        # IF there is no memory/measurements layer yet: create it
-        if self.measurements_layer is not None:
-            self.info("removing layer with id: {}".format(self.measurements_layer.id()))
-            self.set_legend_node_name(self.layer_group,
-                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            # also update our internal list of layers:
-            self.remove_jrodos_layer(self.measurements_layer)
-            # remove it from registry, and thereby from timelayer
-            QgsMapLayerRegistry.instance().removeMapLayer(self.measurements_layer.id())
-            self.measurements_layer = None
-        else:
+        register_layers = False
+        if self.measurements_layer is None:
+            register_layers = True
             self.set_legend_node_name(self.layer_group,
                                       self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString(
                                           'MM/dd HH:mm:ss'))
 
+            # create layer name based on self.measurements_settings
+            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+            # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
+            layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+                         self.measurements_settings.endminusstart + ", " + \
+                         start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+                         end_time.toString(self.measurements_settings.date_time_format_short)
+            self.measurements_layer = QgsVectorLayer("point", layer_name, "memory")
 
-        # create layer name based on self.measurements_settings
-        start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
-        end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
-        # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
-        layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-                     self.measurements_settings.endminusstart + ", " + \
-                     start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-                     end_time.toString(self.measurements_settings.date_time_format_short)
-        self.measurements_layer = QgsVectorLayer("point", layer_name, "memory")
-        # fields = gml_layer.fields()
-        # self.msg(None, 'temp_layer.fields() %s' % temp_layer.fields())
-        # for field in fields:
-        #    temp_layer.addAttribute(field)
-        #    temp_layer.commitChanges()
-        #    temp_layer.updateFields()  # tell the vector layer to fetch changes from the provider
+            # add fields
+            pr = self.measurements_layer.dataProvider()
+            pr.addAttributes([QgsField("gml_id", QVariant.String),
+                              QgsField("startTime", QVariant.String),
+                              QgsField("endTime", QVariant.String),
+                              QgsField("quantity", QVariant.String),
+                              QgsField("substance", QVariant.String),
+                              QgsField("unit", QVariant.String),
+                              QgsField("value", QVariant.Double),
+                              QgsField("time", QVariant.String),
+                              QgsField("info", QVariant.String),
+                              QgsField("device", QVariant.String),
+                              QgsField("valuemsv", QVariant.Double)
+                              ])
+            self.measurements_layer.updateFields()
 
-        # add fields
-        pr = self.measurements_layer.dataProvider()
-        pr.addAttributes([QgsField("gml_id", QVariant.String),
-                          QgsField("startTime", QVariant.String),
-                          QgsField("endTime", QVariant.String),
-                          QgsField("quantity", QVariant.String),
-                          QgsField("substance", QVariant.String),
-                          QgsField("unit", QVariant.String),
-                          QgsField("value", QVariant.Double),
-                          QgsField("time", QVariant.String),
-                          QgsField("info", QVariant.String),
-                          QgsField("device", QVariant.String),
-                          QgsField("valuemsv", QVariant.Double)
-                          ])
-        self.measurements_layer.updateFields()
+            QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False) # False, meaning not ready to add to legend
+            self.layer_group.insertLayer(0, self.measurements_layer) # now add to legend in current layer group
 
-        QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False) # False, meaning not ready to add to legend
-        self.layer_group.insertLayer(0, self.measurements_layer) # now add to legend in current layer group
+            # put a copy of the settings into our map<=>settings dict
+            # IF we want to be able to load a layer several times based on the same settings
+            # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
+            self.jrodos_settings[self.measurements_layer] = self.measurements_settings
 
-        # put a copy of the settings into our map<=>settings dict
-        # IF we want to be able to load a layer several times based on the same settings
-        # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
-        self.jrodos_settings[self.measurements_layer] = self.measurements_settings
-
-        self.measurements_layer.loadNamedStyle(
-            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-        #else:
+            self.measurements_layer.loadNamedStyle(
+                os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+        else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
-            #self.layer_group.setName(self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            # self.set_legend_node_name(self.layer_group,
-            #                             self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            # QgsMapLayerRegistry.instance().removeMapLayer(self.measurements_layer.id())
-
-            # self.measurements_layer.startEditing()
-            # self.measurements_layer.selectAll()
-            # self.measurements_layer.deleteSelectedFeatures()
-            # self.measurements_layer.commitChanges()
-
-            # http://www.opengis.ch/2015/08/12/with-edit-layer/#avoid-using-dataprovider-methods
-            # NOPE: this only deletes the features which are in current (time query)
-            # with edit(self.measurements_layer):
-            #
-            #     ids = [feat.id() for feat in self.measurements_layer.getFeatures()]
-            #     self.info("Deleting features: {}\n{}".format(ids, self.measurements_layer.featureCount()))
-            #     self.measurements_layer.deleteFeatures(ids)
-            #     self.info("Deleted features, fcount now: {}".format(self.measurements_layer.featureCount()))
-
+            self.measurements_layer.startEditing()
+            self.measurements_layer.setSubsetString('') # first remove the query otherwise only the query result is removed
+            self.measurements_layer.beginEditCommand("Delete Selected Features")
+            self.measurements_layer.selectAll()
+            self.measurements_layer.deleteSelectedFeatures()
+            self.measurements_layer.endEditCommand()
+            self.measurements_layer.commitChanges()
+            # set current timestamp in the group node of the legend
+            self.set_legend_node_name(self.layer_group,
+                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
 
         feature_count = 0
         flist = []
@@ -1328,20 +1308,24 @@ class JRodos:
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 
+            timemanager = plugins['timemanager'].getController().getTimeLayerManager()
+            timemanager.setTimeFrameDiscrete(timemanager.timeFrameDiscrete)
+
+        if register_layers:
+            # add this layer to the TimeManager
+            self.add_layer_to_timemanager(self.measurements_layer, 'time')
+
             # set the display field value
             self.measurements_layer.setDisplayField('[% measurement_values()%]')
             # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
-                self.iface.actionMapTips().trigger() # trigger action
+                self.iface.actionMapTips().trigger()  # trigger action
             self.iface.legendInterface().setCurrentLayer(self.measurements_layer)
-            self.iface.mapCanvas().refresh()
+            #self.iface.mapCanvas().refresh()
 
-        # add this layer to the TimeManager
-        self.add_layer_to_timemanager(self.measurements_layer, 'time')
-
-        # add rainradar and to the TimeManager IF enabled
-        if self.settings.value('rainradar_enabled'):
-            self.add_rainradar_to_timemanager(self.measurements_layer)
+            # add rainradar and to the TimeManager IF enabled
+            if self.settings.value('rainradar_enabled'):
+                self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def set_legend_node_name(self, treenode, name):
         """

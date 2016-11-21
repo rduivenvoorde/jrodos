@@ -346,11 +346,8 @@ class JRodos:
 
             # IF there is a layer selected in the legend
             # based on 'currentLayer' in legend, check the settings
-            #self.msg(None, self.jrodos_settings)
             if self.iface.mapCanvas().currentLayer() is not None \
                     and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
-                #self.msg(None, self.jrodos_settings[self.iface.mapCanvas().currentLayer()])
-                #return
                 settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
                 if isinstance(settings, JRodosModelOutputConfig):
                     self.show_jrodos_output_dialog(settings)
@@ -361,11 +358,12 @@ class JRodos:
                 return
 
             # create a group always on TOP == 0
-            self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('Data group'))
+            self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('JRodos plugin layers'))
             if self.settings.value('jrodos_enabled'):
                 self.show_jrodos_output_dialog()
             if self.settings.value('measurements_enabled'):
                 self.show_measurements_dialog()
+
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
             return
@@ -774,12 +772,6 @@ class JRodos:
 
     def show_measurements_dialog(self, measurements_settings=None):
 
-        # if measurements_settings is not None:
-        #     self.measurements_settings = measurements_settings
-        #     self.update_measurements_bbox()
-        #     self.start_measurements_provider()
-        #     return
-
         if self.measurements_settings is not None:
             self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
             return
@@ -901,7 +893,7 @@ class JRodos:
                 del self.jrodos_settings[layer]
                 return
 
-    def load_jrodos_output(self, shape_dir, style_file):
+    def  load_jrodos_output(self, shape_dir, style_file):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
         from given shape_dir.
@@ -1150,19 +1142,13 @@ class JRodos:
 
         timemanager = plugins['timemanager']
 
-        #TODO click on button if not enabled
+        # enable timemanager by 'clicking' on enable button (if not enabled)
         if not timemanager.getController().getTimeLayerManager().isEnabled():
             timemanager.getController().getGui().dock.pushButtonToggleTime.click()
-        # for testing: just remove all timelayers
-        #timemanager.getController().timeLayerManager.clearTimeLayerList()
-
-        jrodos_settings = self.jrodos_settings[layer] # we keep (deep)copies of the settings of the layers here
 
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = layer
         timelayer_settings.startTimeAttribute = time_column
-        #timelayer_settings.startTimeAttribute = jrodos_settings.start_datetime
-        #timelayer_settings.endTimeAttribute = jrodos_settings.end_datetime
 
         timelayer = TimeVectorLayer(timelayer_settings, self.iface)
 
@@ -1171,16 +1157,11 @@ class JRodos:
         frame_type = frame_type
         timemanager.getController().setPropagateGuiChanges(False)
         timemanager.getController().setAnimationOptions(animationFrameLength, False, False)
-
-        # via gui should not be nessecary!!!
-        # tm.getController().getGui().setTimeFrameType(frame_type)
         timemanager.getController().setTimeFrameType(frame_type)
-        # via gui should not be nessecary!!!
-        # tm.getController().getGui().setTimeFrameSize(frame_size)
         timemanager.getController().setTimeFrameSize(frame_size)
 
         timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
-        # set layer to zero
+        # set timeslider to zero
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (untill upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
@@ -1197,7 +1178,7 @@ class JRodos:
         :param style_file:
         :return:
         """
-        register_layers = False
+
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
@@ -1206,6 +1187,7 @@ class JRodos:
                      start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
                      end_time.toString(self.measurements_settings.date_time_format_short)
 
+        register_layers = False
         if self.measurements_layer is None:
             register_layers = True
             self.set_legend_node_name(self.layer_group,

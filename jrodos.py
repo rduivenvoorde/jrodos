@@ -344,21 +344,10 @@ class JRodos:
             if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
                 self.get_quantities_and_substances() # async call, will fill dropdowns when network requests return
 
-            # IF there is a layer selected in the legend
-            # based on 'currentLayer' in legend, check the settings
-            if self.iface.mapCanvas().currentLayer() is not None \
-                    and self.jrodos_settings.has_key(self.iface.mapCanvas().currentLayer()):
-                settings = self.jrodos_settings[self.iface.mapCanvas().currentLayer()]
-                if isinstance(settings, JRodosModelOutputConfig):
-                    self.show_jrodos_output_dialog(settings)
-                elif isinstance(settings, CalnetMeasurementsConfig):
-                    self.show_measurements_dialog(settings)
-                else:
-                    self.msg(None, settings)
-                return
-
-            # create a group always on TOP == 0
-            self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('JRodos plugin layers'))
+            # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
+            if self.measurements_layer is None and self.jrodos_output_settings is None:
+                self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('JRodos plugin layers'))
+            # only show dialogs if the item is enabled in settings
             if self.settings.value('jrodos_enabled'):
                 self.show_jrodos_output_dialog()
             if self.settings.value('measurements_enabled'):
@@ -770,7 +759,7 @@ class JRodos:
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
-    def show_measurements_dialog(self, measurements_settings=None):
+    def show_measurements_dialog(self):
 
         if self.measurements_settings is not None:
             self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
@@ -778,10 +767,11 @@ class JRodos:
 
         end_time = QDateTime.currentDateTime()  # end NOW
         start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
-        if measurements_settings is not None:
-            self.measurements_settings = measurements_settings
-            start_time = QDateTime.fromString(measurements_settings.start_datetime, measurements_settings.date_time_format)
-            end_time = QDateTime.fromString(measurements_settings.end_datetime, measurements_settings.date_time_format)
+
+        if self.measurements_layer is not None:
+            self.measurements_settings = self.jrodos_settings[self.measurements_layer]
+            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         else:
             # BUT if we just received a model, INIT the measurements dialog based on this
             if self.jrodos_output_settings is not None:

@@ -34,6 +34,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
             result.set_data(data, reply.url().toString())
         self.ready = True
         self.finished.emit(result)
+        reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self, param='Quantities'):
 

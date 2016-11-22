@@ -175,6 +175,7 @@ class SimpleProvider(ProviderBase):
             result._data = content
         self.finished.emit(result)
         self.ready = True
+        reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self):
         url = self.config.url

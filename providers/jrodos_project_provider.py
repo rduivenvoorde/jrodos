@@ -25,6 +25,7 @@ class JRodosProjectProvider(ProviderBase):
             result._data = json.loads(content)
         self.finished.emit(result)
         self.ready = True
+        reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self, path=None):
         if path is not None:

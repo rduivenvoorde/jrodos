@@ -259,6 +259,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             # OK, we have an error... emit the result + error here and quit the loading loop
             self.ready = True
             self.finished.emit(result)
+            reply.deleteLater()  # else timeouts on Windows
             return
         else:
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
@@ -274,6 +275,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             # we need to wait untill all pages are there before to emit the result; so: INSIDE de loop
             self.ready = True
             self.finished.emit(result)
+            reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self):
         request = QNetworkRequest(QUrl(self.config.url))

@@ -76,6 +76,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             # OK, we have an error... emit the result + error here and quit the loading loop
             self.ready = True
             self.finished.emit(result)
+            reply.deleteLater() # else timeouts on Windows
             return
         else:
             filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
@@ -98,6 +99,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                     result.set_error(-1, reply.url().toString(), first500chars)
                     self.ready = True
                     self.finished.emit(result)
+                    reply.deleteLater()  # else timeouts on Windows
                     return
                 else:
                     # if all OK we have a page count:
@@ -134,6 +136,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                 # we nee to wait untill all pages are there before to emit the result; so: INSIDE de loop
                 self.ready = True
                 self.finished.emit(result)
+                reply.deleteLater()  # else timeouts on Windows
 
 
     def get_data(self):

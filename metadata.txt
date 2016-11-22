@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=2.0
 description=Plugin to connect to JRodos via WPS
-version=0.3.2
+version=0.3.3
 author=Zuidt
 email=richard@zuidt.nl
 

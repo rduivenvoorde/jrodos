@@ -84,9 +84,26 @@ class CalnetMeasurementsProvider(ProviderBase):
                 # first read 500 chars to check the 'numberReturned' attribute
                 # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
                 first500chars = reply.read(500)
-                page_count = re.findall('numberReturned="([0-9.]+)"', first500chars)
-                self.page_count = int(page_count[0])
-                self.total_count += self.page_count
+
+                # could be an exception
+                # <ows:ExceptionReport version="2.0.0" xsi:schemaLocation="http://www.opengis.net/ows/1.1 http://geoserver.dev.cal-net.nl:80/geoserver/schemas/ows/1.1.0/owsAll.xsd">
+                #     <ows:Exception exceptionCode="OperationProcessingFailed" locator="GetFeature">
+                #     <ows:ExceptionText>Error occurred getting features The end instant must be greater or equal to the start
+                #     </ows:ExceptionText>
+                #     </ows:Exception>
+                # </ows:ExceptionReport>
+                exception = re.findall('<ows:ExceptionText>', first500chars)
+                if len(exception)>0:
+                    # oops WFS returned an exception
+                    result.set_error(-1, reply.url().toString(), first500chars)
+                    self.ready = True
+                    self.finished.emit(result)
+                    return
+                else:
+                    # if all OK we have a page count:
+                    page_count = re.findall('numberReturned="([0-9.]+)"', first500chars)
+                    self.page_count = int(page_count[0])
+                    self.total_count += self.page_count
                 f.write(first500chars)
                 # now the rest
                 f.write(reply.readAll())

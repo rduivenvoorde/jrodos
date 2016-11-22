@@ -202,6 +202,7 @@ class JRodosModelProvider(ProviderBase):
                 result.set_error(-1, self.config.url, "Wong json: " + content)
         self.finished.emit(result)
         self.ready = True
+        reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self):
         request = QNetworkRequest(QUrl(self.config.url))

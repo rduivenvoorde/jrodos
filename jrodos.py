@@ -1226,7 +1226,7 @@ class JRodos:
             # set current timestamp in the group node of the legend
             self.set_legend_node_name(self.layer_group,
                                         self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            self.measurements_layer.setName(layer_name)
+            #self.measurements_layer.setName(layer_name) # only in 2.16
 
         feature_count = 0
         flist = []

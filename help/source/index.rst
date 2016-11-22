@@ -25,6 +25,9 @@ Install both(!!!) the JRodos plugin and the TimeManager plugin using QGIS Plugin
 
 Make sure both plugins are active.
 
+If you need some map data as background/reference layers, install 'QuickMapServices' plugin or 'PDOK Services Plugin'
+via the plugin manager of QGIS.
+
 Click de JRodos button to start the dialogs.
 
 How does it work

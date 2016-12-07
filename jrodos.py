@@ -21,7 +21,8 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, QDesktopServices, QColor
+from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
+    QDesktopServices,  QColor, QSortFilterProxyModel
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
@@ -32,7 +33,7 @@ from glob import glob
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from ui import JRodosMeasurementsDialog, JRodosDialog
+from ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog
 from jrodos_settings import JRodosSettings
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
@@ -51,6 +52,7 @@ import resources # needed for button images!
 import os.path
 import json
 import sys
+import pickle
 
 
 # pycharm debugging
@@ -108,9 +110,11 @@ class JRodos:
         self.QMODEL_NAME_IDX        = 1 # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
         self.QMODEL_DESCRIPTION_IDX = 2 # IF the QStandardModel has a description (eg used in dropdowns)
         self.QMODEL_DATA_IDX        = 3 # IF the QStandardModel has other data
-        self.QMODEL_SEARCH_IDX      = 4 # IF the QStandardModel has a special SEARCH column (optional for tables)
+        self.QMODEL_SEARCH_IDX      = 4 # IF the QStandardModel has a special SEARCH/FILTER column (optional for tables)
 
         self.MAX_FLOAT = sys.float_info.max
+
+        self.USER_DATA_ITEMS_PATH = self.plugin_dir + '/jrodos_data_items.pickle'
 
         self.settings = JRodosSettings()
 
@@ -292,8 +296,12 @@ class JRodos:
         self.jrodosmodel_dlg = JRodosDialog()
         # connect the change of the project dropdown to a refresh of the data path
         self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
-
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
+        self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_filter_dialog)
+
+        # Create the filter dialog
+        self.filter_dlg = JRodosFilterDialog(self.jrodosmodel_dlg)
+        self.filter_dlg.le_item_filter.setPlaceholderText(self.tr('Search in items'))
 
         # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
@@ -301,10 +309,28 @@ class JRodos:
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
 
+        # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
 
     def show_settings(self):
         self.settings_dlg.show()
+
+    def show_filter_dialog(self):
+        # load saved user data_items from pickled file
+        self.filter_dlg.show()
+        # OK pressed:
+        if self.filter_dlg.exec_():
+            # save user data_items
+            data_items = []
+            for task_model in self.jrodos_project_data:
+                # run over model, and check if SEARCH column is 1
+                for row in range(0, task_model.rowCount()):
+                    if task_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
+                        data_item =  task_model.item(row, self.QMODEL_DATA_IDX).text()
+                        data_items.append(data_item)
+            # pickling the user_data_items to disk
+            with open(self.USER_DATA_ITEMS_PATH, 'wb') as f:
+                pickle.dump(data_items, f)
 
     def show_help(self):
         docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
@@ -324,7 +350,6 @@ class JRodos:
         del self.toolbar
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
-
         QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
 
 
@@ -518,6 +543,12 @@ class JRodos:
             # cleanup the starttime, step etc in the dialog too
             self.set_dialog_project_info(None, None, None)
         else:
+            # load saved user data_items from pickled file
+            data_items_from_disk = []
+            if os.path.isfile(self.USER_DATA_ITEMS_PATH):
+                with open(self.USER_DATA_ITEMS_PATH, 'rb') as f:
+                    data_items_from_disk = pickle.load(f)
+
             # a project has 1-4 tasks (model calculations?)
             # every task has dataitems (both output and input)
             # a dataitem is actually a 'path' to an 'output-node' in the output tree of JRodos
@@ -563,17 +594,24 @@ class JRodos:
                     if data_item['dataitem_type'] in ['GridSeries', 'Series']:
                         # example datapath:
                         # Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective
+
+
+                        name = data_item['datapath'].split('=;=')[-2]+', '+data_item['datapath'].split('=;=')[-1]
+                        user_favourite = '0'
+                        if data_item['datapath'] in data_items_from_disk:
+                            user_favourite = '1'
                         data_items_model.appendRow([
                             QStandardItem('0'),                    # self.QMODEL_ID_IDX (not used)
-                            QStandardItem(data_item['datapath']),  # self.QMODEL_NAME_IDX
+                            QStandardItem(name),                   # self.QMODEL_NAME_IDX
                             QStandardItem(data_item['datapath']),  # self.QMODEL_DESCRIPTION_IDX
-                            QStandardItem(data_item['datapath'])   # self.QMODEL_DATA_IDX
+                            QStandardItem(data_item['datapath']),  # self.QMODEL_DATA_IDX
+                            QStandardItem(user_favourite)          # self.QMODEL_SEARCH_IDX
                         ])
                 # add the task model to the project data
                 self.jrodos_project_data.append(data_items_model)
 
             self.jrodosmodel_dlg.combo_task.setModel(self.task_model)
-            self.jrodosmodel_dlg.combo_task.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
+            self.jrodosmodel_dlg.combo_task.setModelColumn(self.QMODEL_NAME_IDX)  # what we show in dropdown
             # check the last remembered Task
             last_used_task = Utils.get_settings_value("jrodos_last_task", "")
             items = self.task_model.findItems(last_used_task, Qt.MatchExactly, self.QMODEL_NAME_IDX)
@@ -600,14 +638,25 @@ class JRodos:
         :param tasks_model_idx:
         :return:
         """
-        self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_project_data[tasks_model_idx])
-        self.jrodosmodel_dlg.combo_path.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
+        current_data_items = self.jrodos_project_data[tasks_model_idx]
+        proxy_model = QSortFilterProxyModel()
+        proxy_model.setSourceModel(current_data_items)
+        proxy_model.setFilterKeyColumn(self.QMODEL_SEARCH_IDX) # SEARCH contains '1' and '0', show only '1'
+        proxy_model.setFilterFixedString('1')
+        proxy_model.setDynamicSortFilter(True)
+        self.jrodosmodel_dlg.combo_path.setModel(proxy_model)
+        self.jrodosmodel_dlg.combo_path.setModelColumn(self.QMODEL_NAME_IDX)  # what we show
+        self.filter_dlg.set_model(current_data_items)
         # set last used datapath or the first item if this project/task does not have this datapath
         last_used_datapath = Utils.get_settings_value("jrodos_last_model_datapath", "")
-        items = self.jrodos_project_data[tasks_model_idx].findItems(last_used_datapath, Qt.MatchExactly, self.QMODEL_DATA_IDX)
+        items = current_data_items.findItems(last_used_datapath, Qt.MatchExactly, self.QMODEL_DATA_IDX)
         if len(items) > 0:
-            self.jrodosmodel_dlg.combo_path.setCurrentIndex(items[0].row())
-
+            # get the model index
+            model_idx = current_data_items.index(items[0].row(), self.QMODEL_NAME_IDX)
+            # map to the proxymodel index
+            idx = self.jrodosmodel_dlg.combo_path.model().mapFromSource(model_idx)
+            # show it
+            self.jrodosmodel_dlg.combo_path.setCurrentIndex(idx.row())
 
     def provide_project_info_finished(self, result):
         """
@@ -699,11 +748,18 @@ class JRodos:
             # selected project + save the project id (model col 1) to QSettings
             # +"'&amp;model='EMERSIM'"
             jrodos_output_settings.jrodos_project = "project='"+self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()+"'"
-            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(),self.QMODEL_DATA_IDX ).text())
+            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX ).text())
             # for storing in settings we do not use the non unique name, but the ID of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
-            last_used_datapath = self.jrodosmodel_dlg.combo_path.itemText(self.jrodosmodel_dlg.combo_path.currentIndex())
+
+            # get data_item/path from model behind the combo_path dropdown
+            datapath_model = self.jrodos_project_data[self.jrodosmodel_dlg.combo_task.currentIndex()] # QStandardItemModel
+            combopath_model = self.jrodosmodel_dlg.combo_path.model() # QSortFilterProxyModel
+            proxy_idx = combopath_model.index(self.jrodosmodel_dlg.combo_path.currentIndex(), self.QMODEL_DATA_IDX)
+            idx = combopath_model.mapToSource(proxy_idx)
+            last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
+
             # NOTE that the jrodos_output_settings.jrodos_path has single quotes around it's value!! in the settings:
             # like: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
             jrodos_output_settings.jrodos_path = "path='{}'".format(last_used_datapath)

@@ -197,6 +197,13 @@
    <item row="1" column="1" colspan="4">
     <widget class="QComboBox" name="combo_task"/>
    </item>
+   <item row="2" column="5">
+    <widget class="QPushButton" name="btn_item_filter">
+     <property name="text">
+      <string>All</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

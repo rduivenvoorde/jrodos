@@ -498,8 +498,8 @@ class JRodos:
                     if l['rel'] == 'self':
                         link = l['href']
                         break
-                id = unicode(project['projectId'])
-                name = project['name']
+                id = unicode(project['project']['projectId'])
+                name = project['project']['name']
                 self.projects_model.appendRow([
                     QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
                     QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
@@ -553,7 +553,7 @@ class JRodos:
             # every task has dataitems (both output and input)
             # a dataitem is actually a 'path' to an 'output-node' in the output tree of JRodos
             self.task_model = QStandardItemModel()
-            for task in result.data['tasks']:
+            for task in result.data['project']['tasks']:
                 # "uid": "527fcd2c-ac13-7293-5563-bb409a0362f5",
                 # "modelwrappername": "LSMC",
                 # "description": "run:Tameka",
@@ -594,8 +594,6 @@ class JRodos:
                     if data_item['dataitem_type'] in ['GridSeries', 'Series']:
                         # example datapath:
                         # Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective
-
-
                         name = data_item['datapath'].split('=;=')[-2]+', '+data_item['datapath'].split('=;=')[-1]
                         user_favourite = '0'
                         if data_item['datapath'] in data_items_from_disk:
@@ -620,7 +618,7 @@ class JRodos:
             # Retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = "project='"+result.data['name']
+            conf.jrodos_project = "project='"+result.data['project']['name']
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
             # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
             if self.task_model.rowCount()>1:

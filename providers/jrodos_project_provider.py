@@ -20,6 +20,18 @@ class JRodosProjectProvider(ProviderBase):
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos project provider (REST)')
+        elif reply.attribute(QNetworkRequest.RedirectionTargetAttribute) is not None:
+            # !! We are being redirected
+            # http://stackoverflow.com/questions/14809310/qnetworkreply-and-301-redirect
+            url = reply.attribute(QNetworkRequest.RedirectionTargetAttribute)  # returns a QUrl
+            if not url.isEmpty():  # which IF NOT EMPTY contains the new url
+                # find it and get it
+                self.config.url = url.toString()
+                self.get_data()
+            # delete this reply, else timeouts on Windows
+            reply.deleteLater()
+            # return without emitting 'finished'
+            return
         else:
             content = unicode(reply.readAll())
             result._data = json.loads(content)

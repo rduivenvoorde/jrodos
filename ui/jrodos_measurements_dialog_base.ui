@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>588</width>
+    <width>834</width>
     <height>304</height>
    </rect>
   </property>
@@ -14,10 +14,24 @@
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="5" column="0">
-    <widget class="QLabel" name="lbl_substance">
+   <item row="0" column="0">
+    <widget class="QLabel" name="lbl_start_time">
      <property name="text">
-      <string>Substance</string>
+      <string>Start time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="lbl_end_time">
+     <property name="text">
+      <string>End time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="lbl_endminusstart">
+     <property name="text">
+      <string>Endtime - Starttime</string>
      </property>
     </widget>
    </item>
@@ -28,10 +42,34 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="lbl_endminusstart">
+   <item row="3" column="1">
+    <widget class="QComboBox" name="combo_quantity">
+     <property name="editable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="lbl_substance">
      <property name="text">
-      <string>Endtime - Starttime</string>
+      <string>Substance</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QComboBox" name="combo_substance">
+     <property name="editable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="3">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
@@ -58,13 +96,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="lbl_end_time">
-     <property name="text">
-      <string>End time (UTC)</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1" colspan="2">
     <widget class="QDateTimeEdit" name="dateTime_end">
      <property name="locale">
@@ -88,13 +119,6 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="lbl_start_time">
-     <property name="text">
-      <string>Start time (UTC)</string>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="1" colspan="2">
     <widget class="QComboBox" name="combo_endminusstart">
      <property name="editable">
@@ -102,27 +126,17 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="0" colspan="3">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   <item row="4" column="2">
+    <widget class="QPushButton" name="btn_substance_filter">
+     <property name="text">
+      <string>See All</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="1" colspan="2">
-    <widget class="QComboBox" name="combo_quantity">
-     <property name="editable">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1" colspan="2">
-    <widget class="QComboBox" name="combo_substance">
-     <property name="editable">
-      <bool>true</bool>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="btn_quantity_filter">
+     <property name="text">
+      <string>See All</string>
      </property>
     </widget>
    </item>

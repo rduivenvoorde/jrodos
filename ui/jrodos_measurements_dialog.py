@@ -37,7 +37,7 @@ class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
+        # http://qt-project.org/doc/qt-4.8/ designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
@@ -49,12 +49,12 @@ class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
         # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
         self.combo_quantity.close()  # this apparently also removes the widget??
         self.combo_quantity = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_quantity, 3, 1, 1, 2)
+        self.gridLayout.addWidget(self.combo_quantity, 3, 1, 1, 1)  # row, col, #rows, #cols
 
         # Replace the default ComboBox with our better ExtendedCombo
         # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
         self.combo_substance.close()  # this apparently also removes the widget??
         self.combo_substance = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_substance, 5, 1, 1, 2)
+        self.gridLayout.addWidget(self.combo_substance, 4, 1, 1, 1)  # row, col, #rows, #cols
 
 

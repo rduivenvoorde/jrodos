@@ -60,6 +60,7 @@ import pickle
 # import pydevd
 # pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True)
 
+
 class JRodos:
     """QGIS Plugin Implementation."""
 
@@ -105,6 +106,7 @@ class JRodos:
         self.JRODOS_DESCRIPTION_IDX = 0
         self.JRODOS_CODE_IDX = 1
 
+        # TODO: remove these in favour of constants-versions (from constants import ... like in jrodos_filter_dialog.py)
         # 'standard' column indexes for QStandardModels to be used instead of magic numbers for data columns:
         self.QMODEL_ID_IDX          = 0 # IF the QStandardModel has a true ID make it column 0 (else double NAME as 0)
         self.QMODEL_NAME_IDX        = 1 # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
@@ -114,7 +116,9 @@ class JRodos:
 
         self.MAX_FLOAT = sys.float_info.max
 
-        self.USER_DATA_ITEMS_PATH = self.plugin_dir + '/jrodos_data_items.pickle'
+        self.USER_DATA_ITEMS_PATH = self.plugin_dir + '/jrodos_user_data_items.pickle'
+        self.USER_QUANTITIES_PATH = self.plugin_dir + '/jrodos_user_quantities.pickle'
+        self.USER_SUBSTANCES_PATH = self.plugin_dir + '/jrodos_user_substances.pickle'
 
         self.settings = JRodosSettings()
 
@@ -135,6 +139,8 @@ class JRodos:
         self.measurements_progress_bar = None
         self.measurements_settings = None
         self.measurements_provider = None
+        self.quantities_model = None
+        self.substances_model = None
 
         self.measurements_layer = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
@@ -297,7 +303,7 @@ class JRodos:
         # connect the change of the project dropdown to a refresh of the data path
         self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
-        self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_filter_dialog)
+        self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_data_item_filter_dialog)
 
         # Create the filter dialog
         self.filter_dlg = JRodosFilterDialog(self.jrodosmodel_dlg)
@@ -305,6 +311,8 @@ class JRodos:
 
         # Create the measurements dialog
         self.measurements_dlg = JRodosMeasurementsDialog()
+        self.measurements_dlg.btn_quantity_filter.clicked.connect(self.show_quantity_filter_dialog)
+        self.measurements_dlg.btn_substance_filter.clicked.connect(self.show_substance_filter_dialog)
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
@@ -315,7 +323,7 @@ class JRodos:
     def show_settings(self):
         self.settings_dlg.show()
 
-    def show_filter_dialog(self):
+    def show_data_item_filter_dialog(self):
         # load saved user data_items from pickled file
         self.filter_dlg.show()
         # OK pressed:
@@ -326,11 +334,47 @@ class JRodos:
                 # run over model, and check if SEARCH column is 1
                 for row in range(0, task_model.rowCount()):
                     if task_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
-                        data_item =  task_model.item(row, self.QMODEL_DATA_IDX).text()
+                        data_item = task_model.item(row, self.QMODEL_DATA_IDX).text()
                         data_items.append(data_item)
             # pickling the user_data_items to disk
             with open(self.USER_DATA_ITEMS_PATH, 'wb') as f:
                 pickle.dump(data_items, f)
+
+    def show_quantity_filter_dialog(self):
+        # set model of the generic filter dialog
+        self.filter_dlg.set_model(self.quantities_model)
+        self.filter_dlg.show()
+        # OK pressed: save the clicked quantities as 'user_quantities'
+        if self.filter_dlg.exec_():
+            # save/pickle user quantities
+            quantities = []
+            # run over model, and check if SEARCH column is 1 and so collect selected quantities
+            for row in range(0, self.quantities_model.rowCount()):
+                if self.quantities_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
+                    # for quantities we pickle 'code' which is in QMODEL_ID_IDX
+                    quantity = self.quantities_model.item(row, self.QMODEL_ID_IDX).text()
+                    quantities.append(quantity)
+            # pickle the user_data_items to disk
+            with open(self.USER_QUANTITIES_PATH, 'wb') as f:
+                pickle.dump(quantities, f)
+
+    def show_substance_filter_dialog(self):
+        # set model of the generic filter dialog
+        self.filter_dlg.set_model(self.substances_model)
+        self.filter_dlg.show()
+        # OK pressed: save the clicked substances as 'user_substances'
+        if self.filter_dlg.exec_():
+            # save/pickle user substances
+            substances = []
+            # run over model, and check if SEARCH column is 1 and so collect selected substances
+            for row in range(0, self.substances_model.rowCount()):
+                if self.substances_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
+                    # for sustances we pickle 'code' which is in QMODEL_ID_IDX
+                    substance = self.substances_model.item(row, self.QMODEL_ID_IDX).text()
+                    substances.append(substance)
+            # pickle the user_data_items to disk
+            with open(self.USER_SUBSTANCES_PATH, 'wb') as f:
+                pickle.dump(substances, f)
 
     def show_help(self):
         docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
@@ -367,7 +411,7 @@ class JRodos:
             # we try to retrieve the quantities and substances just once, but not earlier then a user actually
             # starts using the plugin (that is call this run)...
             if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
-                self.get_quantities_and_substances() # async call, will fill dropdowns when network requests return
+                self.get_quantities_and_substances()  # async call, will fill dropdowns when network requests return
 
             # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
             if self.measurements_layer is None and self.jrodos_output_settings is None:
@@ -421,16 +465,39 @@ class JRodos:
         else:
             # QUANTITIES
             self.quantities = result.data
-
             self.quantities_model = QStandardItemModel()
+            # load saved user data_items from pickled file
+            user_quantities_from_disk = []
+            if os.path.isfile(self.USER_QUANTITIES_PATH):
+                with open(self.USER_QUANTITIES_PATH, 'rb') as f:
+                    user_quantities_from_disk = pickle.load(f)
             for q in self.quantities:
-                self.quantities_model.appendRow([QStandardItem(q['description']), QStandardItem(q['code'])])
-            self.measurements_dlg.combo_quantity.setModel(self.quantities_model)
-
+                user_favourite = '0'
+                # {'code': 'ZR-97', 'description': 'ZIRCONIUM-97 (ZR-97)'}
+                # fill model setting user_favourite to 1 if in pickled file
+                if q['code'] in user_quantities_from_disk:
+                    user_favourite = '1'
+                self.quantities_model.appendRow([
+                    QStandardItem(QStandardItem(q['code'])),  # self.QMODEL_ID_IDX
+                    QStandardItem(QStandardItem(q['code'])),  # self.QMODEL_NAME_IDX
+                    QStandardItem(QStandardItem(q['description'])),  # self.QMODEL_DESCRIPTION_IDX
+                    QStandardItem(QStandardItem(q['description'])),  # self.QMODEL_DATA_IDX, description also has code
+                    QStandardItem(user_favourite)  # self.QMODEL_SEARCH_IDX
+                ])
+            quantities_proxy_model = QSortFilterProxyModel()
+            quantities_proxy_model.setSourceModel(self.quantities_model)
+            quantities_proxy_model.setFilterKeyColumn(self.QMODEL_SEARCH_IDX)
+            quantities_proxy_model.setFilterFixedString('1')
+            quantities_proxy_model.setDynamicSortFilter(True)  # !! ELSE you do not see the changes done in the filter dialog
+            self.measurements_dlg.combo_quantity.setModel(quantities_proxy_model)
+            self.measurements_dlg.combo_quantity.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
             last_used_quantities_code = Utils.get_settings_value("measurements_last_quantity", "T_GAMMA")
-            items = self.quantities_model.findItems(last_used_quantities_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
-            if len(items) > 0:
-                self.measurements_dlg.combo_quantity.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+            items = self.quantities_model.findItems(last_used_quantities_code, Qt.MatchExactly, self.QMODEL_ID_IDX)
+            if len(items) > 0:  # that is: we do have this last used one in the dropdown model
+                model_index = self.quantities_model.indexFromItem(items[0])
+                self.quantities_model.setData(self.quantities_model.index(model_index.row(), self.QMODEL_SEARCH_IDX), '1')
+                idx = self.measurements_dlg.combo_quantity.model().mapFromSource(model_index)
+                self.measurements_dlg.combo_quantity.setCurrentIndex(idx.row())
 
     def substance_provider_finished(self, result):
         if result.error():
@@ -439,16 +506,40 @@ class JRodos:
         else:
             # SUBSTANCES
             self.substances = result.data
-
             self.substances_model = QStandardItemModel()
+            # load saved user data_items from pickled file
+            user_substances_from_disk = []
+            if os.path.isfile(self.USER_SUBSTANCES_PATH):
+                with open(self.USER_SUBSTANCES_PATH, 'rb') as f:
+                    user_substances_from_disk = pickle.load(f)
             for s in self.substances:
-                self.substances_model.appendRow([QStandardItem(s['description']), QStandardItem(s['code'])])
-            self.measurements_dlg.combo_substance.setModel(self.substances_model)
-
+                user_favourite = '0'
+                # {'code': 'C501', 'description': 'JUICE - FRUIT UNSPECIFIED (C501)'}
+                # fill model setting user_favourite to 1 if in pickled file
+                if s['code'] in user_substances_from_disk:
+                    user_favourite = '1'
+                self.substances_model.appendRow([
+                    QStandardItem(s['code']),  # self.QMODEL_ID_IDX (not used)
+                    QStandardItem(QStandardItem(s['code'])),  # self.QMODEL_NAME_IDX
+                    QStandardItem(QStandardItem(s['description'])),  # self.QMODEL_DESCRIPTION_IDX
+                    QStandardItem(QStandardItem(s['description'])),  # self.QMODEL_DATA_IDX, description also has code
+                    QStandardItem(user_favourite)  # self.QMODEL_SEARCH_IDX
+                ])
+            substances_proxy_model = QSortFilterProxyModel()
+            substances_proxy_model.setSourceModel(self.substances_model)
+            substances_proxy_model.setFilterKeyColumn(self.QMODEL_SEARCH_IDX)
+            substances_proxy_model.setFilterFixedString('1')
+            substances_proxy_model.setDynamicSortFilter(True)  # !! ELSE you do not see the changes done in the filter dialog
+            self.measurements_dlg.combo_substance.setModel(substances_proxy_model)
+            self.measurements_dlg.combo_substance.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
             last_used_substance_code = Utils.get_settings_value("measurements_last_substance", "A5")
-            items = self.substances_model.findItems(last_used_substance_code, Qt.MatchExactly, self.JRODOS_CODE_IDX)
-            if len(items) > 0:
-                self.measurements_dlg.combo_substance.setCurrentIndex(items[self.JRODOS_DESCRIPTION_IDX].row())
+            items = self.substances_model.findItems(last_used_substance_code, Qt.MatchExactly, self.QMODEL_ID_IDX)
+            if len(items) > 0:  # that is we do have this last used one in the dropdown model
+                model_index = self.substances_model.indexFromItem(items[0])
+                self.substances_model.setData(self.substances_model.index(model_index.row(), self.QMODEL_SEARCH_IDX), '1')
+                idx = self.measurements_dlg.combo_substance.model().mapFromSource(model_index)
+                self.measurements_dlg.combo_substance.setCurrentIndex(idx.row())
+
 
     def get_jrodos_projects(self):
         config = JRodosProjectConfig()
@@ -498,8 +589,8 @@ class JRodos:
                     if l['rel'] == 'self':
                         link = l['href']
                         break
-                id = unicode(project['project']['projectId'])
-                name = project['project']['name']
+                id = unicode(project['projectId'])
+                name = project['name']
                 self.projects_model.appendRow([
                     QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
                     QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
@@ -553,7 +644,7 @@ class JRodos:
             # every task has dataitems (both output and input)
             # a dataitem is actually a 'path' to an 'output-node' in the output tree of JRodos
             self.task_model = QStandardItemModel()
-            for task in result.data['project']['tasks']:
+            for task in result.data['tasks']:
                 # "uid": "527fcd2c-ac13-7293-5563-bb409a0362f5",
                 # "modelwrappername": "LSMC",
                 # "description": "run:Tameka",
@@ -618,7 +709,7 @@ class JRodos:
             # Retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
             conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = "project='"+result.data['project']['name']
+            conf.jrodos_project = "project='"+result.data['name']
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
             # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
             if self.task_model.rowCount()>1:
@@ -829,8 +920,8 @@ class JRodos:
         else:
             # BUT if we just received a model, INIT the measurements dialog based on this
             if self.jrodos_output_settings is not None:
-                start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC() # we REALLY want UTC
-                end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time)) # model time
+                start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
+                end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
 
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
@@ -842,23 +933,45 @@ class JRodos:
         result = self.measurements_dlg.exec_()
         if result:  # OK was pressed
 
-            if len(self.quantities) == 1 or len(self.substances) == 1: # meaning we did not retrieve anything back yet
+            if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
                 self.msg(None, "No substances and quantities, network problem? \nSee messages panel ...")
+                return
+            # selected quantity + save to QSettings
+            quantity_text = self.measurements_dlg.combo_quantity.itemText(self.measurements_dlg.combo_quantity.currentIndex())
+            if quantity_text is None or quantity_text == '':
+                self.msg(None, "No Quantity selected, or quantity is emtpy ...\nFill dropdown via 'See All' button")
+                self.show_measurements_dialog()
+                return
+            # now find quantity_text (like: LANTANHUM-140(LA-140)' in model to find quantity_code (like 'LA-140')
+            items = self.quantities_model.findItems(quantity_text, Qt.MatchExactly, self.QMODEL_DESCRIPTION_IDX)
+            if len(items) == 1:
+                quantity = self.quantities_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
+                Utils.set_settings_value("measurements_last_quantity", quantity)
+            else:
+                self.msg(None, "No or duplicate quantity (%s) found in model?" % quantity_text)
+                return
+
+            # selected substance + save to QSettings
+            substance_text = self.measurements_dlg.combo_substance.itemText(self.measurements_dlg.combo_substance.currentIndex())
+            if substance_text is None or substance_text == '':
+                self.msg(None, "No substance selected, or substance is emtpy ...\nFill dropdown via 'See All' button")
+                self.show_measurements_dialog()
+                return
+            # now find id for quantity_text
+            items = self.substances_model.findItems(substance_text, Qt.MatchExactly, self.QMODEL_DESCRIPTION_IDX)
+            if len(items) == 1:
+                substance = self.substances_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
+                Utils.set_settings_value("measurements_last_substance", substance)
+            else:
+                self.msg(None, "No or duplicate substance (%s) found in model?" % substance_text)
                 return
 
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
             Utils.set_settings_value("endminusstart", endminusstart)
-            # selected quantity + save to QSettings
-            quantity = self.quantities_model.item(self.measurements_dlg.combo_quantity.currentIndex(), self.JRODOS_CODE_IDX).text()
-            Utils.set_settings_value("measurements_last_quantity", quantity)
-            # selected substance + save to QSettings
-            substance = self.substances_model.item(self.measurements_dlg.combo_substance.currentIndex(), self.JRODOS_CODE_IDX).text()
-            Utils.set_settings_value("measurements_last_substance", substance)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime() # UTC
             end_date = self.measurements_dlg.dateTime_end.dateTime() # UTC
-
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
 

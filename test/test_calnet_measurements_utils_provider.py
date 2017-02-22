@@ -17,6 +17,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
     def test_calnet_measurements_quantities(self):
         def prov_finished(result):
             # TODO some better testing here
+            # [{'code': 'ZR-97', 'description': 'ZIRCONIUM-97 (ZR-97)'}, ...
             print result
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Quantities')
@@ -43,9 +44,9 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
 
     def test_calnet_measurements_substances(self):
         def prov_finished(result):
+            # [{'code': 'C501', 'description': 'JUICE - FRUIT UNSPECIFIED (C501)'}, ...
             # TODO some better testing here
             print result
-
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Substances')
         while not self.prov.is_finished():
@@ -55,6 +56,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
     def test_calnet_measurements_units(self):
         def prov_finished(result):
             # TODO some better testing here
+            # [{'code': ' ', 'description': 'BLANKFIELD ( )'}, {'code': '%', 'description': 'PERCENTAGE (%)'},
             print result
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Units')

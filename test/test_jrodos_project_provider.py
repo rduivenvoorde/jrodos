@@ -10,8 +10,8 @@ class TestJRodosProjectProvider(TestProviderBase):
 
     def test_jrodos_project_url(self):
         conf = JRodosProjectConfig()
-        conf.url = 'https://duif.net/project1268.json'
-        # conf.url = 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos/projects/1268'
+        #conf.url = 'https://duif.net/project1268.json'
+        conf.url = 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos/projects/1268'
         prov = JRodosProjectProvider(conf)
         def prov_finished(result):
             # get first dataitem form first task from first project
@@ -51,6 +51,7 @@ class TestJRodosProjectProvider(TestProviderBase):
         conf = JRodosProjectConfig()
         # find dir of this class
         conf.url = 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos'
+        conf.url = 'http://jrodos.dev.cal-net.nl/rest/jrodos'
         prov = JRodosProjectProvider(conf)
         def prov_finished(result):
             self.assertIsNotNone(result.data)

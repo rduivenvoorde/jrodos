@@ -28,6 +28,7 @@ from PyQt4 import uic
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QDialog, QSortFilterProxyModel, QAbstractItemView, QColor
 
+from .. constants import QMODEL_ID_IDX, QMODEL_NAME_IDX, QMODEL_DESCRIPTION_IDX, QMODEL_DATA_IDX, QMODEL_SEARCH_IDX
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_filter_dialog_base.ui'))
@@ -45,7 +46,6 @@ class JRodosFilterDialog(QDialog, FORM_CLASS):
         self.setupUi(self)
         self.tbl_items.setDragEnabled(False)
         self.tbl_items.setSelectionBehavior(self.tbl_items.SelectRows)
-        #self.tbl_items.setSelectionMode(self.tbl_items.MultiSelection)
         self.tbl_items.setSelectionMode(self.tbl_items.NoSelection)
         self.tbl_items.clicked.connect(self.toggle_user_filter)
         self.tbl_items.setSortingEnabled(True)
@@ -54,27 +54,25 @@ class JRodosFilterDialog(QDialog, FORM_CLASS):
         self.proxy_model = None
 
     def set_model(self, item_model=None):
-        #self.tbl_items.setModel(item_model)
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(item_model)
-        # TODO: magic numbershould be JRodos.QMODEL_DATA_IDX
-        self.proxy_model.setFilterKeyColumn(3)
-        #proxy_model.setDynamicSortFilter(True)
+        self.proxy_model.setFilterKeyColumn(QMODEL_DATA_IDX)
         self.tbl_items.setModel(self.proxy_model)
         self.tbl_items.setEditTriggers(QAbstractItemView.NoEditTriggers)
         # precolor all rows
         for row in range(0, self.tbl_items.model().rowCount()):
             self.color_model(row)
 
-        item_model.setHeaderData(1, Qt.Horizontal, "Short")
-        item_model.setHeaderData(2, Qt.Horizontal, "Full Path")
-        item_model.setHeaderData(4, Qt.Horizontal, "Show")
+        item_model.setHeaderData(QMODEL_NAME_IDX, Qt.Horizontal, "Name")
+        item_model.setHeaderData(QMODEL_DESCRIPTION_IDX, Qt.Horizontal, "Description")
+        item_model.setHeaderData(QMODEL_SEARCH_IDX, Qt.Horizontal, "Show")
 
-        self.tbl_items.setColumnHidden(0, True)
-        self.tbl_items.setColumnHidden(3, True)
-        #self.tbl_items.setColumnHidden(4, True)
-        self.tbl_items.setColumnWidth(1, 250)  # set name to 300px (there are some huge layernames)
-        self.tbl_items.setColumnWidth(2, 600)
+        self.tbl_items.setColumnHidden(QMODEL_ID_IDX, True)
+        self.tbl_items.setColumnHidden(QMODEL_DATA_IDX, True)
+        # self.tbl_items.setColumnHidden(QMODEL_SEARCH_IDX, True)
+
+        self.tbl_items.setColumnWidth(QMODEL_NAME_IDX, 250)  # set name to 300px (there are some huge layernames)
+        self.tbl_items.setColumnWidth(QMODEL_DESCRIPTION_IDX, 600)
         self.tbl_items.horizontalHeader().setStretchLastSection(True)
 
     def filter_items(self, string):
@@ -82,9 +80,8 @@ class JRodosFilterDialog(QDialog, FORM_CLASS):
         self.proxy_model.setFilterFixedString(string)
 
     def toggle_user_filter(self, model_index):
-        # TODO: magic 4 should be JRodos.QMODEL_SEARCH_IDX
         row = model_index.row()
-        idx = self.tbl_items.model().index(row, 4)
+        idx = self.tbl_items.model().index(row, QMODEL_SEARCH_IDX)
         selected = '1'
         if self.tbl_items.model().data(idx) == '1':
             selected = '0'
@@ -93,8 +90,7 @@ class JRodosFilterDialog(QDialog, FORM_CLASS):
 
     def color_model(self, row):
         # color background based on selected ('1') or not
-        # TODO: magic 4 should be JRodos.QMODEL_SEARCH_IDX
-        idx = self.tbl_items.model().index(row, 4)
+        idx = self.tbl_items.model().index(row, QMODEL_SEARCH_IDX)
         color = Qt.lightGray
         if self.tbl_items.model().data(idx) == '1':
             color = Qt.white

@@ -19,12 +19,10 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         self.config.quantity = 'T-GAMMA'
         self.config.substance = 'A5'
 
+        # BBOX, start and endtime to be set in test !!!
         self.ZEELAND_BBOX = '51,3,52,6'  # south Netherlands
         self.EU_BBOX = '38,-8,61,30' # europe
-
-        # BBOX, start and endtime to be set in test !!!
-
-
+        self.BENELUX_BOX = '50.3723647997,1.51982637865,52.3253260358,7.03980085372'
 
     def test_calnet_measurements_config(self):
         c = unicode(self.config)
@@ -52,6 +50,8 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         prov.get_data()
         while not prov.is_finished():
             QCoreApplication.processEvents()
+
+
 
     def test_calnet_600_measurements_zeeland_last12hours(self):
 

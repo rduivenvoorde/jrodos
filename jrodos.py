@@ -325,6 +325,7 @@ class JRodos:
 
     def show_data_item_filter_dialog(self):
         # load saved user data_items from pickled file
+        self.filter_dlg.le_item_filter.setText('')
         self.filter_dlg.show()
         # OK pressed:
         if self.filter_dlg.exec_():
@@ -343,6 +344,7 @@ class JRodos:
     def show_quantity_filter_dialog(self):
         # set model of the generic filter dialog
         self.filter_dlg.set_model(self.quantities_model)
+        self.filter_dlg.le_item_filter.setText('')
         self.filter_dlg.show()
         # OK pressed: save the clicked quantities as 'user_quantities'
         if self.filter_dlg.exec_():
@@ -361,6 +363,7 @@ class JRodos:
     def show_substance_filter_dialog(self):
         # set model of the generic filter dialog
         self.filter_dlg.set_model(self.substances_model)
+        self.filter_dlg.le_item_filter.setText('')
         self.filter_dlg.show()
         # OK pressed: save the clicked substances as 'user_substances'
         if self.filter_dlg.exec_():
@@ -1290,7 +1293,6 @@ class JRodos:
         timemanager = plugins['timemanager']
         timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
 
-
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
 
         if not 'timemanager' in plugins:
@@ -1320,13 +1322,12 @@ class JRodos:
         timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
         # set timeslider to zero
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
-        # TODO: temporarily in if clause (untill upstream has it too)
+        # TODO: temporarily in if clause (until upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
             timemanager.getController().refreshGuiTimeFrameProperties()
         else:
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
         timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
-
 
     def load_measurements(self, output_dir, style_file):
         """
@@ -1335,7 +1336,6 @@ class JRodos:
         :param style_file:
         :return:
         """
-
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"

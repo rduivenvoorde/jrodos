@@ -170,7 +170,8 @@ Your selection will be remembered in your profile.
 After selecting all the right inputs, click OK, that actual measurement data is requested (from the Measurements Postgres database) via a WFS service.
 
 Note 1, depending on the time-range or the size of the geographical bounding box you are viewing,
-this can take some time.
+this can take some time. ONLY the measurements in current bounding box are requested. Please do not request a few
+days of data for the whole of europe if you do not want to wait several minutes. Start with little area's first.
 
 The RainRadar
 .............
@@ -193,6 +194,23 @@ Or
 - Styles: default
 - CRS: EPSG:28992
 
+TimeManager, play time
+......................
+
+After the retrieval of model output, measurements and rain radar, you should have a result like this:
+
+.. image:: img/jrodos_measurements_rain.png
+   :width: 100 %
+
+The TimeManager dialog should have found the time range in the data, the step/frame size in the projects and all other
+information to be able to 'play through time'...
+
+Make sure the checkbox 'Discrete steps' in the TimeManager widget is enabled!
+
+Now you can run through time by either clicking the little >> buttons on the timescale, or by pushing the play button.
+
+If you do not see anything yet, please first try to advance some steps in time. Note that the retrieval of the
+rainradar is via an online KNMI service, which can take some time.
 
 Development
 -----------

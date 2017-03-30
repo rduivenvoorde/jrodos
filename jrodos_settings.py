@@ -47,7 +47,7 @@ class JRodosSettings(SettingManager):
                                 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi'))
         # rainradar_wmst_layers
         self.add_setting(String('rainradar_wmst_layers', Scope.Global,
-                                'RADNL_OPER_R___25PCPRR_L3_COLOR'))
+                                'RADNL_OPER_R___25PCPRR_L3_KNMI'))
         # rainradar_wmst_styles
         self.add_setting(String('rainradar_wmst_styles', Scope.Global,
                                 ''))

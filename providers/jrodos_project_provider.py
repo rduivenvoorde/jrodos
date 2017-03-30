@@ -12,7 +12,9 @@ class JRodosProjectConfig(ProviderConfig):
 
 
 class JRodosProjectProvider(ProviderBase):
-
+    """A provider which connects to a model REST service to retrieve information about the JRodos projects.
+     Needed to show the Task-items of a project (LSMC, Emersim etc), and the Dataitems of every task)
+    """
     def __init__(self, config):
         ProviderBase.__init__(self, config)
 

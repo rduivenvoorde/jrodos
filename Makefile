@@ -26,13 +26,13 @@
 #Add iso code for any locales you want to support here (space separated)
 # default is no locales
 # LOCALES = af
-LOCALES =
+LOCALES = nl
 
 # If locales are enabled, set the name of the lrelease binary on your system. If
 # you have trouble compiling the translations, you may have to specify the full path to
 # lrelease
 #LRELEASE = lrelease
-#LRELEASE = lrelease-qt4
+LRELEASE = lrelease-qt4
 
 
 # translation
@@ -63,7 +63,7 @@ PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
 # Normally you would not need to edit below here
 #################################################
 
-HELP = help/build/html
+HELP = help/build
 
 PLUGIN_UPLOAD = $(c)/plugin_upload.py
 
@@ -199,7 +199,8 @@ doc:
 	@echo "------------------------------------"
 	@echo "Building documentation using sphinx."
 	@echo "------------------------------------"
-	cd help; make html
+	cd help;make clean html
+	rm -rf $(HELP)/doctrees
 
 pylint:
 	@echo

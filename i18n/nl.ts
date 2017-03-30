@@ -413,7 +413,7 @@ Er is zijn geen gegevens te tonen!</translation>
     <message>
         <location filename="jrodos_dialog_base.ui" line="130"/>
         <source>Task</source>
-        <translation>Taks</translation>
+        <translation type="unfinished">Task</translation>
     </message>
     <message>
         <location filename="jrodos_dialog_base.ui" line="144"/>

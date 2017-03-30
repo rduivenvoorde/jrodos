@@ -19,9 +19,9 @@ class JRodosSettings(SettingManager):
         # jrodos_enabled
         self.add_setting(Bool('jrodos_enabled', Scope.Global, True))
         # jrodos_wps_url
-        self.add_setting(String('jrodos_wps_url', Scope.Global, 'http://jrodos.dev.cal-net.nl:8080/geoserver/wps'))
+        self.add_setting(String('jrodos_wps_url', Scope.Global, 'http://jrodos.dev.cal-net.nl/geoserver/wps'))
         # jrodos_rest_url
-        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos'))
+        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://jrodos.dev.cal-net.nl/rest/jrodos'))
 
 
         # CalNet Measurements WFS service url

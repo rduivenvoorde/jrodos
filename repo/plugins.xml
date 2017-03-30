@@ -2,7 +2,7 @@
 <?xml-stylesheet type="text/xsl" href="plugins.xsl"?>
  <plugins>
 
-   <pyqgis_plugin name="SectorPlot" version="0.6.2">
+   <pyqgis_plugin name="SectorPlot" version="0.7.1">
      <description>Plots sector areas on risk management map</description>
      <homepage>https://github.com/rduivenvoorde/sectorplot</homepage>
      <qgis_minimum_version>2.12</qgis_minimum_version>
@@ -20,7 +20,7 @@
      <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/RegenRadar.zip</download_url>
    </pyqgis_plugin>
 
-   <pyqgis_plugin name="JRodos" version="0.3.4">
+   <pyqgis_plugin name="JRodos" version="0.3.6">
      <description>This plugin shows JRodos model output, measurements and weather data</description>
      <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
      <qgis_minimum_version>2.12</qgis_minimum_version>

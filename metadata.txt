@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=2.0
 description=Plugin to connect to JRodos via WPS
-version=0.3.6
+version=0.3.7
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog:
 changelog=
+    0.3.7   adding 0 to begin/endtime dropdown for meetwagens/irs
     0.3.6   user preferences for long lists, documentation update
     0.3.5   release
     0.3.4   adding user favorites for options

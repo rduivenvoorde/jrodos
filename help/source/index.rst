@@ -150,11 +150,12 @@ these are prefilled in the Measurements Dialog (as you probably want to see the 
 .. image:: img/jrodos_requesting_model_measurements.png
    :width: 100 %
 
-The user can choose one of the three different 'integration'-time periods:
+The user can choose one of the four different 'integration'-time periods:
 
-- 10 minute data (600 seconds)
-- 1 hour data (3600 minutes)
-- 24 hour data (86400 minutes)
+- 0  irs/meetwagen data (begin_time == end_time untill fixed)
+- 600 = 10 minute data (600 seconds)
+- 3600 = 1 hour data (3600 minutes)
+- 86400 = 24 hour data (86400 minutes)
 
 The user can choose a Quantity and a Substance. The information for this Quantity and Substance lookup list
 are retrieved via a SOAP service and the CalnetMeasurementsUtilsProvider in ``calnet_measurements_utils_provider.py``

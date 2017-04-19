@@ -48,6 +48,6 @@ class JRodosProjectProvider(ProviderBase):
             request = QUrl(self.config.url)
         reply = self.network_manager.get(QNetworkRequest(request))
         reply.finished.connect(partial(self._data_retrieved, reply))
-        # this part is needed to be sure we do not return immidiatly
-        while not reply.isFinished():
-            QCoreApplication.processEvents()
+        # this part is needed to be sure we do not return immidiatly (NOT to be used when used as plugin)
+        #while not reply.isFinished():
+        #    QCoreApplication.processEvents()

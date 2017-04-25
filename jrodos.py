@@ -765,7 +765,8 @@ class JRodos:
         """
         if result.error():
             self.msg(None,
-                     self.tr("Problem in JRodos plugin retrieving the Project info. \nCheck the Log Message Panel for more info"))
+                     self.tr("Problem in JRodos plugin retrieving the Project info for selected project. "
+                             "\nSelect another project, and/or check the Log Message Panel for more info..."))
         else:
             self.set_dialog_project_info(
                 result.data['timeStep'],
@@ -911,14 +912,14 @@ class JRodos:
                 unit_used = 'TODO'
                 self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
-                self.msg(None, "No Jrodos Model Output data? Got: {}".format(result.data))
+                self.msg(None, self.tr("No Jrodos Model Output data? Got: {}").format(result.data))
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
     def show_measurements_dialog(self):
 
         if self.measurements_settings is not None:
-            self.msg(None, "Still busy retrieving Measurement data via WFS, please try later...")
+            self.msg(None, self.tr("Still busy retrieving Measurement data via WFS, please try later..."))
             return
 
         end_time = QDateTime.currentDateTime()  # end NOW
@@ -945,12 +946,12 @@ class JRodos:
         if result:  # OK was pressed
 
             if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
-                self.msg(None, "No substances and quantities, network problem? \nSee messages panel ...")
+                self.msg(None, self.tr("No substances and quantities, network problem? \nSee messages panel ..."))
                 return
             # selected quantity + save to QSettings
             quantity_text = self.measurements_dlg.combo_quantity.itemText(self.measurements_dlg.combo_quantity.currentIndex())
             if quantity_text is None or quantity_text == '':
-                self.msg(None, "No Quantity selected, or quantity is emtpy ...\nFill dropdown via 'See All' button")
+                self.msg(None, self.tr("No Quantity selected, or quantity is emtpy ...\nFill dropdown via 'See All' button"))
                 self.show_measurements_dialog()
                 return
             # now find quantity_text (like: LANTANHUM-140(LA-140)' in model to find quantity_code (like 'LA-140')
@@ -959,13 +960,13 @@ class JRodos:
                 quantity = self.quantities_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
                 Utils.set_settings_value("measurements_last_quantity", quantity)
             else:
-                self.msg(None, "No or duplicate quantity (%s) found in model?" % quantity_text)
+                self.msg(None, self.tr("No or duplicate quantity (%s) found in model?") % quantity_text)
                 return
 
             # selected substance + save to QSettings
             substance_text = self.measurements_dlg.combo_substance.itemText(self.measurements_dlg.combo_substance.currentIndex())
             if substance_text is None or substance_text == '':
-                self.msg(None, "No substance selected, or substance is emtpy ...\nFill dropdown via 'See All' button")
+                self.msg(None, self.tr("No substance selected, or substance is emtpy ...\nFill dropdown via 'See All' button"))
                 self.show_measurements_dialog()
                 return
             # now find id for quantity_text
@@ -974,7 +975,7 @@ class JRodos:
                 substance = self.substances_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
                 Utils.set_settings_value("measurements_last_substance", substance)
             else:
-                self.msg(None, "No or duplicate substance (%s) found in model?" % substance_text)
+                self.msg(None, self.tr("No or duplicate substance (%s) found in model?") % substance_text)
                 return
 
             # selected endminusstart + save to QSettings
@@ -1033,7 +1034,7 @@ class JRodos:
             if result.data is not None and result.data['count'] > 0:
                 self.load_measurements(result.data['output_dir'], 'totalpotentialdoseeffective2measurements.qml')
             else:
-                self.msg(None, "No Measurements data? {}".format(result.data))
+                self.msg(None, self.tr("No Measurements data? {}").format(result.data))
         self.measurements_settings = None
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
@@ -1304,7 +1305,7 @@ class JRodos:
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
 
         if not 'timemanager' in plugins:
-            self.iface.messageBar().pushWarning ("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
+            self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
             return
 
         timemanager = plugins['timemanager']
@@ -1404,7 +1405,7 @@ class JRodos:
             self.measurements_layer.commitChanges()
             # set current timestamp in the group node of the legend
             self.set_legend_node_name(self.layer_group,
-                                        self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+                                      self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
             # self.measurements_layer.setName(layer_name) # only in 2.16
 
         feature_count = 0
@@ -1442,7 +1443,7 @@ class JRodos:
                             valuemsv = value / 1000
                         else:
                             if new_unit_msg:
-                                self.msg(None, "New unit in data: '%s', setting valuemsv to -1" % feature.attribute('unit'))
+                                self.msg(None, self.tr("New unit in data: '%s', setting valuemsv to -1") % feature.attribute('unit'))
                                 new_unit_msg = False
                         attributes.append(valuemsv)
                         f.setAttributes(attributes)
@@ -1453,7 +1454,7 @@ class JRodos:
                             flist = []
                         #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())
                     else:
-                        self.msg(None, "ERROR: # %s no geometry !!! attributes: %s " % (feature_count, f.attributes()))
+                        self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
                         return
 
             if feature_count == 0:

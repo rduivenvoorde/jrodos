@@ -6,6 +6,7 @@ from provider_base import ProviderConfig, ProviderBase, ProviderResult
 from utils import Utils
 import logging
 import json
+import re
 
 
 class JRodosModelOutputConfig(ProviderConfig):
@@ -155,8 +156,38 @@ class JRodosModelProvider(ProviderBase):
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = unicode(reply.readAll())
-            #print "JRodosModelProvider # 158 content: {}".format(content)
-            #print "JRodosModelProvider # 158 content: {}".format(reply.request().url().toString())
+            # could be an exception, eg:
+            # <wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" service="WPS" serviceInstance="http://geoserver.prd.cal-net.nl:80/geoserver/ows?" version="1.0.0">
+            #       <wps:Process wps:processVersion="1.0.0">
+            #       <ows:Identifier>gs:JRodosWPS</ows:Identifier>
+            #       <ows:Title>jrodosWPS</ows:Title>
+            #       <ows:Abstract>JRodos Result Access</ows:Abstract>
+            #       </wps:Process><wps:Status creationTime="2017-04-25T13:36:24.287Z">
+            #       <wps:ProcessFailed>
+            #           <ows:ExceptionReport version="1.1.0">
+            #               <ows:Exception exceptionCode="NoApplicableCode">
+            #                   <ows:ExceptionText>Process failed during execution org.dom4j.DocumentException: Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.  Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.</ows:ExceptionText>
+            #               </ows:Exception>
+            #           </ows:ExceptionReport>
+            #       </wps:ProcessFailed>
+            #       </wps:Status>
+            # </wps:ExecuteResponse>
+
+            exception = re.findall('<ows:ExceptionText>', content)
+            if len(exception) > 0:
+                # oops WPS returned an exception
+                result.set_error(-1, reply.url().toString(), content)
+                self.ready = True
+                self.finished.emit(result)
+                reply.deleteLater()  # else timeouts on Windows
+                return
+            if len(content) < 5:
+                # oops WPS emtpy json doc?
+                result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
+                self.ready = True
+                self.finished.emit(result)
+                reply.deleteLater()  # else timeouts on Windows
+                return
             obj = json.loads(content)
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)

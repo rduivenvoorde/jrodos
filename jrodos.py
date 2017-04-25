@@ -1228,7 +1228,7 @@ class JRodos:
             # IF we want to be able to load a layer several times based on the same settings
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
             # add this layer to the TimeManager
-            step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # model step is in seconds!!!
+            step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # jrodos_model_step is in seconds!!!
             self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     def style_layer(self, layer):
@@ -1325,6 +1325,10 @@ class JRodos:
         # TODO: temporarily in if clause (until upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
             timemanager.getController().refreshGuiTimeFrameProperties()
+            # set 'discrete checkbox' to True to be sure there is something to see...
+            timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
+            # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
+            timemanager.getController().stepForward()
         else:
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
         timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()

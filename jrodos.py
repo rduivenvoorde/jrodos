@@ -846,9 +846,13 @@ class JRodos:
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
             # get data_item/path from model behind the combo_path dropdown
-            datapath_model = self.jrodos_project_data[self.jrodosmodel_dlg.combo_task.currentIndex()] # QStandardItemModel
-            combopath_model = self.jrodosmodel_dlg.combo_path.model() # QSortFilterProxyModel
-            proxy_idx = combopath_model.index(self.jrodosmodel_dlg.combo_path.currentIndex(), self.QMODEL_DATA_IDX)
+            datapath_model = self.jrodos_project_data[self.jrodosmodel_dlg.combo_task.currentIndex()]  # QStandardItemModel
+            combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
+            current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
+            if current_path_index < 0:
+                self.msg(None, "Mandatory 'Dataitem' selection missing... Please select one. ")
+                return
+            proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
             idx = combopath_model.mapToSource(proxy_idx)
             last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
 

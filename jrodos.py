@@ -1393,7 +1393,7 @@ class JRodos:
             # set current timestamp in the group node of the legend
             self.set_legend_node_name(self.layer_group,
                                         self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            #self.measurements_layer.setName(layer_name) # only in 2.16
+            # self.measurements_layer.setName(layer_name) # only in 2.16
 
         feature_count = 0
         flist = []
@@ -1419,23 +1419,24 @@ class JRodos:
                     if feature.geometry() is not None:
                         attributes = feature.attributes()
                         value = float(feature.attribute('value'))
+                        valuemsv = -1  # set value to '-1' not sure if NULL is better...
+                        # preferred unit is microSv/H, but the data contains value+unit column
+                        # set all values in column valuemsv in microS/H
                         if feature.attribute('unit') == 'USV/H':
-                            # value in milliS/H, value / 1000
-                            valuemsv = value/1000
-                            attributes.append(valuemsv)
+                            # value is in microS/H all OK
+                            valuemsv = value
                         elif feature.attribute('unit') == 'NSV/H':
-                            # value in milliS/H, value / 1000
-                            valuemsv = value/1000000
-                            attributes.append(valuemsv)
+                            # value is in milliS/H, value / 1000
+                            valuemsv = value / 1000
                         else:
-                            attributes.append(-1) # set value to '-1' not sure if NULL is better...
                             if new_unit_msg:
                                 self.msg(None, "New unit in data: '%s', setting valuemsv to -1" % feature.attribute('unit'))
                                 new_unit_msg = False
+                        attributes.append(valuemsv)
                         f.setAttributes(attributes)
                         f.setGeometry(feature.geometry())
                         flist.append(f)
-                        if len(flist)>1000:
+                        if len(flist) > 1000:
                             self.measurements_layer.dataProvider().addFeatures(flist)
                             flist = []
                         #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())

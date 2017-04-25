@@ -1,52 +1,52 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.17.0" simplifyAlgorithm="0" minimumScale="100000" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.14.13-Essen" minimumScale="100000" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
     <edittype widgetv2type="TextEdit" name="gml_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="startTime">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="endTime">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="quantity">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="substance">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="unit">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="value">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="time">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="info">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="device">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="valuemsv">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+      <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
   </edittypes>
   <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     <rules key="{e7991823-286e-4757-abcb-af6991a87fb7}">
-      <rule description="Abstract" filter="valuemsv &lt;= 0.0001" key="{bd7e31b7-fd0a-41d4-9f3f-354edaa4ee63}" symbol="0" label="&lt;= 1E-4"/>
-      <rule description="Abstract" filter="valuemsv >= 0.0001 AND valuemsv &lt;= 0.001" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" symbol="1" label="1E-4 - 1E-3"/>
-      <rule description="Abstract" filter="valuemsv >= 0.001 AND valuemsv &lt;= 0.01" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" symbol="2" label="1E-3 - 1E-2"/>
-      <rule description="Abstract" filter="valuemsv >= 0.01 AND valuemsv &lt;= 0.1" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" symbol="3" label="1E-2 - 1E-1"/>
-      <rule description="Abstract" filter="valuemsv >= 0.1 AND valuemsv &lt;= 1" key="{41bc24bd-294c-4818-ae41-17744878653f}" symbol="4" label="1E-1 - 1E0"/>
-      <rule description="Abstract" filter="valuemsv >= 1 AND valuemsv &lt;= 10" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" symbol="5" label="1E0 - 1E1"/>
-      <rule description="Abstract" filter="valuemsv >= 10 AND valuemsv &lt;= 100" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" symbol="6" label="1E1 - 1E2"/>
-      <rule description="Abstract" filter="valuemsv >= 100 AND valuemsv &lt;= 1000" key="{b2906596-36e6-4582-b813-885480ddf6ab}" symbol="7" label="1E2 - 1E3"/>
-      <rule description="Abstract" filter="valuemsv >= 1000 AND valuemsv &lt;= 10000" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" symbol="8" label="1E3 - 1E4"/>
-      <rule description="Abstract" filter="valuemsv >= 10000" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" symbol="9" label=">1E4"/>
+      <rule description="Abstract" filter="valuemsv &lt;= 0.1" key="{bd7e31b7-fd0a-41d4-9f3f-354edaa4ee63}" symbol="0" label="&lt;= 1E-1 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 0.1 AND valuemsv &lt;= 1" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" symbol="1" label="1E-1 - 1 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 1 AND valuemsv &lt;= 10" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" symbol="2" label="1 - 10 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 10 AND valuemsv &lt;= 100" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" symbol="3" label="10 - 100 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 100 AND valuemsv &lt;= 1000" key="{41bc24bd-294c-4818-ae41-17744878653f}" symbol="4" label="100 - 1000 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 1000 AND valuemsv &lt;= 10000" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" symbol="5" label="1000 - 10000 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 10000 AND valuemsv &lt;= 100000" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" symbol="6" label="10000 - 100000 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 100000 AND valuemsv &lt;= 1000000" key="{b2906596-36e6-4582-b813-885480ddf6ab}" symbol="7" label="100000 - 1000000 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 1000000 AND valuemsv &lt;= 10000000" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" symbol="8" label="1000000 - 10000000 USV/H"/>
+      <rule description="Abstract" filter="valuemsv >= 10000000" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" symbol="9" label=">10000000 USV/H"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
@@ -54,7 +54,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,255,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -76,7 +75,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="54,97,255,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -98,7 +96,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="56,172,255,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -120,7 +117,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="0,255,255,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -142,7 +138,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="145,255,180,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -164,7 +159,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="210,255,105,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -186,7 +180,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="255,255,0,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -208,7 +201,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="255,183,0,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -230,7 +222,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="255,111,0,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -252,7 +243,6 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="255,0,0,191"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="joinstyle" v="bevel"/>
           <prop k="name" v="square"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -273,7 +263,6 @@
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
-    <property key="embeddedWidgets/count" value="0"/>
     <property key="labeling" value="pal"/>
     <property key="labeling/addDirectionSymbol" value="false"/>
     <property key="labeling/angleOffset" value="0"/>
@@ -412,13 +401,13 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="variableNames" value="_fields_"/>
-    <property key="variableValues" value=""/>
+    <property key="variableNames"/>
+    <property key="variableValues"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
   <layerTransparency>0</layerTransparency>
-  <displayfield>gml_id</displayfield>
+  <displayfield>[% measurement_values()%]</displayfield>
   <label>0</label>
   <labelattributes>
     <label fieldname="" text="Label"/>
@@ -440,68 +429,30 @@
     <multilineenabled fieldname="" on=""/>
     <selectedonly on=""/>
   </labelattributes>
-  <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
-    <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="100000">
+  <LinearlyInterpolatedDiagramRenderer upperValue="0" lowerHeight="0" upperHeight="50" lowerValue="0" diagramType="Histogram" upperWidth="50" classificationAttributeExpression="" lowerWidth="0">
+    <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" sizeType="MM" minScaleDenominator="100000">
       <fontProperties description="Cantarell,11,-1,5,50,0,0,0,0,0" style=""/>
       <attribute field="" color="#000000" label=""/>
     </DiagramCategory>
-    <symbol alpha="1" clip_to_extent="1" type="marker" name="sizeSymbol">
-      <layer pass="0" class="SimpleMarker" locked="0">
-        <prop k="angle" v="0"/>
-        <prop k="color" v="255,0,0,255"/>
-        <prop k="horizontal_anchor_point" v="1"/>
-        <prop k="joinstyle" v="bevel"/>
-        <prop k="name" v="circle"/>
-        <prop k="offset" v="0,0"/>
-        <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-        <prop k="offset_unit" v="MM"/>
-        <prop k="outline_color" v="0,0,0,255"/>
-        <prop k="outline_style" v="solid"/>
-        <prop k="outline_width" v="0"/>
-        <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
-        <prop k="outline_width_unit" v="MM"/>
-        <prop k="scale_method" v="diameter"/>
-        <prop k="size" v="2"/>
-        <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
-        <prop k="size_unit" v="MM"/>
-        <prop k="vertical_anchor_point" v="1"/>
-      </layer>
-    </symbol>
-  </SingleCategoryDiagramRenderer>
-  <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
+  </LinearlyInterpolatedDiagramRenderer>
+  <DiagramLayerSettings yPosColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="gml_id" index="0" name=""/>
-    <alias field="startTime" index="1" name=""/>
+    <alias field="device" index="9" name=""/>
     <alias field="endTime" index="2" name=""/>
+    <alias field="gml_id" index="0" name=""/>
+    <alias field="info" index="8" name=""/>
     <alias field="quantity" index="3" name=""/>
+    <alias field="startTime" index="1" name=""/>
     <alias field="substance" index="4" name=""/>
+    <alias field="time" index="7" name=""/>
     <alias field="unit" index="5" name=""/>
     <alias field="value" index="6" name=""/>
-    <alias field="time" index="7" name=""/>
-    <alias field="info" index="8" name=""/>
-    <alias field="device" index="9" name=""/>
     <alias field="valuemsv" index="10" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
-  <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
-    <columns>
-      <column width="-1" hidden="0" type="field" name="gml_id"/>
-      <column width="-1" hidden="0" type="field" name="startTime"/>
-      <column width="-1" hidden="0" type="field" name="endTime"/>
-      <column width="-1" hidden="0" type="field" name="quantity"/>
-      <column width="-1" hidden="0" type="field" name="substance"/>
-      <column width="-1" hidden="0" type="field" name="unit"/>
-      <column width="-1" hidden="0" type="field" name="value"/>
-      <column width="-1" hidden="0" type="field" name="time"/>
-      <column width="-1" hidden="0" type="field" name="info"/>
-      <column width="-1" hidden="0" type="field" name="device"/>
-      <column width="-1" hidden="1" type="actions"/>
-      <column width="-1" hidden="0" type="field" name="valuemsv"/>
-    </columns>
-  </attributetableconfig>
+  <attributeactions/>
   <editform>.</editform>
   <editforminit/>
   <editforminitcodesource>0</editforminitcodesource>

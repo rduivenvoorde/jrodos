@@ -65,13 +65,13 @@ To retrieve JRodos Model output (JRodos Geoserver WPS tab):
 JRodos Geoserver Model WPS url, which is WPS interface to a Geoserver-enabled JRodos WPS to retrieve
 model input from projects (timestep, modeltime etc), use for example::
 
-  http://jrodos.dev.cal-net.nl/geoserver/wps
+  http://geoserver.dev.cal-net.nl/geoserver/wps
 
 
 JRodos Model REST service url, which a REST service to retrieve all saved projects
 and the detail information of every project::
 
-  http://jrodos.dev.cal-net.nl/rest/jrodos/
+  http://geoserver.dev.cal-net.nl/rest/jrodos/
 
 
 To retrieve Eurdep measurements (Measurements WFS tab):
@@ -94,20 +94,20 @@ The JRodos Model output dialog
 
 First the available JRodos (output) projects are retrieved via a REST service (output is JSON, jrodos_project_provider.py):
 
-http://jrodos.dev.cal-net.nl/rest/jrodos/projects
+http://geoserver.dev.cal-net.nl/rest/jrodos/projects
 
 This will result in a list of 'projects'.
 
 Selecting a project will result in the firing of a REST url to retrieve the information of the information
  (output is JSON, jrodos_project_provider.py):
 
-http://jrodos.dev.cal-net.nl/rest/jrodos/projects/1268
+http://geoserver.dev.cal-net.nl/rest/jrodos/projects/1268
 
 At the same time a WPS request is fired to retrieve specific time related information of that project.
 That is the Duration of the model/prognosis, the timetep used and the start of the release.
 The JRodos WPS service running on:
 
-http://jrodos.dev.cal-net.nl/geoserver/wps
+http://geoserver.dev.cal-net.nl/geoserver/wps
 
 And needs 4 parameters:
 
@@ -246,7 +246,7 @@ To deploy the plugin: RIVM has their own plugin repo: http://repo.svc.cal-net.nl
 
 This is a web directory with:
 
-- the lastest version of JRodos.zip
+- the latest version of JRodos.zip
 - een plugins.xml with the data of all plugins in that dir
 - een plugins.xsl just for viewing the xml
 

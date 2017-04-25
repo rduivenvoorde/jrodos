@@ -901,7 +901,11 @@ class JRodos:
             # Load the received shp-zip files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None:
-                self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml')
+                s = self.jrodos_output_settings.jrodos_path[:-1]  # contains path='...' remove last quote
+                layer_name = s.split('=;=')[-2]+', '+s.split('=;=')[-1]
+                # TODO get unit_used from somewhere
+                unit_used = 'TODO'
+                self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
                 self.msg(None, "No Jrodos Model Output data? Got: {}".format(result.data))
         self.jrodos_output_settings = None
@@ -1053,7 +1057,7 @@ class JRodos:
                 del self.jrodos_settings[layer]
                 return
 
-    def  load_jrodos_output(self, shape_dir, style_file):
+    def load_jrodos_output(self, shape_dir, style_file, layer_name, unit_used):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
         from given shape_dir.
@@ -1067,15 +1071,6 @@ class JRodos:
         :param style_file: style (qml) to be used to style the layer in which we merged all shapefiles
         :return:
         """
-        # give the memory layer the same CRS as the source layer
-        # timestamp as first attribute, easier to config with timemanager plugin (default first column)
-        # TODO: epsg:32631
-        # http: // docs.qgis.org / testing / en / docs / pyqgis_developer_cookbook / vector.html  # writing-vector-layers
-        # create layer
-        jrodos_datapath = self.jrodos_output_settings.jrodos_path
-        jrodos_output_layer = QgsVectorLayer("Polygon", jrodos_datapath, "memory")
-
-        layer_crs = None
 
         import zipfile
         zips = glob(os.path.join(shape_dir, "*.zip"))
@@ -1090,6 +1085,12 @@ class JRodos:
         features_have_valid_time = False
         features_min_value = self.MAX_FLOAT
 
+        # give the memory layer the same CRS as the source layer
+        # timestamp as first attribute, easier to config with timemanager plugin (default first column)
+        # http://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html  # writing-vector-layers
+        # create layer
+        # jrodos_output_layer = QgsVectorLayer("Polygon", layer_name+" ("+unit_used+")", "memory")
+        # layer_crs = None
         # if len(shps) > 1:  # OLD way: a directory of zips
         #     # add fields to memory layer
         #     pr = jrodos_output_layer.dataProvider()
@@ -1180,8 +1181,11 @@ class JRodos:
         if len(shps) == 1:
             for shp in shps:
                 (shpdir, shpfile) = os.path.split(shp)
-                #self.msg(None, "{}\n{}".format(shpdir, shpfile))
-                jrodos_output_layer = QgsVectorLayer(shp, shpfile, "ogr")
+                #self.info("{}\n{}".format(shpdir, shpfile))
+                if 'Empty' in shpfile: # JRodos sents an 'Empty.shp' if no features are in the model data path)
+                    self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
+                    break
+                jrodos_output_layer = QgsVectorLayer(shp, layer_name+" ("+unit_used+")", "ogr")
                 if not jrodos_output_layer.isValid():
                     self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
                     break

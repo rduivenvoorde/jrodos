@@ -22,7 +22,7 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QSortFilterProxyModel
+    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
@@ -33,7 +33,7 @@ from glob import glob
 from datetime import datetime
 from utils import Utils
 from copy import deepcopy
-from ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog
+from ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog, JRodosGraphWidget
 from jrodos_settings import JRodosSettings
 from jrodos_settings_dialog import JRodosSettingsDialog
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
@@ -141,6 +141,9 @@ class JRodos:
         self.measurements_provider = None
         self.quantities_model = None
         self.substances_model = None
+
+        # graph widget
+        self.graph_widget_checkbox = None
 
         self.measurements_layer = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
@@ -298,6 +301,13 @@ class JRodos:
             self.measurements_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.toolbar.addWidget(self.measurements_progress_bar)
 
+        if self.graph_widget_checkbox is None:
+            self.graph_widget_checkbox = QCheckBox()
+            #self.graph_widget_checkbox.setChecked(False)
+            self.toolbar.addWidget(self.graph_widget_checkbox)
+
+            self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
+
         # Create the dialog (after translation) and keep reference
         self.jrodosmodel_dlg = JRodosDialog()
         # connect the change of the project dropdown to a refresh of the data path
@@ -316,6 +326,9 @@ class JRodos:
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog()
+
+        # Create GraphWidget
+        self. graph_widget = JRodosGraphWidget()
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
@@ -382,6 +395,12 @@ class JRodos:
     def show_help(self):
         docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
         QDesktopServices.openUrl(QUrl("file:" + docs))
+
+    def show_graph_widget(self, checked):
+        if checked:
+            self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.graph_widget)
+        else:
+            self.graph_widget.hide()
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""

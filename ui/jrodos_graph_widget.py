@@ -2,9 +2,9 @@
 """
 /***************************************************************************
  JRodosGraphWidget
-                        
+
  DockedWidget to be used to show plots/graps of measurement periods
- 
+
                              -------------------
         begin                : 2017-05-11
         git sha              : $Format:%H$
@@ -25,10 +25,15 @@
 import os
 
 from PyQt4 import uic
-from PyQt4.QtGui import QDockWidget, QSizePolicy, QPen, QBrush
-from PyQt4.QtCore import Qt, QSize
+from PyQt4.QtGui import QDockWidget
 
-from PyQt4.Qwt5 import QwtPlot, QwtPlotCurve, QwtScaleDiv, QwtSymbol
+from .. import pyqtgraph as pg
+import time
+import numpy as np
+
+# , QSizePolicy, QPen, QBrush
+# from PyQt4.QtCore import Qt, QSize
+# from PyQt4.Qwt5 import QwtPlot, QwtPlotCurve, QwtScaleDiv, QwtSymbol, QwtLog10ScaleEngine
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -46,27 +51,59 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-        # Setup Qwt Plot Area in Widget
-        #self.qwtPlot = QwtPlot()
-        # self.qwtPlot.setAutoFillBackground(False)
-        # self.qwtPlot.setObjectName("qwtPlot")
-        # self.curve = QwtPlotCurve()
-        # self.curve.setSymbol(
-        #     QwtSymbol(QwtSymbol.Ellipse,
-        #               QBrush(Qt.white),
-        #               QPen(Qt.red, 2),
-        #               QSize(9, 9)))
-        # self.curve.attach(self.qwtPlot)
-        #
-        # # Size Policy ???
-        # sizePolicy = QSizePolicy(QSizePolicy.Expanding,
-        #                                QSizePolicy.Expanding)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(0)
-        # sizePolicy.setHeightForWidth(self.qwtPlot.sizePolicy().hasHeightForWidth())
-        # self.qwtPlot.setSizePolicy(sizePolicy)
-        # # Size Policy ???
-        #
-        # self.qwtPlot.updateGeometry()
-        # self.addWidget(self.qwtPlot)
-        # self.qwt_widgetnumber = self.stackedWidget.indexOf(self.qwtPlot)
+        axis = DateAxis(orientation='bottom')
+
+        # Switch to using white background and black foreground
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+
+        pw = pg.PlotWidget(axisItems={'bottom': axis},
+                           enableMenu=False,
+                           title="y: USV/H    x: time")
+        #pw = pg.PlotWidget(title="y: USV/H    x: time")
+        #pw.setYRange(0.06, 0.15, update=True)
+        pw.show()
+        self.graph = pw
+
+        # ROI = Region Of Interest
+        #r = pg.PolyLineROI([(0, 0), (10, 10)])
+        #pw.addItem(r)
+
+        self.setWidget(pw)
+
+
+class DateAxis(pg.AxisItem):
+    def tickStrings(self, values, scale, spacing):
+        strns = []
+        rng = max(values) - min(values)
+        # if rng < 120:
+        #    return pg.AxisItem.tickStrings(self, values, scale, spacing)
+        if rng < 3600 * 24:
+            string = '%H:%M:%S'
+            label1 = '%b %d -'
+            label2 = ' %b %d, %Y'
+        elif rng >= 3600 * 24 and rng < 3600 * 24 * 30:
+            string = '%d'
+            label1 = '%b - '
+            label2 = '%b, %Y'
+        elif rng >= 3600 * 24 * 30 and rng < 3600 * 24 * 30 * 24:
+            string = '%b'
+            label1 = '%Y -'
+            label2 = ' %Y'
+        elif rng >= 3600 * 24 * 30 * 24:
+            string = '%Y'
+            label1 = ''
+            label2 = ''
+        for x in values:
+            try:
+                strns.append(time.strftime(string, time.localtime(x)))
+            except ValueError:  ## Windows can't handle dates before 1970
+                strns.append('')
+        try:
+            label = time.strftime(label1, time.localtime(min(values))) + time.strftime(label2,
+                                                                                       time.localtime(max(values)))
+        except ValueError:
+            label = ''
+        # self.setLabel(text=label)
+        return strns
+

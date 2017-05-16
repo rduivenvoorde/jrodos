@@ -46,6 +46,7 @@ PY_FILES = \
 	*.py \
 	qgissettingmanager \
 	providers \
+	pyqtgraph \
 	ui
 
 UI_FILES = \
@@ -125,6 +126,13 @@ dclean:
 	find $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
 	find $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME) -iname ".git" -prune -exec rm -Rf {} \;
 
+# git clean: clean up the *.pyc files 
+gclean:
+	@echo
+	@echo "-----------------------------------"
+	@echo "Removing any compiled python files."
+	@echo "-----------------------------------"
+	find -iname "*.pyc" -delete
 
 derase:
 	@echo

@@ -26,7 +26,7 @@ from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItem
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
-    QgsRuleBasedRendererV2, edit
+    QgsRuleBasedRendererV2, QgsFeatureRequest
 from qgis.utils import qgsfunction, plugins, QgsExpression
 
 from glob import glob
@@ -410,14 +410,26 @@ class JRodos:
                 action)
             self.iface.removeToolBarIcon(action)
         # remove progress bars
-        del self.jrodos_output_progress_bar
-        del self.measurements_progress_bar
+        if self.jrodos_output_progress_bar is not None:
+            del self.jrodos_output_progress_bar
+        if self.measurements_progress_bar is not None:
+            del self.measurements_progress_bar
         # remove the toolbar
         del self.toolbar
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
         QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
 
+        # IF there is a measurement layer disconnect selectionChanged signal
+        if self.measurements_layer is not None:
+            self.info("TODO: Disconnecting Measurements Layer Signal") # TODO
+            self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+
+        # IF there is a JRodos group... remove it
+        if self.layer_group is not None:
+            # self.info("TODO: Removing Layer Group")
+            root = QgsProject.instance().layerTreeRoot()
+            root.removeChildNode(self.layer_group)
 
     def run(self):
 
@@ -942,7 +954,8 @@ class JRodos:
             return
 
         end_time = QDateTime.currentDateTime()  # end NOW
-        start_time = end_time.addSecs(-60 * 60 * 12)  # -12 hours
+        hours = 24
+        start_time = end_time.addSecs(-60 * 60 * hours)  # minus hours
 
         if self.measurements_layer is not None:
             self.measurements_settings = self.jrodos_settings[self.measurements_layer]
@@ -1066,6 +1079,41 @@ class JRodos:
             # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
             self.measurements_settings.bbox = "{},{},{},{}".format(
                 current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
+
+    def measurement_selection_change(self, selected_ids, deselected_ids, clear_and_select):
+
+        selected_features_ids = self.measurements_layer.selectedFeaturesIds()
+        # remember current (timebased) subset string to be able to add it later
+        subset_string = self.measurements_layer.dataProvider().subsetString()
+        self.measurements_layer.setSubsetString('')
+        self.graph_widget.graph.clear()
+        for fid in selected_ids:
+            fiter = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
+            for selected_feature in fiter:
+                #self.info(selected_feature['device'])  # NL1212
+                device = selected_feature['device']
+                fr = QgsFeatureRequest()
+                # HACKY: disable current time-filter, to be able to find all features from same device
+                fr.disableFilter()
+                fr.setFilterExpression(u'"device" = \'{}\''.format(device))
+                x = []
+                y = []
+                for feature in (self.measurements_layer.getFeatures(fr)):
+                    #self.info(feature['gml_id'])
+                    t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
+                    x.append(t/1000)
+                    y.append(feature['valuemsv'])
+                #self.graph_widget.graph.plot(x=x, y=y, symbol='o')  # symbol = x, o, +, d, t, t1, t2, t3, s, p, h, star
+                self.graph_widget.graph.plot(x=x, y=y)
+        # RE-apply old (timebased) subset_string again to make layer work for timemanager again
+        self.measurements_layer.dataProvider().setSubsetString(subset_string)
+        # AND apply the selection again because resetting the subsetString removed it
+        # NOOOOO, this will emit a next selection etc etc ...
+        # so: we disconnect signal temporarily
+        self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+        self.measurements_layer.setSelectedFeatures(selected_features_ids)
+        # and connect signal again
+        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
     def find_jrodos_layer(self, settings_object):
         for layer in self.jrodos_settings:
@@ -1290,6 +1338,20 @@ class JRodos:
         # apply the renderer to the layer
         layer.setRendererV2(renderer)
 
+    def enable_timemanager(self, enable):
+        """
+        Enable OR disable the timemanager
+        :param enable: 
+        :return: 
+        """
+        if plugins.has_key('timemanager'):
+            timemanager = plugins['timemanager']
+        # enable timemanager by 'clicking' on enable button (if not enabled)
+        if enable and not timemanager.getController().getTimeLayerManager().isEnabled():
+            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
+        elif not enable and timemanager.getController().getTimeLayerManager().isEnabled():
+            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
+
     def add_rainradar_to_timemanager(self, layer_for_settings):
 
         settings = JRodosSettings()
@@ -1327,23 +1389,20 @@ class JRodos:
             self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
             return
 
+        self.enable_timemanager(True)
+
         timemanager = plugins['timemanager']
-
-        # enable timemanager by 'clicking' on enable button (if not enabled)
-        if not timemanager.getController().getTimeLayerManager().isEnabled():
-            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
-
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = layer
         timelayer_settings.startTimeAttribute = time_column
 
         timelayer = TimeVectorLayer(timelayer_settings, self.iface)
 
-        animationFrameLength = 2000
+        animation_frame_length = 2000
         frame_size = frame_size
         frame_type = frame_type
         timemanager.getController().setPropagateGuiChanges(False)
-        timemanager.getController().setAnimationOptions(animationFrameLength, False, False)
+        timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
         timemanager.getController().setTimeFrameType(frame_type)
         timemanager.getController().setTimeFrameSize(frame_size)
 
@@ -1372,9 +1431,9 @@ class JRodos:
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         # layer_name = "T-GAMMA, A5, 600, 17/6 23:01 - 20/6 11:01"
         layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-                     self.measurements_settings.endminusstart + ", " + \
-                     start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-                     end_time.toString(self.measurements_settings.date_time_format_short)
+            self.measurements_settings.endminusstart + ", " + \
+            start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+            end_time.toString(self.measurements_settings.date_time_format_short)
 
         register_layers = False
         if self.measurements_layer is None:
@@ -1402,8 +1461,8 @@ class JRodos:
                               ])
             self.measurements_layer.updateFields()
 
-            QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False) # False, meaning not ready to add to legend
-            self.layer_group.insertLayer(0, self.measurements_layer) # now add to legend in current layer group
+            QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
+            self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
 
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
@@ -1412,6 +1471,9 @@ class JRodos:
 
             self.measurements_layer.loadNamedStyle(
                 os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+            self.measurements_layer_featuresource = self.measurements_layer.dataProvider().featureSource()
+            self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
+
         else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer

@@ -25,16 +25,10 @@
 import os
 
 from PyQt4 import uic
-from PyQt4.QtGui import QDockWidget
+from PyQt4.QtGui import QDockWidget, QFont
 
 from .. import pyqtgraph as pg
 import time
-import numpy as np
-
-# , QSizePolicy, QPen, QBrush
-# from PyQt4.QtCore import Qt, QSize
-# from PyQt4.Qwt5 import QwtPlot, QwtPlotCurve, QwtScaleDiv, QwtSymbol, QwtLog10ScaleEngine
-
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_graph_widget.ui'))
@@ -51,61 +45,82 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-        x_axis = DateAxis(orientation='bottom')
-        y_axis = pg.AxisItem(orientation='left', pen='ff0000')
+        x_axis = DateAxis(orientation='bottom', pen='333333')
+        y_axis = pg.AxisItem(orientation='left', pen='333333')
+
+        font = QFont()
+        font.setPixelSize(10)
+        x_axis.tickFont = font
+        y_axis.tickFont = font
 
         # Switch to using white background and black foreground
         pg.setConfigOption('background', 'ffffff')
         pg.setConfigOption('foreground', '000000')
 
-        pw = pg.PlotWidget(axisItems={'bottom': x_axis},
+        pw = pg.PlotWidget(axisItems={'bottom': x_axis, 'left': y_axis},
                            enableMenu=False,
-                           title="y: USV/H    x: time")
+                           title="y: USV/H   -   x: time")
+
         #pw = pg.PlotWidget(title="y: USV/H    x: time")
         #pw.setYRange(0.06, 0.15, update=True)
         pw.show()
         self.graph = pw
 
         # ROI = Region Of Interest
-        #r = pg.PolyLineROI([(0, 0), (10, 10)])
-        #pw.addItem(r)
+        r = pg.PolyLineROI([(0, 0), (10, 10)])
+        pw.addItem(r)
 
         self.setWidget(pw)
 
 
 class DateAxis(pg.AxisItem):
+
     def tickStrings(self, values, scale, spacing):
-        self.setPen('333333')
-        strns = []
-        rng = max(values) - min(values)
-        # if rng < 120:
-        #    return pg.AxisItem.tickStrings(self, values, scale, spacing)
-        if rng < 3600 * 24:
-            string = '%H:%M:%S'
-            label1 = '%b %d -'
-            label2 = ' %b %d, %Y'
-        elif rng >= 3600 * 24 and rng < 3600 * 24 * 30:
-            string = '%d'
+        tick_strings = []
+
+        if len(values) == 0:
+            return tick_strings
+        elif len(values) == 1:
+            # just one value... probably a 'major tick':
+            # do date / time
+            string = '%d/%m %H:%M'
             label1 = '%b - '
             label2 = '%b, %Y'
-        elif rng >= 3600 * 24 * 30 and rng < 3600 * 24 * 30 * 24:
-            string = '%b'
-            label1 = '%Y -'
-            label2 = ' %Y'
-        elif rng >= 3600 * 24 * 30 * 24:
-            string = '%Y'
-            label1 = ''
-            label2 = ''
+        else:
+            rng = max(values) - min(values)
+
+            if rng < 3600 * 1:  # < 1 hour
+                string = '%H:%M:%S'
+                label1 = '%b %d -'
+                label2 = ' %b %d, %Y'
+            elif rng >= 3600 * 1 and rng < 3600 * 24 * 5:  # 1 hour - 5 day
+                string = '%H:%M'
+                label1 = '%b %d -'
+                label2 = ' %b %d, %Y'
+            elif rng >= 3600 * 24 * 5 and rng < 3600 * 24 * 30:  # 5 day - 1 month
+                string = '%d/%m %H:%M'
+                label1 = '%b - '
+                label2 = '%b, %Y'
+            elif rng >= 3600 * 24 * 30 and rng < 3600 * 24 * 30 * 24:  # 1 month  - 2 years
+                string = '%b'
+                label1 = '%Y -'
+                label2 = ' %Y'
+            elif rng >= 3600 * 24 * 30 * 24:  # > 2 years
+                string = '%Y'
+                label1 = ''
+                label2 = ''
+
         for x in values:
             try:
-                strns.append(time.strftime(string, time.localtime(x)))
+                tick_strings.append(time.strftime(string, time.localtime(x)))
             except ValueError:  ## Windows can't handle dates before 1970
-                strns.append('')
-        try:
-            label = time.strftime(label1, time.localtime(min(values))) + time.strftime(label2,
-                                                                                       time.localtime(max(values)))
-        except ValueError:
-            label = ''
+                tick_strings.append('')
+
+        # try:
+        #     label = time.strftime(label1, time.localtime(min(values))) + time.strftime(label2, time.localtime(max(values)))
+        # except ValueError:
+        #     label = '@'
         # self.setLabel(text=label)
-        return strns
+
+        return tick_strings
 

@@ -45,6 +45,9 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
+        # RD: hopefully fix exit errors from pyqtgraph
+        pg.setConfigOptions(exitCleanup=False)
+
         x_axis = DateAxis(orientation='bottom', pen='333333')
         y_axis = pg.AxisItem(orientation='left', pen='333333')
 
@@ -61,8 +64,8 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
                            enableMenu=False,
                            title="y: USV/H   -   x: time")
 
-        #pw = pg.PlotWidget(title="y: USV/H    x: time")
         #pw.setYRange(0.06, 0.15, update=True)
+
         pw.show()
         self.graph = pw
 

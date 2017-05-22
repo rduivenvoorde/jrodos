@@ -303,9 +303,7 @@ class JRodos:
 
         if self.graph_widget_checkbox is None:
             self.graph_widget_checkbox = QCheckBox()
-            #self.graph_widget_checkbox.setChecked(False)
             self.toolbar.addWidget(self.graph_widget_checkbox)
-
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 
         # Create the dialog (after translation) and keep reference
@@ -1128,6 +1126,7 @@ class JRodos:
         for layer in self.jrodos_settings.keys():
             if layer2remove == layer.id():
                 if self.measurements_layer == layer:
+                    self.graph_widget.graph.clear()
                     self.measurements_layer = None
                 del self.jrodos_settings[layer]
                 return

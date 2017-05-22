@@ -1081,16 +1081,22 @@ class JRodos:
                 current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
 
     def measurement_selection_change(self, selected_ids, deselected_ids, clear_and_select):
-
+        #self.info(" selected: {}\n deselected: {}\n clear_and_select: {}".
+        #          format(selected_ids, deselected_ids, clear_and_select))
+        # we do not use these selected_ids etc because selectedFeaturesIds is easier to use with CTRL-selects
         selected_features_ids = self.measurements_layer.selectedFeaturesIds()
-        # remember current (timebased) subset string to be able to add it later
+        # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
+        # With a connected signal measurement_selection_change function would have been called again because
+        # timemanager set's the subsetstring again
+        self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+        # remember current (timemanager-based) subset string to be able to add it later
         subset_string = self.measurements_layer.dataProvider().subsetString()
         self.measurements_layer.setSubsetString('')
         self.graph_widget.graph.clear()
-        for fid in selected_ids:
-            fiter = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
-            for selected_feature in fiter:
-                #self.info(selected_feature['device'])  # NL1212
+        for fid in selected_features_ids:
+            filter = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
+            for selected_feature in filter:
+                #self.info(selected_feature['device'])  # strings like: NL1212
                 device = selected_feature['device']
                 fr = QgsFeatureRequest()
                 # HACKY: disable current time-filter, to be able to find all features from same device
@@ -1105,14 +1111,11 @@ class JRodos:
                     y.append(feature['valuemsv'])
                 #self.graph_widget.graph.plot(x=x, y=y, symbol='o')  # symbol = x, o, +, d, t, t1, t2, t3, s, p, h, star
                 self.graph_widget.graph.plot(x=x, y=y)
-        # RE-apply old (timebased) subset_string again to make layer work for timemanager again
+        # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
-        # NOOOOO, this will emit a next selection etc etc ...
-        # so: we disconnect signal temporarily
-        self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
         self.measurements_layer.setSelectedFeatures(selected_features_ids)
-        # and connect signal again
+        # and connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
     def find_jrodos_layer(self, settings_object):

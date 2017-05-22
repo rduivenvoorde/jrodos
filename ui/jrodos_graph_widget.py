@@ -51,13 +51,14 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-        axis = DateAxis(orientation='bottom')
+        x_axis = DateAxis(orientation='bottom')
+        y_axis = pg.AxisItem(orientation='left', pen='ff0000')
 
         # Switch to using white background and black foreground
         pg.setConfigOption('background', 'ffffff')
         pg.setConfigOption('foreground', '000000')
 
-        pw = pg.PlotWidget(axisItems={'bottom': axis},
+        pw = pg.PlotWidget(axisItems={'bottom': x_axis},
                            enableMenu=False,
                            title="y: USV/H    x: time")
         #pw = pg.PlotWidget(title="y: USV/H    x: time")
@@ -74,6 +75,7 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
 
 class DateAxis(pg.AxisItem):
     def tickStrings(self, values, scale, spacing):
+        self.setPen('333333')
         strns = []
         rng = max(values) - min(values)
         # if rng < 120:

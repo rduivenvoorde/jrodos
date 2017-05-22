@@ -54,8 +54,8 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
         axis = DateAxis(orientation='bottom')
 
         # Switch to using white background and black foreground
-        pg.setConfigOption('background', 'w')
-        pg.setConfigOption('foreground', 'k')
+        pg.setConfigOption('background', 'ffffff')
+        pg.setConfigOption('foreground', '000000')
 
         pw = pg.PlotWidget(axisItems={'bottom': axis},
                            enableMenu=False,

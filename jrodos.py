@@ -1108,7 +1108,7 @@ class JRodos:
                     x.append(t/1000)
                     y.append(feature['valuemsv'])
                 #self.graph_widget.graph.plot(x=x, y=y, symbol='o')  # symbol = x, o, +, d, t, t1, t2, t3, s, p, h, star
-                self.graph_widget.graph.plot(x=x, y=y)
+                self.graph_widget.graph.plot(x=x, y=y, pen=('ff000099'))
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it

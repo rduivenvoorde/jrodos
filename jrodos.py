@@ -302,7 +302,7 @@ class JRodos:
             self.toolbar.addWidget(self.measurements_progress_bar)
 
         if self.graph_widget_checkbox is None:
-            self.graph_widget_checkbox = QCheckBox()
+            self.graph_widget_checkbox = QCheckBox(self.tr('Show Time Graph'))
             self.toolbar.addWidget(self.graph_widget_checkbox)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 

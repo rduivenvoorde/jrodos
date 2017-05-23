@@ -22,12 +22,14 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox
+    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
-    QgsRuleBasedRendererV2, QgsFeatureRequest
+    QgsRuleBasedRendererV2, QgsFeatureRequest, QgsGeometry
 from qgis.utils import qgsfunction, plugins, QgsExpression
+from qgis.gui import QgsVertexMarker
+from pyqtgraph import CurvePoint, TextItem, PlotCurveItem
 
 from glob import glob
 from datetime import datetime
@@ -327,7 +329,9 @@ class JRodos:
         self.settings_dlg = JRodosSettingsDialog()
 
         # Create GraphWidget
-        self. graph_widget = JRodosGraphWidget()
+        self.graph_widget = JRodosGraphWidget()
+        # QgsVertexMarker used to highlight the measurement device shown in the GraphWidget
+        self.device_pointer = None
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
@@ -418,6 +422,8 @@ class JRodos:
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
         QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
+        # remove pointer
+        self.remove_device_pointer()
 
         # IF there is a measurement layer disconnect selectionChanged signal
         if self.measurements_layer is not None:
@@ -1082,6 +1088,7 @@ class JRodos:
     def measurement_selection_change(self, selected_ids, deselected_ids, clear_and_select):
         #self.info(" selected: {}\n deselected: {}\n clear_and_select: {}".
         #          format(selected_ids, deselected_ids, clear_and_select))
+        self.remove_device_pointer()
         # we do not use these selected_ids etc because selectedFeaturesIds is easier to use with CTRL-selects
         selected_features_ids = self.measurements_layer.selectedFeaturesIds()
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
@@ -1092,9 +1099,13 @@ class JRodos:
         subset_string = self.measurements_layer.dataProvider().subsetString()
         self.measurements_layer.setSubsetString('')
         self.graph_widget.graph.clear()
+        font = QFont()
+        font.setPixelSize(10)
+        self.curves={}
+        first = True
         for fid in selected_features_ids:
-            filter = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
-            for selected_feature in filter:
+            features = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
+            for selected_feature in features:
                 #self.info(selected_feature['device'])  # strings like: NL1212
                 device = selected_feature['device']
                 fr = QgsFeatureRequest()
@@ -1108,14 +1119,60 @@ class JRodos:
                     t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                     x.append(t/1000)
                     y.append(feature['valuemsv'])
-                #self.graph_widget.graph.plot(x=x, y=y, symbol='o')  # symbol = x, o, +, d, t, t1, t2, t3, s, p, h, star
-                self.graph_widget.graph.plot(x=x, y=y, pen=('ff000099'))
+
+                # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
+                # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
+                # NOT using shortcut notation above, because we want to keep a reference to the PlotCurveItem for click
+                curve = PlotCurveItem(x=x, y=y, pen='ff000099', mouseWidth=0)
+                curve.setClickable(True, 6)
+                curve.sigClicked.connect(self.curve_click)
+                self.graph_widget.graph.addItem(curve)
+                # create a curve <-> device,feature mapping as lookup for later use
+                self.curves[curve] = (device, selected_feature)
+
+                label_point = CurvePoint(curve)
+                self.graph_widget.graph.addItem(label_point)
+                label = TextItem(device, anchor=(0, 0), color='0000ff')
+                label.setFont(font)
+                label_point.setPos(0)
+                label.setParentItem(label_point)
+            if first:
+                self.set_device_pointer(selected_feature.geometry())
+                first = False
+            else:
+                self.remove_device_pointer()
+
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
         self.measurements_layer.setSelectedFeatures(selected_features_ids)
         # and connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
+
+    def curve_click(self, item):
+        device, feature = self.curves[item]
+        self.set_device_pointer(feature.geometry())
+
+    def set_device_pointer(self, geom):
+        self.remove_device_pointer()
+        self.device_pointer = QgsVertexMarker(self.iface.mapCanvas())
+        self.device_pointer.setColor(QColor(255, 0, 0))
+        self.device_pointer.setIconSize(20)
+        self.device_pointer.setPenWidth(3)
+        self.device_pointer.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        to_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
+        from_crs = self.measurements_layer.crs()
+        crs_transformer = QgsCoordinateTransform(from_crs, to_crs)
+        copy_geom = QgsGeometry(geom)  # doing transformation on the copy, else the original is transformed
+        copy_geom.transform(crs_transformer)
+
+        self.device_pointer.setCenter(copy_geom.asPoint())
+
+    def remove_device_pointer(self):
+        if self.device_pointer is not None:
+            self.iface.mapCanvas().scene().removeItem(self.device_pointer)
+            self.iface.mapCanvas().refresh()
+            self.device_pointer = None
 
     def find_jrodos_layer(self, settings_object):
         for layer in self.jrodos_settings:
@@ -1129,6 +1186,7 @@ class JRodos:
                 if self.measurements_layer == layer:
                     self.graph_widget.graph.clear()
                     self.measurements_layer = None
+                    self.remove_device_pointer()
                 del self.jrodos_settings[layer]
                 return
 

@@ -250,7 +250,7 @@ class JRodos:
         icon_path = ':/plugins/JRodos/icon.png'
         self.add_action(
             icon_path,
-            text=self.tr(u'JRodos'),
+            text=self.tr(u'Show Measurements and JRodos ModelDialog'),
             callback=self.run,
             parent=self.iface.mainWindow())
 
@@ -303,6 +303,7 @@ class JRodos:
 
         if self.graph_widget_checkbox is None:
             self.graph_widget_checkbox = QCheckBox(self.tr('Show Time Graph'))
+            self.graph_widget_checkbox.setToolTip(self.tr('Selecting features will be shown in Graph'))
             self.toolbar.addWidget(self.graph_widget_checkbox)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 

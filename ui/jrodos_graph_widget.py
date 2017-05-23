@@ -64,8 +64,6 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
                            enableMenu=False,
                            title="y: USV/H   -   x: time")
 
-        #pw.setYRange(0.06, 0.15, update=True)
-
         pw.show()
         self.graph = pw
 

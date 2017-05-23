@@ -191,64 +191,555 @@ p, li { white-space: pre-wrap; }
     </message>
 </context>
 <context>
+    <name>DockWidget</name>
+    <message>
+        <location filename="jrodos_graph_widget.ui" line="14"/>
+        <source>Data Time Graph</source>
+        <translation>Data Tijd Grafiek</translation>
+    </message>
+</context>
+<context>
+    <name>Form</name>
+    <message>
+        <location filename="uictest.ui" line="14"/>
+        <source>Form</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="32"/>
+        <source>Link Axis:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="39"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Links this axis with another view. When linked, both views will display the same data range.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="52"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Percent of data to be visible when auto-scaling. It may be useful to decrease this value for data with spiky noise.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="55"/>
+        <source>%</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="74"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically resize this axis whenever the displayed data is changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="168"/>
+        <source>Auto</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="87"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the range for this axis manually. This disables automatic scaling. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="90"/>
+        <source>Manual</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="97"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum value to display for this axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="110"/>
+        <source>0</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="107"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum value to display for this axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="117"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Inverts the display of this axis. (+y points downward instead of upward)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="120"/>
+        <source>Invert Axis</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="127"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables mouse interaction (panning, scaling) for this axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="130"/>
+        <source>Mouse Enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="140"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked, the axis will only auto-scale to data that is visible along the orthogonal axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="143"/>
+        <source>Visible Data Only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="150"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked, the axis will automatically pan to center on the current data, but the scale along this axis will not change.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="axisCtrlTemplate.ui" line="153"/>
+        <source>Auto Pan Only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="139"/>
+        <source>Display averages of the curves displayed in this plot. The parameter list allows you to choose parameters to average over (if any are available).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="140"/>
+        <source>Average</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="141"/>
+        <source>Plot only the portion of each curve that is visible. This assumes X values are uniformly spaced.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="142"/>
+        <source>Clip to View</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="143"/>
+        <source>If multiple curves are displayed in this plot, check this box to limit the number of traces that are displayed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="144"/>
+        <source>Max Traces:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="145"/>
+        <source>Downsample</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="146"/>
+        <source>Downsample by drawing a saw wave that follows the min and max of the original data. This method produces the best visual representation of the data but is slower.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="147"/>
+        <source>Peak</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="148"/>
+        <source>If multiple curves are displayed in this plot, check &quot;Max Traces&quot; and set this value to limit the number of traces that are displayed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="149"/>
+        <source>If MaxTraces is checked, remove curves from memory after they are hidden (saves memory, but traces can not be un-hidden).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="150"/>
+        <source>Forget hidden traces</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="151"/>
+        <source>Downsample by taking the mean of N samples.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="152"/>
+        <source>Mean</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="153"/>
+        <source>Downsample by taking the first of N samples. This method is fastest and least accurate.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="154"/>
+        <source>Subsample</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="155"/>
+        <source>Automatically downsample data based on the visible range. This assumes X values are uniformly spaced.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="157"/>
+        <source>Downsample data before plotting. (plot every Nth sample)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="158"/>
+        <source>x</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="159"/>
+        <source>Power Spectrum (FFT)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="160"/>
+        <source>Log X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="161"/>
+        <source>Log Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="162"/>
+        <source>Points</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="164"/>
+        <source>Show X Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="165"/>
+        <source>Show Y Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="166"/>
+        <source>Opacity</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="plotConfigTemplate_pyqt5.py" line="167"/>
+        <source>Alpha</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="FlowchartCtrlTemplate_pyqt5.py" line="60"/>
+        <source>Load..</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="FlowchartCtrlTemplate_pyqt5.py" line="61"/>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="FlowchartCtrlTemplate_pyqt5.py" line="62"/>
+        <source>As..</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="FlowchartCtrlTemplate_pyqt5.py" line="63"/>
+        <source>Reload Libs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="FlowchartCtrlTemplate_pyqt5.py" line="64"/>
+        <source>Flowchart</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate_pyqt5.py" line="85"/>
+        <source>Store SVG</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate_pyqt5.py" line="86"/>
+        <source>Store PNG</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="40"/>
+        <source>Auto Range</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="52"/>
+        <source>Check to display all local items in a remote canvas.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="55"/>
+        <source>Redirect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="92"/>
+        <source>Reset Transforms</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="99"/>
+        <source>Mirror Selection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="CanvasTemplate.ui" line="106"/>
+        <source>MirrorXY</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TransformGuiTemplate_pyqt.py" line="64"/>
+        <source>Translate:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TransformGuiTemplate_pyqt.py" line="65"/>
+        <source>Rotate:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TransformGuiTemplate_pyqt.py" line="66"/>
+        <source>Scale:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TransformGuiTemplate_pyqt.py" line="67"/>
+        <source>Mirror</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TransformGuiTemplate_pyqt.py" line="68"/>
+        <source>Reflect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="58"/>
+        <source>Export</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="56"/>
+        <source>Item to export:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="57"/>
+        <source>Export format</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="59"/>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="60"/>
+        <source>Export options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="exportDialogTemplate_pyside.py" line="61"/>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="144"/>
+        <source>ROI</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="137"/>
+        <source>Menu</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="138"/>
+        <source>Normalization</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="139"/>
+        <source>Subtract</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="140"/>
+        <source>Divide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="141"/>
+        <source>Operation:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="142"/>
+        <source>Mean:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="143"/>
+        <source>Blur:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="145"/>
+        <source>X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="146"/>
+        <source>Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="147"/>
+        <source>T</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="148"/>
+        <source>Off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="149"/>
+        <source>Time range</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyside.py" line="150"/>
+        <source>Frame</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="ImageViewTemplate_pyqt5.py" line="139"/>
+        <source>Norm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="96"/>
+        <source>Console</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="97"/>
+        <source>History..</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="98"/>
+        <source>Exceptions..</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="99"/>
+        <source>Exception Handling</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="105"/>
+        <source>Clear Exception</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="100"/>
+        <source>Show All Exceptions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="101"/>
+        <source>Show Next Exception</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="102"/>
+        <source>Only Uncaught Exceptions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="103"/>
+        <source>Run commands in selected stack frame</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt5.py" line="104"/>
+        <source>Exception Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="template_pyqt.py" line="125"/>
+        <source>Filter (regex):</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>JRodos</name>
     <message>
-        <location filename="jrodos.py" line="100"/>
+        <location filename="jrodos.py" line="102"/>
         <source>JRodos Plugin</source>
         <translation>JRodos Plugin</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="389"/>
+        <location filename="jrodos.py" line="411"/>
         <source>&amp;JRodos</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="147"/>
+        <location filename="jrodos.py" line="152"/>
         <source>Trying to retrieve quantities...</source>
         <translation>Bezig met ontvangen van &apos;quantities&apos;...</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="148"/>
+        <location filename="jrodos.py" line="153"/>
         <source>Trying to retrieve substances...</source>
         <translation>Bezig met ontvangen van &apos;substances&apos;...</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="248"/>
-        <source>JRodos</source>
-        <translation>JRodos</translation>
-    </message>
-    <message>
-        <location filename="jrodos.py" line="256"/>
+        <location filename="jrodos.py" line="261"/>
         <source>Show Settings</source>
         <translation>Toon Instellingen</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="265"/>
+        <location filename="jrodos.py" line="270"/>
         <source>Documentation</source>
         <translation>Documentatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="274"/>
+        <location filename="jrodos.py" line="279"/>
         <source>Loading data...</source>
         <translation>Data wordt geladen...</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="275"/>
+        <location filename="jrodos.py" line="280"/>
         <source>JRodos Model</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="288"/>
+        <location filename="jrodos.py" line="293"/>
         <source>Measurements</source>
         <translation>Metingen</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="310"/>
+        <location filename="jrodos.py" line="321"/>
         <source>Search in items</source>
         <translation>Zoeken in items</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="407"/>
+        <location filename="jrodos.py" line="443"/>
         <source>This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.
 
 Please enable OTF for this project or open a project with OTF enabled.</source>
@@ -257,38 +748,38 @@ Please enable OTF for this project or open a project with OTF enabled.</source>
 Vink OTF aan voor dit project in the projectinstellingen/CRS tab.</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="421"/>
+        <location filename="jrodos.py" line="457"/>
         <source>JRodos plugin layers</source>
         <translation>JRodos plugin lagen</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="466"/>
+        <location filename="jrodos.py" line="502"/>
         <source>Problem in JRodos plugin retrieving the Quantities. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de &apos;Quantities&apos;.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="507"/>
+        <location filename="jrodos.py" line="543"/>
         <source>Problem in JRodos plugin retrieving the Substances. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de &apos;Substances&apos;.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="556"/>
+        <location filename="jrodos.py" line="592"/>
         <source>Problem in JRodos plugin retrieving the JRodos projects. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de JRodos projecten.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="618"/>
+        <location filename="jrodos.py" line="654"/>
         <source>Retrieving project paths...</source>
         <translation>Bezig met opvragen van project-paden...</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="632"/>
+        <location filename="jrodos.py" line="668"/>
         <source>Problem in JRodos plugin retrieving the JRodos datapaths for project:
 {}.
 </source>
@@ -296,36 +787,29 @@ Kijk in het logpaneel voor meer informatie</translation>
 {}.</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="632"/>
+        <location filename="jrodos.py" line="668"/>
         <source>Check the Log Message Panel for more info</source>
         <translation>Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="767"/>
-        <source>Problem in JRodos plugin retrieving the Project info. 
-Check the Log Message Panel for more info</source>
-        <translation>Probleem in de JRodos plugin bij het ophalen van de Project informatie.
-Kijk in het logpaneel voor meer informatie</translation>
-    </message>
-    <message>
-        <location filename="jrodos.py" line="788"/>
+        <location filename="jrodos.py" line="825"/>
         <source> minutes</source>
         <translation> minuten</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="795"/>
+        <location filename="jrodos.py" line="832"/>
         <source> hours</source>
         <translation> uren</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="898"/>
+        <location filename="jrodos.py" line="939"/>
         <source>Problem in JRodos plugin retrieving the JRodos model output. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de JRodos modeluitvoer.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1017"/>
+        <location filename="jrodos.py" line="1063"/>
         <source>Network timeout for Measurements-WFS request. 
 Consider rising it in Settings/Options/Network. 
 Value is now: {} msec</source>
@@ -334,33 +818,118 @@ Probeer eventueel de timoutwaarde te verhogen in Extra/Opties/Netwerk.
 De waarde staat nu op: {} msec</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1186"/>
+        <location filename="jrodos.py" line="1323"/>
         <source>Apparently no valid JRodos data received. 
 Failed to load the data!</source>
         <translation>Blijkbaar geen geldige JRodos data ontvangen. 
 Er is zijn geen gegevens te tonen!</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1350"/>
+        <location filename="jrodos.py" line="1502"/>
         <source>Data retrieved: </source>
         <translation>Data ontvangen: </translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1394"/>
+        <location filename="jrodos.py" line="1549"/>
         <source>Data refreshed: </source>
         <translation>Data ververst: </translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1447"/>
+        <location filename="jrodos.py" line="1603"/>
         <source>NO measurements found in :
  %s</source>
         <translation>GEEN metingen gevonden in :
 .%s</translation>
     </message>
     <message>
-        <location filename="jrodos.py" line="1450"/>
+        <location filename="jrodos.py" line="1606"/>
         <source>%s measurements loaded from GML file, total now: %s</source>
         <translation>%s metingen geladen uit het data bastand, totaal nu: %s</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="253"/>
+        <source>Show Measurements and JRodos ModelDialog</source>
+        <translation>Toon Metingen- en JRodosModel-schermen</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="307"/>
+        <source>Show Time Graph</source>
+        <translation>Toon Data-Tijd Grafiek</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="308"/>
+        <source>Selecting features will be shown in Graph</source>
+        <translation>Geselecteerde punten zullen worden getoond in de Grafiek</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="803"/>
+        <source>Problem in JRodos plugin retrieving the Project info for selected project. 
+Select another project, and/or check the Log Message Panel for more info...</source>
+        <translation>Probleem in de JRodos plugin bij het ophalen van de projectinformatie voor dit geselecteerde project.
+Kijk in het logpaneel voor meer informatie...</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="951"/>
+        <source>No Jrodos Model Output data? Got: {}</source>
+        <translation>Geen JRodos Model Data? Ontvangen: {}</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="958"/>
+        <source>Still busy retrieving Measurement data via WFS, please try later...</source>
+        <translation>Nog steeds bezig met het ontvangen van Metingen via WFS, even geduld a.u.b...</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="986"/>
+        <source>No substances and quantities, network problem? 
+See messages panel ...</source>
+        <translation>Geen &apos;substances&apos; en &apos;quantities&apos;, misschien een netwerk/service-probleem?
+Zie ook het logpaneel ...</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="991"/>
+        <source>No Quantity selected, or quantity is emtpy ...
+Fill dropdown via &apos;See All&apos; button</source>
+        <translation>Geen &apos;Quantity&apos; geselecteerd, of deze is leeg...
+Zorg dat er items zijn via de &apos;Zie Alles&apos; knop</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1000"/>
+        <source>No or duplicate quantity (%s) found in model?</source>
+        <translation>Geen of een dubbele &apos;quantity&apos; (%s) gevonden in model?</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1006"/>
+        <source>No substance selected, or substance is emtpy ...
+Fill dropdown via &apos;See All&apos; button</source>
+        <translation>Geen &apos;Substance&apos; geselecteerd, of deze is leeg...
+Zorg dat er items zijn via de &apos;Zie Alles&apos; knop</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1015"/>
+        <source>No or duplicate substance (%s) found in model?</source>
+        <translation>Geen of een dubbele &apos;substance&apos; (%s) gevonden in model?</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1074"/>
+        <source>No Measurements data? {}</source>
+        <translation>GEEN meetgegevens? {}</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1319"/>
+        <source>JRodos data received successfully. 
+But dataset &apos;</source>
+        <translation>JRodos data succesvol ontvangen. 
+Maar dataset &apos;</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1588"/>
+        <source>New unit in data: &apos;%s&apos;, setting valuemsv to -1</source>
+        <translation>Nieuwe eenheid in data: &apos;%s&apos;, waarde van valuemsv op -1 gezet</translation>
+    </message>
+    <message>
+        <location filename="jrodos.py" line="1599"/>
+        <source>ERROR: # %s no geometry !!! attributes: %s </source>
+        <translation>FOUT: # %s Geen geometry !!! Attributen: %s </translation>
     </message>
 </context>
 <context>
@@ -413,12 +982,30 @@ Er is zijn geen gegevens te tonen!</translation>
     <message>
         <location filename="jrodos_dialog_base.ui" line="130"/>
         <source>Task</source>
-        <translation type="unfinished">Task</translation>
+        <translation>Task</translation>
     </message>
     <message>
         <location filename="jrodos_dialog_base.ui" line="144"/>
         <source>See All</source>
         <translation>Alles Tonen</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="qwt5test.py" line="84"/>
+        <source>MainWindow</source>
+        <translation>Hoofdscherm</translation>
+    </message>
+    <message>
+        <location filename="qwt5test.py" line="85"/>
+        <source>Selec file txt</source>
+        <translation>Selecteer txt bestand</translation>
+    </message>
+    <message>
+        <location filename="qwt5test.py" line="86"/>
+        <source>Plot</source>
+        <translation>Grafiek</translation>
     </message>
 </context>
 </TS>

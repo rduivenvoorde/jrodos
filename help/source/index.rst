@@ -174,6 +174,27 @@ Note 1, depending on the time-range or the size of the geographical bounding box
 this can take some time. ONLY the measurements in current bounding box are requested. Please do not request a few
 days of data for the whole of europe if you do not want to wait several minutes. Start with little area's first.
 
+Clicking the 'Show Time Graph' checkbox will show a (docked) graph in which it is possible to view current loaded
+time series of data.
+
+.. image:: img/jrodos_measurements_graph.png
+
+To have a graph: first retrieve a measurement time serie.
+
+Then using the QGIS select tools (first button) select one or more features in the map.
+
+.. image:: img/qgis_selecttools.png
+
+From these features (devices) you will now see the timeseries in the graph. The shown curves will be selected (yellow)
+in the map.
+
+To view the relation between a curve in the graph and the feature/device, click on the curve in the graph.
+A red circle for the corresponding device will be show (see screendump above).
+Note that when there is just one curve there is no need to click in the graph.
+
+
+
+
 The RainRadar
 .............
 
@@ -236,6 +257,10 @@ Create a new translation (given you are working with sphinx)::
   make transclean
   # compile the ts file to qm file which can be used in the plugin
   make transcompile
+
+Now creata a plugin zip::
+
+ # make zip
 
 This will first copy all needed files to `.qgis2/python/plugins/JRodos` and then zip that directory
 and place in the the directory `repo`.

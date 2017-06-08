@@ -668,8 +668,8 @@ class JRodos:
             self.msg(None,
                      self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n").format(result.url) +
                      self.tr("Check the Log Message Panel for more info"))
-            # set (empty) paths_model in combo: clean up
-            self.jrodosmodel_dlg.combo_path.setModel(self.jrodos_project_data)
+            # set (empty) paths_model/None in combo: clean up
+            self.jrodosmodel_dlg.combo_path.setModel(None)
             # cleanup the starttime, step etc in the dialog too
             self.set_dialog_project_info(None, None, None)
         else:

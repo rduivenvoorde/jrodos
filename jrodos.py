@@ -143,6 +143,7 @@ class JRodos:
         self.measurements_provider = None
         self.quantities_model = None
         self.substances_model = None
+        self.task_model = None
 
         # graph widget
         self.graph_widget_checkbox = None
@@ -579,8 +580,14 @@ class JRodos:
                 idx = self.measurements_dlg.combo_substance.model().mapFromSource(model_index)
                 self.measurements_dlg.combo_substance.setCurrentIndex(idx.row())
 
-
     def get_jrodos_projects(self):
+        """Retrieve all JRodos projects via REST interface url like:
+        http://geoserver.prd.cal-net.nl/rest-1.0-TEST-1/jrodos/projects
+
+        If retrieved call 'projects_provider_finished' which will create a model from the result
+        and try to fill the dialog with the last project used.
+
+        """
         config = JRodosProjectConfig()
         config.url = self.settings.value('jrodos_rest_url')
         projects_provider = JRodosProjectProvider(config)
@@ -652,7 +659,7 @@ class JRodos:
         # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
         self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project paths...")])
-        self.jrodos_project_data = None  # ?thourough cleanup?
+        self.jrodos_project_data = None  # ? thorough cleanup?
         self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
@@ -666,12 +673,13 @@ class JRodos:
     def datapaths_provider_finished(self, result):
         if result.error():
             self.msg(None,
-                     self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.\n").format(result.url) +
-                     self.tr("Check the Log Message Panel for more info"))
+                     self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.").format(result.url) +
+                     self.tr("\nCheck the Log Message Panel for more info, or replay this url in a browser."))
             # set (empty) paths_model/None in combo: clean up
             self.jrodosmodel_dlg.combo_path.setModel(None)
             # cleanup the starttime, step etc in the dialog too
             self.set_dialog_project_info(None, None, None)
+            self.task_model = None # is used as flag for problems
         else:
             # load saved user data_items from pickled file
             data_items_from_disk = []
@@ -870,6 +878,13 @@ class JRodos:
         self.get_jrodos_projects()
 
         if self.jrodosmodel_dlg.exec_():  # OK was pressed
+
+            # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
+            # Else there was a problem retrieving the project informaton
+            if not hasattr(self, 'task_model') or self.task_model is None:
+                self.msg(None, "There is a problem with this project (no tasks), quitting retrieving this model... ")
+                return
+
             jrodos_output_settings = JRodosModelOutputConfig()
             jrodos_output_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
             # FORMAT is fixed to zip with shapes
@@ -882,7 +897,6 @@ class JRodos:
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
-            # get data_item/path from model behind the combo_path dropdown
             datapath_model = self.jrodos_project_data[self.jrodosmodel_dlg.combo_task.currentIndex()]  # QStandardItemModel
             combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
             current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()

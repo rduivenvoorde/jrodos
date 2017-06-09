@@ -869,7 +869,7 @@ class JRodos:
 
         # WPS / MODEL PART
         if self.jrodos_output_settings is not None:
-            self.msg(None, "Still busy retrieving Model data via WPS, please try later...")
+            self.msg(None, self.tr("Still busy retrieving Model data via WPS, please try later..."))
             return
 
         self.jrodosmodel_dlg.show()
@@ -882,7 +882,7 @@ class JRodos:
             # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
             # Else there was a problem retrieving the project informaton
             if not hasattr(self, 'task_model') or self.task_model is None:
-                self.msg(None, "There is a problem with this project (no tasks), quitting retrieving this model... ")
+                self.msg(None, self.tr("There is a problem with this project (no tasks), quitting retrieving this model... "))
                 return
 
             jrodos_output_settings = JRodosModelOutputConfig()
@@ -901,7 +901,7 @@ class JRodos:
             combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
             current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
             if current_path_index < 0:
-                self.msg(None, "Mandatory 'Dataitem' selection missing... Please select one. ")
+                self.msg(None, self.tr("Mandatory 'Dataitem' selection missing... Please select one. "))
                 return
             proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
             idx = combopath_model.mapToSource(proxy_idx)

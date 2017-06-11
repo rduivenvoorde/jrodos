@@ -35,8 +35,12 @@ class JRodosProjectProvider(ProviderBase):
             # return without emitting 'finished'
             return
         else:
-            content = unicode(reply.readAll())
-            result._data = json.loads(content)
+            # mmm, service returns HTML instead of JSON in case of a problem
+            try:
+                content = unicode(reply.readAll())
+                result._data = json.loads(content)
+            except:
+                result.set_error('Error retrieving the JRodos projects using url: ', reply.request().url().toString(), 'JRodos project provider (REST)')
         self.finished.emit(result)
         self.ready = True
         reply.deleteLater()  # else timeouts on Windows

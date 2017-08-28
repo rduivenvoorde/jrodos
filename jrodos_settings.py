@@ -10,7 +10,7 @@ class JRodosSettings(SettingManager):
 
     def __init__(self):
 
-        plugin_name = 'JRodos'
+        plugin_name = 'jrodos'  # NOTE: will be root node in QSettings: always lowercase!
 
         SettingManager.__init__(self, plugin_name)
 

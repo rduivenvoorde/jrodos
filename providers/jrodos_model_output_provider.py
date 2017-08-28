@@ -156,6 +156,15 @@ class JRodosModelProvider(ProviderBase):
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = unicode(reply.readAll())
+
+            # oops WPS emtpy json doc?
+            if len(content) < 5:
+                result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
+                self.ready = True
+                self.finished.emit(result)
+                reply.deleteLater()  # else timeouts on Windows
+                return
+
             # could be an exception, eg:
             # <wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" service="WPS" serviceInstance="http://geoserver.prd.cal-net.nl:80/geoserver/ows?" version="1.0.0">
             #       <wps:Process wps:processVersion="1.0.0">
@@ -172,7 +181,6 @@ class JRodosModelProvider(ProviderBase):
             #       </wps:ProcessFailed>
             #       </wps:Status>
             # </wps:ExecuteResponse>
-
             exception = re.findall('<ows:ExceptionText>', content)
             if len(exception) > 0:
                 # oops WPS returned an exception
@@ -181,14 +189,10 @@ class JRodosModelProvider(ProviderBase):
                 self.finished.emit(result)
                 reply.deleteLater()  # else timeouts on Windows
                 return
-            if len(content) < 5:
-                # oops WPS emtpy json doc?
-                result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
-                self.ready = True
-                self.finished.emit(result)
-                reply.deleteLater()  # else timeouts on Windows
-                return
+
             obj = json.loads(content)
+
+
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)
 
@@ -302,7 +306,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             self.column += 1
             self.get_data()
         else:
-            logging.debug('All model information received; stop fetching, start loading...')
+            #logging.debug('All model information received; stop fetching, start loading...')
             result.set_data({'result': 'OK', 'output_dir': self.config.output_dir}, reply.url().toString())
             # we need to wait untill all pages are there before to emit the result; so: INSIDE de loop
             self.ready = True

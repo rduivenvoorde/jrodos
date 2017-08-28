@@ -48,7 +48,7 @@ copyright = u'2017, Richard Duivenvoorde, Raymond Nijssen'
 # built documents.
 #
 # The short X.Y version.
-version = '0.3.11'
+version = '0.3.12'
 # The full version, including alpha/beta/rc tags.
 release = '0.3.11'
 

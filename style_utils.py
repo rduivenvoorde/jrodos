@@ -41,7 +41,7 @@ class RangeCreator:
             r += (s, e), # add s and e as tuple
         if max_inf:
             r += (pow(10, end_exponent), float('inf')),
-            print r
+            #print r
         return r
 
     @staticmethod

@@ -311,7 +311,7 @@ class JRodos:
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 
         # Create the dialog (after translation) and keep reference
-        self.jrodosmodel_dlg = JRodosDialog()
+        self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
         # connect the change of the project dropdown to a refresh of the data path
         self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
@@ -322,12 +322,12 @@ class JRodos:
         self.filter_dlg.le_item_filter.setPlaceholderText(self.tr('Search in items'))
 
         # Create the measurements dialog
-        self.measurements_dlg = JRodosMeasurementsDialog()
+        self.measurements_dlg = JRodosMeasurementsDialog(self.iface.mainWindow())
         self.measurements_dlg.btn_quantity_filter.clicked.connect(self.show_quantity_filter_dialog)
         self.measurements_dlg.btn_substance_filter.clicked.connect(self.show_substance_filter_dialog)
 
         # Create the settings dialog
-        self.settings_dlg = JRodosSettingsDialog()
+        self.settings_dlg = JRodosSettingsDialog(self.iface.mainWindow())
 
         # Create GraphWidget
         self.graph_widget = JRodosGraphWidget()
@@ -658,7 +658,7 @@ class JRodos:
     def project_selected(self, projects_model_idx):
         # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
-        self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project paths...")])
+        self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project datapaths...")])
         self.jrodos_project_data = None  # ? thorough cleanup?
         self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
@@ -673,13 +673,18 @@ class JRodos:
     def datapaths_provider_finished(self, result):
         if result.error():
             self.msg(None,
-                     self.tr("Problem in JRodos plugin retrieving the JRodos datapaths for project:\n{}.").format(result.url) +
-                     self.tr("\nCheck the Log Message Panel for more info, or replay this url in a browser."))
+                     self.tr("Problem retrieving the JRodos datapaths for project:\n\n{}.").format(
+                         result.url) +
+                     self.tr("\n\nCheck the Log Message Panel for more info, \nor replay this url in a browser."))
             # set (empty) paths_model/None in combo: clean up
             self.jrodosmodel_dlg.combo_path.setModel(None)
-            # cleanup the starttime, step etc in the dialog too
+            self.jrodosmodel_dlg.combo_path.clear()
+            # cleanup the start time, step etc in the dialog too
             self.set_dialog_project_info(None, None, None)
-            self.task_model = None # is used as flag for problems
+            self.task_model = None  # is used as flag for problems
+            # let's remove this project from the user settings, as it apparently has datapath problems
+            # and keeping this project as last project we stay in this loop of retrieving faulty datapaths
+            Utils.set_settings_value("jrodos_last_model_project", "")
         else:
             # load saved user data_items from pickled file
             data_items_from_disk = []
@@ -882,7 +887,10 @@ class JRodos:
             # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
             # Else there was a problem retrieving the project informaton
             if not hasattr(self, 'task_model') or self.task_model is None:
-                self.msg(None, self.tr("There is a problem with this project (no tasks), quitting retrieving this model... "))
+                self.msg(None, self.tr(
+                  "There is a problem with this project (no tasks),\nquitting retrieving this model's parameters... "))
+                # let's remove this project from the user settings
+                Utils.set_settings_value("jrodos_last_model_project", "")
                 return
 
             jrodos_output_settings = JRodosModelOutputConfig()

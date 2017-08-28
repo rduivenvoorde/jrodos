@@ -1,4 +1,5 @@
-import os.path, tempfile
+import os.path
+import tempfile
 
 class Utils:
 

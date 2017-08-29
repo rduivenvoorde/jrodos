@@ -22,7 +22,7 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont
+    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont, QToolBar
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
@@ -130,8 +130,7 @@ class JRodos:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&JRodos')
-        self.toolbar = self.iface.addToolBar(u'JRodos')
-        self.toolbar.setObjectName(u'JRodos')
+        self.toolbar = self.get_rivm_toolbar()
 
         self.jrodos_output_progress_bar = None
         self.jrodos_output_settings = None
@@ -336,6 +335,17 @@ class JRodos:
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
+
+    # TODO: move this to a commons class/module
+    def get_rivm_toolbar(self):
+        TOOLBAR_TITLE = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
+        toolbars = self.iface.mainWindow().findChildren(QToolBar, TOOLBAR_TITLE)
+        if len(toolbars)==0:
+            toolbar = self.iface.addToolBar(TOOLBAR_TITLE)
+            toolbar.setObjectName(TOOLBAR_TITLE)
+        else:
+            toolbar = toolbars[0]
+        return toolbar
 
     def show_settings(self):
         self.settings_dlg.show()

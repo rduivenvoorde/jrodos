@@ -40,7 +40,8 @@ class RangeCreator:
             #print '{} - {}'.format(s, e)
             r += (s, e), # add s and e as tuple
         if max_inf:
-            r += (pow(10, end_exponent), float('inf')),
+            #r += (pow(10, end_exponent), float('inf')),
+            r += (pow(10, end_exponent), 1000000000000),
             #print r
         return r
 

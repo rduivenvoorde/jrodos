@@ -22,7 +22,7 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont, QToolBar
+    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont, QToolBar, QFileDialog
 
 from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
     QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
@@ -314,6 +314,15 @@ class JRodos:
             action = self.toolbar.addWidget(self.graph_widget_checkbox)
             self.actions.append(action)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
+
+        # loading a JRodos Shapefile + sld (not untill QGIS 2.14.6 or so...)
+        # icon_path = ':/plugins/JRodos/icon.png'
+        # self.add_action(
+        #     icon_path,
+        #     text=self.tr(u'Load JRodos Shapefile (.shp) and Style (.sld)'),
+        #     callback=self.load_jrodos_shape,
+        #     add_to_toolbar=True,
+        #     parent=self.iface.mainWindow())
 
         # Create the dialog (after translation) and keep reference
         self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
@@ -1363,7 +1372,8 @@ class JRodos:
                 if 'Empty' in shpfile: # JRodos sents an 'Empty.shp' if no features are in the model data path)
                     self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
                     break
-                jrodos_output_layer = QgsVectorLayer(shp, layer_name+" ("+unit_used+")", "ogr")
+                #jrodos_output_layer = QgsVectorLayer(shp, layer_name +" ("+unit_used+")", "ogr")
+                jrodos_output_layer = QgsVectorLayer(shp, layer_name, "ogr")
                 if not jrodos_output_layer.isValid():
                     self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
                     break
@@ -1683,6 +1693,59 @@ class JRodos:
         model = self.iface.layerTreeView().model()
         index = model.node2index(treenode)
         model.setData(index, name)
+
+    def load_jrodos_shape(self):
+        shape_file = QFileDialog.getOpenFileName(
+            self.iface.mainWindow(),
+            self.tr("Esri Shape (.shp) bestand openen..."),
+            # os.path.realpath(filename),
+            filter=self.tr("JRodos Esri Shape files (*.shp)"))
+
+        if shape_file == "":  # user choose cancel
+            return
+
+        file_name, extension = os.path.splitext(unicode(shape_file))
+
+        layer = QgsVectorLayer(shape_file, file_name, "ogr")
+
+        # sld_file = '/home/richard/z/17/rivm/20170906_JRodosOutputBeverwijk/test.sld'
+        sld_file = file_name + '.sld'
+
+        with open(sld_file, 'rb') as f:
+            original = f.read()
+
+        before = """<?xml version="1.0" encoding="UTF-8"?>
+        <sld:StyledLayerDescriptor version="1.0.0"
+         xmlns:sld="http://www.opengis.net/sld"
+         xmlns:ogc="http://www.opengis.net/ogc"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <sld:NamedLayer>
+          <sld:Name>Fixed style</sld:Name>"""
+
+        after = """
+          </sld:NamedLayer>
+        </sld:StyledLayerDescriptor>"""
+
+        # HACK: should be a regular expression
+        original_no_header = original.replace('<?xml version="1.0" encoding="UTF-8"?>', '')
+
+        fixed = "{}{}{}".format(before, original_no_header, after)
+
+        sld_file_fixed = sld_file + '.fixed'
+
+        with open(sld_file_fixed, 'wb') as f:  # using 'with open', then file is explicitly closed
+            f.write(fixed)
+
+        layer.loadSldStyle(sld_file_fixed)
+
+        if not layer.isValid():
+            print "Layer failed to load!"
+
+        else:
+            print "Layer was loaded successfully!"
+
+        QgsMapLayerRegistry.instance().addMapLayer(layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")

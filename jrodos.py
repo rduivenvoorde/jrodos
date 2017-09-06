@@ -288,7 +288,9 @@ class JRodos:
             self.jrodos_output_progress_bar.setValue(0)
             self.jrodos_output_progress_bar.setFixedWidth(progress_bar_width)
             self.jrodos_output_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.toolbar.addWidget(self.jrodos_output_progress_bar)
+            # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
+            action = self.toolbar.addWidget(self.jrodos_output_progress_bar)
+            self.actions.append(action)
 
         self.MEASUREMENTS_BAR_TITLE = self.tr('Measurements')
         if self.measurements_progress_bar is None:
@@ -301,12 +303,16 @@ class JRodos:
             self.measurements_progress_bar.setValue(0)
             self.measurements_progress_bar.setFixedWidth(progress_bar_width)
             self.measurements_progress_bar.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.toolbar.addWidget(self.measurements_progress_bar)
+            # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
+            action = self.toolbar.addWidget(self.measurements_progress_bar)
+            self.actions.append(action)
 
         if self.graph_widget_checkbox is None:
             self.graph_widget_checkbox = QCheckBox(self.tr('Show Time Graph'))
             self.graph_widget_checkbox.setToolTip(self.tr('Selecting features will be shown in Graph'))
-            self.toolbar.addWidget(self.graph_widget_checkbox)
+            # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
+            action = self.toolbar.addWidget(self.graph_widget_checkbox)
+            self.actions.append(action)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 
         # Create the dialog (after translation) and keep reference
@@ -422,14 +428,18 @@ class JRodos:
             self.iface.removePluginWebMenu(
                 self.tr(u'&JRodos'),
                 action)
-            self.iface.removeToolBarIcon(action)
+            #self.iface.removeToolBarIcon(action)
+            self.toolbar.removeAction(action)
+
+        # progress bars are now deleted by deleting the accompanied action above ^^^
         # remove progress bars
-        if self.jrodos_output_progress_bar is not None:
-            del self.jrodos_output_progress_bar
-        if self.measurements_progress_bar is not None:
-            del self.measurements_progress_bar
+        #if self.jrodos_output_progress_bar is not None:
+        #    del self.jrodos_output_progress_bar
+        #if self.measurements_progress_bar is not None:
+        #    del self.measurements_progress_bar
         # remove the toolbar
-        del self.toolbar
+        #del self.toolbar
+
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
         QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
@@ -446,6 +456,9 @@ class JRodos:
             # self.info("TODO: Removing Layer Group")
             root = QgsProject.instance().layerTreeRoot()
             root.removeChildNode(self.layer_group)
+
+        # delete the graph widget
+        del self.graph_widget
 
     def run(self):
 
@@ -1378,7 +1391,7 @@ class JRodos:
                                 j += 1
                                 jrodos_output_layer.deleteFeature(feature.id())
 
-                # jrodos_output_layer.loadNamedStyle(
+                #jrodos_output_layer.loadNamedStyle(
                 #     os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
                 self.style_layer(jrodos_output_layer)
 

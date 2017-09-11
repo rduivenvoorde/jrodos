@@ -12,13 +12,13 @@ class TestJRodosProjectProvider(TestProviderBase):
         conf = JRodosProjectConfig()
         #conf.url = 'https://duif.net/project1268.json'
         #conf.url = 'http://jrodos.dev.cal-net.nl:8080/jrodos-rest-service/jrodos/projects/1268'
-        conf.url = 'http://jrodos.dev.cal-net.nl/rest-1.0-TEST-1/jrodos/projects/2104'
+        conf.url = 'http://geoserver.dev.cal-net.nl/rest-1.0-TEST-1/jrodos/projects/208'
         prov = JRodosProjectProvider(conf)
         def prov_finished(result):
             # get first dataitem form first task from first project
             #dataitems = result.data['project']['tasks'][0]['dataitems']
             dataitems = result.data['tasks'][0]['dataitems']
-            self.assertEquals(481, len(dataitems))
+            self.assertEquals(575, len(dataitems))
         prov.finished.connect(prov_finished)
         prov.get_data()
         while not prov.is_finished():

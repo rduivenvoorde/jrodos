@@ -38,12 +38,13 @@ class JRodosModelOutputConfig(ProviderConfig):
         self.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
         self.jrodos_datetime_format = "yyyy-MM-ddTHH:mm:ss.000 00:00"  # '2016-04-25T08:00:00.000+00:00'
         self.timestamp = datetime.now().strftime("%Y%m%d%H%M%f")
+        self.units = ''
 
     def __str__(self):
-        return """WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n modeltime(minutes): {} ({} hours)\n step(seconds): {} ({} minutes)\n columns: {}\n verticals: {}\n format: {}\n start : {}
+        return u"""WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n modeltime(minutes): {} ({} hours)\n step(seconds): {} ({} minutes)\n columns: {}\n verticals: {}\n format: {}\n start : {}\n units : {}
         """.format(self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
                    self.jrodos_format, self.jrodos_model_time, self.jrodos_model_time/60, self.jrodos_model_step, self.jrodos_model_step/60, self.jrodos_columns, self.jrodos_verticals, self.jrodos_datetime_format,
-                   self.jrodos_datetime_start.toString(self.jrodos_datetime_format))
+                   self.jrodos_datetime_start.toString(self.jrodos_datetime_format), self.units)
 
     @property
     def output_dir(self):
@@ -140,7 +141,8 @@ class JRodosModelProvider(ProviderBase):
         # write settings to file in output dir to be able to do some checking
         wps_settings_file = self.config.output_dir + '/jrodos_output_settings.txt'
         with open(wps_settings_file, 'wb') as f:
-            f.write(unicode(self.config))
+            s = unicode(self.config)  # config can contain utf-8 chars
+            f.write(s.encode('utf-8'))
             f.write('\n'+self.xml())
 
     def xml(self):

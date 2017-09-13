@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qgis.core import QgsApplication  # fake import to force sip version 2
 import unittest
 from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
@@ -22,9 +23,10 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         self.conf.jrodos_model_step = 60*60  # timeStep is in seconds!!
         self.conf.jrodos_verticals = 0  # z / layers
         self.conf.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
+        self.conf.units = u'Bq/m²'
 
     def test_jrodos_model_output_settings(self):
-        print self.conf
+        print unicode(self.conf)
 
     # To run just this test:
     # nosetests test / test_jrodos_model_output_provider.py:TestJRodosModelOutputProvider.test_jrodos_model_shapezip_24cols_output_url_zip

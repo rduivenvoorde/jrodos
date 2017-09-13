@@ -134,6 +134,7 @@ class JRodos:
 
         self.jrodos_output_progress_bar = None
         self.jrodos_output_settings = None
+        self.jrodos_output_provider = None
 
         # dialog for measurements
         self.measurements_dlg = None
@@ -457,7 +458,7 @@ class JRodos:
 
         # IF there is a measurement layer disconnect selectionChanged signal
         if self.measurements_layer is not None:
-            self.info("TODO: Disconnecting Measurements Layer Signal") # TODO
+            self.info("TODO: Disconnecting Measurements Layer Signal")  # TODO
             self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
 
         # IF there is a JRodos group... remove it
@@ -776,7 +777,7 @@ class JRodos:
                         data_items_model.appendRow([
                             QStandardItem('0'),                    # self.QMODEL_ID_IDX (not used)
                             QStandardItem(name),                   # self.QMODEL_NAME_IDX
-                            QStandardItem(data_item['datapath']),  # self.QMODEL_DESCRIPTION_IDX
+                            QStandardItem(data_item['unit']),      # self.QMODEL_DESCRIPTION_IDX  # misuse for holding the unit used, like Bq/m²
                             QStandardItem(data_item['datapath']),  # self.QMODEL_DATA_IDX
                             QStandardItem(user_favourite)          # self.QMODEL_SEARCH_IDX
                         ])
@@ -796,7 +797,7 @@ class JRodos:
             conf.jrodos_project = "project='"+result.data['name']
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
             # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
-            if self.task_model.rowCount()>1:
+            if self.task_model.rowCount() > 1:
                 conf.jrodos_project += "'&amp;model='LSMC'"
             conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
             conf.jrodos_format = 'application/json'
@@ -894,7 +895,7 @@ class JRodos:
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
     def info(self, msg=""):
-        QgsMessageLog.logMessage(str(msg), self.MSG_TITLE, QgsMessageLog.INFO)
+        QgsMessageLog.logMessage(unicode(msg), self.MSG_TITLE, QgsMessageLog.INFO)
 
     def show_jrodos_output_dialog(self, jrodos_output_settings=None):
 
@@ -932,7 +933,8 @@ class JRodos:
             # selected project + save the project id (model col 1) to QSettings
             # +"'&amp;model='EMERSIM'"
             jrodos_output_settings.jrodos_project = "project='"+self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()+"'"
-            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX ).text())
+            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
+
             # for storing in settings we do not use the non unique name, but the ID of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
@@ -946,6 +948,10 @@ class JRodos:
             proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
             idx = combopath_model.mapToSource(proxy_idx)
             last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
+
+            units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX) # we did put the units in description...
+            if units is not None:
+                jrodos_output_settings.units = units.text()
 
             # NOTE that the jrodos_output_settings.jrodos_path has single quotes around it's value!! in the settings:
             # like: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
@@ -996,10 +1002,10 @@ class JRodos:
             # Load the received shp-zip files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None:
-                s = self.jrodos_output_settings.jrodos_path[:-1]  # contains path='...' remove last quote
-                layer_name = s.split('=;=')[-2]+', '+s.split('=;=')[-1]
                 # TODO get unit_used from somewhere
-                unit_used = 'TODO'
+                unit_used = self.jrodos_output_settings.units
+                s = self.jrodos_output_settings.jrodos_path[:-1]  # contains path='...' remove last quote
+                layer_name = unit_used + ' - ' + s.split('=;=')[-2]+', '+s.split('=;=')[-1]
                 self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
                 self.msg(None, self.tr("No Jrodos Model Output data? Got: {}").format(result.data))

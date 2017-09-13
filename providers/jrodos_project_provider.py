@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from PyQt4.QtCore import QUrl, QCoreApplication
 from PyQt4.QtNetwork import QNetworkRequest
 from functools import partial
@@ -37,10 +39,12 @@ class JRodosProjectProvider(ProviderBase):
         else:
             # mmm, service returns HTML instead of JSON in case of a problem
             try:
-                content = unicode(reply.readAll())
+                r = reply.readAll()  # QByteArray
+                content = unicode(r, 'utf-8')  # can contain strings like Bq/m²
                 result._data = json.loads(content)
             except:
-                result.set_error('Error retrieving the JRodos projects using url: ', reply.request().url().toString(), 'JRodos project provider (REST)')
+                result.set_error('Error retrieving the JRodos projects using url: ', reply.request().url().toString(),
+                                 'JRodos project provider (REST)')
         self.finished.emit(result)
         self.ready = True
         reply.deleteLater()  # else timeouts on Windows

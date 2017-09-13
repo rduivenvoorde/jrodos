@@ -172,6 +172,7 @@ class SimpleProvider(ProviderBase):
             result.error_code = reply.error()
         else:
             content = unicode(reply.readAll())
+            s = str(content)
             result._data = content
         self.finished.emit(result)
         self.ready = True

@@ -927,7 +927,7 @@ class JRodos:
                 return
 
             jrodos_output_settings = JRodosModelOutputConfig()
-            jrodos_output_settings.url = self.settings.value('jrodos_wps_url') #'http://localhost:8080/geoserver/wps'
+            jrodos_output_settings.url = self.settings.value('jrodos_wps_url')
             # FORMAT is fixed to zip with shapes
             jrodos_output_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             # selected project + save the project id (model col 1) to QSettings
@@ -939,7 +939,10 @@ class JRodos:
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
-            datapath_model = self.jrodos_project_data[self.jrodosmodel_dlg.combo_task.currentIndex()]  # QStandardItemModel
+            task_index = self.jrodosmodel_dlg.combo_task.currentIndex()
+            if task_index < 0:  # on Windows I've seen that apparently there was NO selected index...
+                task_index = 0
+            datapath_model = self.jrodos_project_data[task_index]  # QStandardItemModel
             combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
             current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
             if current_path_index < 0:

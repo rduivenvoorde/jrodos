@@ -28,7 +28,7 @@
 # LOCALES = af
 LOCALES = nl
 
-VERSION=0.3.13
+VERSION=0.3.14
 
 # If locales are enabled, set the name of the lrelease binary on your system. If
 # you have trouble compiling the translations, you may have to specify the full path to

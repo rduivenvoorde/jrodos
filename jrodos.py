@@ -122,6 +122,11 @@ class JRodos:
         self.USER_QUANTITIES_PATH = self.plugin_dir + '/jrodos_user_quantities.pickle'
         self.USER_SUBSTANCES_PATH = self.plugin_dir + '/jrodos_user_substances.pickle'
 
+        self.BAR_LOADING_TITLE = self.tr('Loading data...')
+        self.JRODOS_BAR_TITLE = self.tr('JRodos Model')
+
+        self.MEASUREMENTS_BAR_TITLE = self.tr('Measurements')
+
         self.settings = JRodosSettings()
 
         # QAbstractItems model for the datapaths in the JRodos dialog
@@ -136,6 +141,8 @@ class JRodos:
         self.jrodos_output_settings = None
         self.jrodos_output_provider = None
 
+        # JRodos model dialog
+        self.jrodosmodel_dlg = None
         # dialog for measurements
         self.measurements_dlg = None
         self.measurements_progress_bar = None
@@ -145,19 +152,25 @@ class JRodos:
         self.substances_model = None
         self.task_model = None
 
-        # graph widget
-        self.graph_widget_checkbox = None
-
         self.measurements_layer = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
+        # dialog to filter long lists
+        self.filter_dlg = None
 
+        # graph widget
+        self.graph_widget = None
+        self.graph_widget_checkbox = None
+        # QgsVertexMarker used to highlight the measurement device shown in the GraphWidget
+        self.graph_device_pointer = None
+
+        # settings dialog
+        self.settings_dlg = None
         # creating a dict for a layer <-> settings mapping
         self.jrodos_settings = {}
 
         self.layer_group = None
-
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -277,11 +290,9 @@ class JRodos:
 
         progress_bar_width = 100
 
-        self.BAR_LOADING_TITLE = self.tr('Loading data...')
-        self.JRODOS_BAR_TITLE = self.tr('JRodos Model')
         if self.jrodos_output_progress_bar is None:
             self.jrodos_output_progress_bar = QProgressBar()
-            self.jrodos_output_progress_bar.setToolTip("Model data (WPS)")
+            self.jrodos_output_progress_bar.setToolTip(self.tr("Model data (WPS)"))
             self.jrodos_output_progress_bar.setTextVisible(True)
             self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
             self.jrodos_output_progress_bar.setMinimum(0)
@@ -293,10 +304,9 @@ class JRodos:
             action = self.toolbar.addWidget(self.jrodos_output_progress_bar)
             self.actions.append(action)
 
-        self.MEASUREMENTS_BAR_TITLE = self.tr('Measurements')
         if self.measurements_progress_bar is None:
             self.measurements_progress_bar = QProgressBar()
-            self.measurements_progress_bar.setToolTip("Measurement data (WFS)")
+            self.measurements_progress_bar.setToolTip(self.tr("Measurement data (WFS)"))
             self.measurements_progress_bar.setTextVisible(True)
             self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE )
             self.measurements_progress_bar.setMinimum(0)
@@ -316,7 +326,7 @@ class JRodos:
             self.actions.append(action)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
 
-        # loading a JRodos Shapefile + sld (not untill QGIS 2.14.6 or so...)
+        # loading a JRodos Shapefile + sld
         # icon_path = ':/plugins/JRodos/icon.png'
         # self.add_action(
         #     icon_path,
@@ -346,8 +356,6 @@ class JRodos:
 
         # Create GraphWidget
         self.graph_widget = JRodosGraphWidget()
-        # QgsVertexMarker used to highlight the measurement device shown in the GraphWidget
-        self.device_pointer = None
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
@@ -661,6 +669,7 @@ class JRodos:
             self.projects_model = QStandardItemModel()
             # content in output is an array of projects
             projects = result.data['content']
+            rows = []
             for project in projects:
                 # retrieve the link of this project
                 link = "NO LINK ?????"
@@ -668,13 +677,23 @@ class JRodos:
                     if l['rel'] == 'self':
                         link = l['href']
                         break
-                id = unicode(project['projectId'])
-                name = project['name']
-                self.projects_model.appendRow([
-                    QStandardItem(id),                                # self.QMODEL_ID_IDX = 0
-                    QStandardItem(name),                              # self.QMODEL_NAME_IDX = 1
-                    QStandardItem(id + ' - ' + name + ' - ' + link),  # self.QMODEL_DESCRIPTION_IDX = 2
-                    QStandardItem(link)])                             # self.QMODEL_DATA_IDX = 3
+                project_id = unicode(project['projectId'])
+                project_name = project['name']
+                # we want the dropdown te be sorted so the last models are on top
+                # using a QSortFilterProxyModel becomes too much a hassle because we need the model on some places
+                # so we do it via a temporary array sort here...
+                # QStandardItems keep data as string, meaning we would not be able to sort these numeric
+                # so we format all integer id's as zero padded 8 length numbers
+                rows.append([
+                    QStandardItem(project_id),                                         # self.QMODEL_ID_IDX = 0
+                    QStandardItem(project_name),                                       # self.QMODEL_NAME_IDX = 1
+                    QStandardItem(project_id + ' - ' + project_name + ' - ' + link),   # self.QMODEL_DESCRIPTION_IDX = 2
+                    QStandardItem(link),                                               # self.QMODEL_DATA_IDX = 3
+                    QStandardItem('{0:08d}'.format(int(project_id)))                   # self.QMODEL_SEARCH_IDX = 4
+                ])
+            sorted_rows = sorted(rows, key=lambda x: x[self.QMODEL_SEARCH_IDX], reverse=True)
+            for row in sorted_rows:
+                self.projects_model.appendRow(row)
 
             # disconnect the change of the project dropdown to be able to do a refresh
             self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
@@ -952,7 +971,7 @@ class JRodos:
             idx = combopath_model.mapToSource(proxy_idx)
             last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
 
-            units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX) # we did put the units in description...
+            units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX)  # we did put the units in description..
             if units is not None:
                 jrodos_output_settings.units = units.text()
 
@@ -1012,7 +1031,8 @@ class JRodos:
                 self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
                 self.msg(None, self.tr("No Jrodos Model Output data? Got: {}").format(result.data))
-        self.jrodos_output_settings = None
+        self.\
+            jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
     def show_measurements_dialog(self):
@@ -1218,24 +1238,24 @@ class JRodos:
 
     def set_device_pointer(self, geom):
         self.remove_device_pointer()
-        self.device_pointer = QgsVertexMarker(self.iface.mapCanvas())
-        self.device_pointer.setColor(QColor(255, 0, 0))
-        self.device_pointer.setIconSize(20)
-        self.device_pointer.setPenWidth(3)
-        self.device_pointer.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        self.graph_device_pointer = QgsVertexMarker(self.iface.mapCanvas())
+        self.graph_device_pointer.setColor(QColor(255, 0, 0))
+        self.graph_device_pointer.setIconSize(20)
+        self.graph_device_pointer.setPenWidth(3)
+        self.graph_device_pointer.setIconType(QgsVertexMarker.ICON_CIRCLE)
         to_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
         from_crs = self.measurements_layer.crs()
         crs_transformer = QgsCoordinateTransform(from_crs, to_crs)
         copy_geom = QgsGeometry(geom)  # doing transformation on the copy, else the original is transformed
         copy_geom.transform(crs_transformer)
 
-        self.device_pointer.setCenter(copy_geom.asPoint())
+        self.graph_device_pointer.setCenter(copy_geom.asPoint())
 
     def remove_device_pointer(self):
-        if self.device_pointer is not None:
-            self.iface.mapCanvas().scene().removeItem(self.device_pointer)
+        if self.graph_device_pointer is not None:
+            self.iface.mapCanvas().scene().removeItem(self.graph_device_pointer)
             self.iface.mapCanvas().refresh()
-            self.device_pointer = None
+            self.graph_device_pointer = None
 
     def find_jrodos_layer(self, settings_object):
         for layer in self.jrodos_settings:

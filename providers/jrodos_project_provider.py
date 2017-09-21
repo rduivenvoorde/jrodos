@@ -40,11 +40,11 @@ class JRodosProjectProvider(ProviderBase):
             # mmm, service returns HTML instead of JSON in case of a problem
             try:
                 r = reply.readAll()  # QByteArray
-                content = unicode(r, 'utf-8')  # can contain strings like Bq/m²
+                content = unicode(r, 'utf-8')  # decode as unicode! Because it can contain strings like Bq/m²
                 result._data = json.loads(content)
-            except:
-                result.set_error('Error retrieving the JRodos projects using url: ', reply.request().url().toString(),
-                                 'JRodos project provider (REST)')
+            except Exception, e:
+                result.set_error(-1, reply.request().url().toString(),
+                                 u'{}\nError converting the JRodos projects reply to json: {}'.format(e, r))
         self.finished.emit(result)
         self.ready = True
         reply.deleteLater()  # else timeouts on Windows

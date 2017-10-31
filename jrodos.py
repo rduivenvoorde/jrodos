@@ -1131,8 +1131,6 @@ class JRodos:
         self.measurements_provider = CalnetMeasurementsProvider(self.measurements_settings)
         self.measurements_provider.finished.connect(self.finish_measurements_provider)
         self.measurements_provider.get_data()
-        while not self.measurements_provider.is_finished():
-            QCoreApplication.processEvents()
 
     def finish_measurements_provider(self, result):
         self.info(result)

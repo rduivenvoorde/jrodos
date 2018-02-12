@@ -82,9 +82,8 @@ class CalnetMeasurementsProvider(ProviderBase):
             filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
 
-                # first read 500 chars to check the 'numberReturned' attribute
-                # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
-                first500chars = reply.read(500)
+                # first read 1500 chars to check some stuff, like the 'numberReturned' attribute or an 'ExceptionText' element
+                first1500chars = reply.read(1500)
 
                 # could be an exception
                 # <ows:ExceptionReport version="2.0.0" xsi:schemaLocation="http://www.opengis.net/ows/1.1 http://geoserver.dev.cal-net.nl:80/geoserver/schemas/ows/1.1.0/owsAll.xsd">
@@ -93,20 +92,22 @@ class CalnetMeasurementsProvider(ProviderBase):
                 #     </ows:ExceptionText>
                 #     </ows:Exception>
                 # </ows:ExceptionReport>
-                exception = re.findall('<ows:ExceptionText>', first500chars)
+                exception = re.findall('<ows:ExceptionText>', first1500chars)
                 if len(exception)>0:
                     # oops WFS returned an exception
-                    result.set_error(-1, reply.url().toString(), first500chars)
+                    result.set_error(-1, reply.url().toString(), first1500chars)
                     self.ready = True
                     self.finished.emit(result)
                     reply.deleteLater()  # else timeouts on Windows
                     return
                 else:
-                    # if all OK we have a page count:
-                    page_count = re.findall('numberReturned="([0-9.]+)"', first500chars)
+                    # if all OK we should have a page count:
+                    # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
+                    print(first1500chars)
+                    page_count = re.findall('numberReturned="([0-9.]+)"', first1500chars)
                     self.page_count = int(page_count[0])
                     self.total_count += self.page_count
-                f.write(first500chars)
+                f.write(first1500chars)
                 # now the rest
                 f.write(reply.readAll())
 

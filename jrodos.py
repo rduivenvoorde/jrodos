@@ -810,18 +810,22 @@ class JRodos:
             items = self.task_model.findItems(last_used_task, Qt.MatchExactly, self.QMODEL_NAME_IDX)
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_task.setCurrentIndex(items[0].row())
-            # Retrieve the Project timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
+            # Retrieve some metadata of the model, like
+            #  timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
+            # NOTE: only wps endpoint 'gs:JRodosWPS' has currently this project info ('gs:JRodosGeopkgWPS' does not)
+            # in future we can hopefully use 'gs:JRodosMetadataWPS' to get model info
+            conf.wps_id = "gs:JRodosWPS"
             conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = "project='"+result.data['name']
+            conf.jrodos_project = "project='"+result.data['name']+"'"
             # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
             # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
             if self.task_model.rowCount() > 1:
-                conf.jrodos_project += "'&amp;model='LSMC'"
+                conf.jrodos_project += "&amp;model='LSMC'"
             conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
             conf.jrodos_format = 'application/json'
             project_info_provider = JRodosModelProvider(conf)
-            #self.msg(None, "{}\n{}\n{}".format(conf.output_dir, conf.jrodos_path, conf.jrodos_project))
+            #self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
             project_info_provider.finished.connect(self.provide_project_info_finished)
             project_info_provider.get_data()
 
@@ -916,10 +920,10 @@ class JRodos:
     def info(self, msg=""):
         QgsMessageLog.logMessage(unicode(msg), self.MSG_TITLE, QgsMessageLog.INFO)
 
-    def show_jrodos_output_dialog(self, jrodos_output_settings=None):
+    def show_jrodos_output_dialog(self, jrodos_output_config=None):
 
-        if jrodos_output_settings is not None:
-            self.jrodos_output_settings = jrodos_output_settings
+        if jrodos_output_config is not None:
+            self.jrodos_output_settings = jrodos_output_config
             #TODO: (re)start the provider?
             self.msg(None, "REstarting provider?")
             return
@@ -945,14 +949,17 @@ class JRodos:
                 Utils.set_settings_value("jrodos_last_model_project", "")
                 return
 
-            jrodos_output_settings = JRodosModelOutputConfig()
-            jrodos_output_settings.url = self.settings.value('jrodos_wps_url')
-            # FORMAT is fixed to zip with shapes
-            jrodos_output_settings.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
+            jrodos_output_config = JRodosModelOutputConfig()
+            jrodos_output_config.wps_id = 'gs:JRodosGeopkgWPS'  # defaulting to GeoPackage
+            if self.jrodosmodel_dlg.rb_shp_output.isChecked():
+                jrodos_output_config.wps_id = 'gs:JRodosWPS'
+            jrodos_output_config.url = self.settings.value('jrodos_wps_url')
+            # FORMAT is fixed to zip with shapes or zip with geopackage
+            jrodos_output_config.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             # selected project + save the project id (model col 1) to QSettings
             # +"'&amp;model='EMERSIM'"
-            jrodos_output_settings.jrodos_project = "project='"+self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text()+"'"
-            jrodos_output_settings.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
+            jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text() + "'"
+            jrodos_output_config.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
 
             # for storing in settings we do not use the non unique name, but the ID of the project
             last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
@@ -973,11 +980,11 @@ class JRodos:
 
             units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX)  # we did put the units in description..
             if units is not None:
-                jrodos_output_settings.units = units.text()
+                jrodos_output_config.units = units.text()
 
             # NOTE that the jrodos_output_settings.jrodos_path has single quotes around it's value!! in the settings:
             # like: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
-            jrodos_output_settings.jrodos_path = "path='{}'".format(last_used_datapath)
+            jrodos_output_config.jrodos_path = "path='{}'".format(last_used_datapath)
             Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
             last_used_task = self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_NAME_IDX).text()
             Utils.set_settings_value("jrodos_last_task", last_used_task)
@@ -985,25 +992,25 @@ class JRodos:
             # model time / duration of prognosis is shown in hours, but retrieved in minutes, and in JRodos in hours!!
             # modeltime (seconds!)
             model_time_secs = int(self.jrodosmodel_dlg.le_model_length.text())
-            jrodos_output_settings.jrodos_model_time = model_time_secs / 60  # jrodos_model_time is in minutes!!
+            jrodos_output_config.jrodos_model_time = model_time_secs / 60  # jrodos_model_time is in minutes!!
             # model Timestep in the dialog is shown in minutes, BUT retrieved in seconds, and in JRodos in minutes!!
             # steptime (seconds!)
             model_step_secs = int(self.jrodosmodel_dlg.le_steps.text())
-            jrodos_output_settings.jrodos_model_step = model_step_secs
+            jrodos_output_config.jrodos_model_step = model_step_secs
             # vertical is fixed to 0 for now (we do not 3D models)
-            jrodos_output_settings.jrodos_verticals = 0  # z / layers
+            jrodos_output_config.jrodos_verticals = 0  # z / layers
             OLD_VERSION = False # old version received the start as seconds_since_epoch
             if OLD_VERSION:
                 # OLD: start text was a secondssinceepoch
-                jrodos_output_settings.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text())/1000).toUTC() # FORCE UTC!!
+                jrodos_output_config.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text()) / 1000).toUTC() # FORCE UTC!!
                 # OLD: columns = number of steps in the model (integer)
-                jrodos_output_settings.jrodos_columns = model_time_secs / model_step_secs
+                jrodos_output_config.jrodos_columns = model_time_secs / model_step_secs
             else:
                 # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
-                jrodos_output_settings.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+                jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
                 # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
-                jrodos_output_settings.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
-            self.jrodos_output_settings = jrodos_output_settings
+                jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
+            self.jrodos_output_settings = jrodos_output_config
             self.start_jrodos_model_output_provider()
 
     def start_jrodos_model_output_provider(self):
@@ -1024,15 +1031,14 @@ class JRodos:
             # Load the received shp-zip files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None:
-                # TODO get unit_used from somewhere
                 unit_used = self.jrodos_output_settings.units
                 s = self.jrodos_output_settings.jrodos_path[:-1]  # contains path='...' remove last quote
                 layer_name = unit_used + ' - ' + s.split('=;=')[-2]+', '+s.split('=;=')[-1]
-                self.load_jrodos_output(result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
+                self.load_jrodos_output(
+                    result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
                 self.msg(None, self.tr("No Jrodos Model Output data? Got: {}").format(result.data))
-        self.\
-            jrodos_output_settings = None
+        self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
     def show_measurements_dialog(self):
@@ -1271,7 +1277,7 @@ class JRodos:
                 del self.jrodos_settings[layer]
                 return
 
-    def load_jrodos_output(self, shape_dir, style_file, layer_name, unit_used):
+    def load_jrodos_output(self, output_dir, style_file, layer_name, unit_used):
         """
         Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
         from given shape_dir.
@@ -1281,158 +1287,78 @@ class JRodos:
         - the starting time of the model (given in dialog, set in jrodos project run)
         - the model length time (24 hours)
 
-        :param shape_dir: directory containing zips with shapefiles
+        :param output_dir: directory containing zips with shapefiles
         :param style_file: style (qml) to be used to style the layer in which we merged all shapefiles
         :return:
         """
 
         import zipfile
-        zips = glob(os.path.join(shape_dir, "*.zip"))
-        for zip in zips:
-            zip_ref = zipfile.ZipFile(zip, 'r')
-            zip_ref.extractall(shape_dir)
+        zips = glob(os.path.join(output_dir, "*.zip"))
+        for zip_file in zips:
+            zip_ref = zipfile.ZipFile(zip_file, 'r')
+            zip_ref.extractall(output_dir)
             zip_ref.close()
 
-        shps = glob(os.path.join(shape_dir, "*.shp"))
+        shps = glob(os.path.join(output_dir, "*.shp"))
+        gpkgs = glob(os.path.join(output_dir, "*.gpkg"))
 
         features_added = False
         features_have_valid_time = False
         features_min_value = self.MAX_FLOAT
 
-        # give the memory layer the same CRS as the source layer
-        # timestamp as first attribute, easier to config with timemanager plugin (default first column)
-        # http://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html  # writing-vector-layers
-        # create layer
-        # jrodos_output_layer = QgsVectorLayer("Polygon", layer_name+" ("+unit_used+")", "memory")
-        # layer_crs = None
-        # if len(shps) > 1:  # OLD way: a directory of zips
-        #     # add fields to memory layer
-        #     pr = jrodos_output_layer.dataProvider()
-        #     pr.addAttributes([QgsField("Time", QVariant.String),
-        #                       QgsField("Cell", QVariant.Int),
-        #                       QgsField("Value", QVariant.Double)])
-        #     jrodos_output_layer.updateFields()  # tell the vector layer to fetch changes from the provider
-        #     # now for every downloaded shape file
-        #     for shp in shps:
-        #         (shpdir, shpfile) = os.path.split(shp)
-        #         input_layer = QgsVectorLayer(shp, shpfile, "ogr")
-        #         flist = []
-        #         if not input_layer.isValid():
-        #             self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
-        #             break
-        #         else:
-        #             #self.msg(None, "Layer loaded %s" % shp)
-        #             if layer_crs ==None:
-        #                 # find out source crs of shp and set our memory layer to the same crs
-        #                 layer_crs = input_layer.crs()
-        #                 jrodos_output_layer.setCrs(layer_crs)
-        #
-        #             features = input_layer.getFeatures()
-        #
-        #             step = int(shpfile.split('_')[0])
-        #             tstamp = QDateTime(self.jrodos_output_settings.jrodos_datetime_start)
-        #             # every zip get's a column with a timestamp based on the 'step/column' from the model
-        #             # so 0_0.zip is column 0, vertical 0
-        #             # BUT column 0 is from the first model step!!
-        #             # SO WE HAVE TO ADD ONE STEP OF SECONDS TO THE TSTAMP (step+1+
-        #             #tstamp = tstamp.addSecs(60 * (step+1) * int(self.jrodos_output_settings.jrodos_model_step))
-        #             tstamp = tstamp.addSecs((step + 1) * int(self.jrodos_output_settings.jrodos_model_step))
-        #             tstamp = tstamp.toString("yyyy-MM-dd HH:mm")
-        #             for feature in features:
-        #                 # only features with Value > 0, to speed up QGIS
-        #                 value = feature.attribute('Value')
-        #                 if value > 0:
-        #                     if value < features_min_value:
-        #                         features_min_value = value
-        #                     fields = feature.fields()
-        #                     fields.append(QgsField("Time"))
-        #                     f = QgsFeature(fields)
-        #                     # timestamp as first attribute, easier to config with timemanager plugin (default first column)
-        #                     f.setAttributes([tstamp, feature.attribute('Cell'), value])
-        #                     f.setGeometry(feature.geometry())
-        #                     flist.append(f)
-        #         if len(flist)>0:
-        #             features_added = True
-        #         jrodos_output_layer.dataProvider().addFeatures(flist)
-        #         jrodos_output_layer.loadNamedStyle(os.path.join(os.path.dirname(__file__), 'styles', style_file)) # qml!! sld is not working!!!
-        #         jrodos_output_layer.updateFields()
-        #         jrodos_output_layer.updateExtents()
-        #         self.iface.mapCanvas().refresh()
-
-        # if len(shps) == 1:  # new way: one zip with one shapefile, the shape containing a column Time (seconds since epoch)
-        #     for shp in shps:
-        #         (shpdir, shpfile) = os.path.split(shp)
-        #         jrodos_output_layer = QgsVectorLayer(shp, shpfile, "ogr")
-        #         if not jrodos_output_layer.isValid():
-        #             self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
-        #             break
-        #         else:
-        #             # self.msg(None, "Layer loaded %s" % shp)
-        #             f = QgsFeature()
-        #             if jrodos_output_layer.getFeatures().nextFeature(f):
-        #                 # checked that we have at least one feature
-        #                 features_added = True # OK
-        #                 # check if we have a valid time in this features
-        #                 time = f.attribute('Time')
-        #                 if time is not None and time != "" and time > 0:
-        #                     features_have_valid_time = True
-        #                 else:
-        #                     self.msg(None, self.tr('Found a feature with Time value {}\nSo not registring as TimeManager layer').format(time))
-        #         jrodos_output_layer.loadNamedStyle(
-        #             os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-        #         jrodos_output_layer.updateFields()
-        #         jrodos_output_layer.updateExtents()
-        #         self.iface.mapCanvas().refresh()
-
-        # newest way: one zip with one shapefile,
-        # the shape containing a column Time (seconds since epoch)
-        # we iterate over features to:
-        # 1) filter out all zero value features (as currently not ALL zero values are removed by server)
-        # 2) determine min and max value of Value (needed for styling purposes)
         i = 0
         j = 0
 
-        if len(shps) == 1:
-            for shp in shps:
-                (shpdir, shpfile) = os.path.split(shp)
-                #self.info("{}\n{}".format(shpdir, shpfile))
-                if 'Empty' in shpfile: # JRodos sents an 'Empty.shp' if no features are in the model data path)
-                    self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
-                    break
-                #jrodos_output_layer = QgsVectorLayer(shp, layer_name +" ("+unit_used+")", "ogr")
-                jrodos_output_layer = QgsVectorLayer(shp, layer_name, "ogr")
-                if not jrodos_output_layer.isValid():
-                    self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
-                    break
+        if len(gpkgs) > 0:
+            (gpkgdir, gpkgfile) = os.path.split(gpkgs[0])
+            #self.info("{}\n{}".format(gpkgdir, gpkgfile))
+            if 'Empty' in gpkgfile:  # JRodos sents an 'Empty.gpkg' if no features are in the model data path)
+                self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
+            else:
+                uri = gpkgs[0] + '|layername=view'
+                jrodos_output_layer = QgsVectorLayer(uri, layer_name, 'ogr')
+        elif len(shps) > 0:
+            (shpdir, shpfile) = os.path.split(shps[0])
+            #self.info("{}\n{}".format(shpdir, shpfile))
+            if 'Empty' in shpfile:  # JRodos sents an 'Empty.shp' if no features are in the model data path)
+                self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
+            else:
+                jrodos_output_layer = QgsVectorLayer(shps[0], layer_name, 'ogr')
+
+        if not jrodos_output_layer.isValid():
+            self.msg(None, self.tr("Apparently no valid JRodos data received. \nFailed to load the data!"))
+        else:
+            # TODO: determine if we really want to walk over all features just to determine class boundaries
+            #       better would be to have this (meta)data available from the jrodos service or so
+            pass
+            for feature in jrodos_output_layer.getFeatures():
+                # Ok, apparently we have at least one feature
+                features_added = True
+                i += 1
+                # only features with Value > 0, to speed up QGIS
+                value = feature.attribute('Value')
+                # check if we have a valid time in this features
+                time = feature.attribute('Time')
+                if value > 0:
+                    if value < features_min_value:
+                        features_min_value = value
+                    # only check when still no valid times found...
+                    if not features_have_valid_time and \
+                                    time is not None and time != "" and time > 0:
+                        features_have_valid_time = True
+                        break # we break here, as we apparently have valid features WITH valid times
                 else:
-                    # TODO: determine if we really want to walk over all features just to determine class boundaries
-                    #       better would be to have this (meta)data available from the jrodos service or so
-                    for feature in jrodos_output_layer.getFeatures():
-                        # Ok, apparently we have at least one feature
-                        features_added = True
-                        i += 1
-                        # only features with Value > 0, to speed up QGIS
-                        value = feature.attribute('Value')
-                        # check if we have a valid time in this features
-                        time = feature.attribute('Time')
-                        if value > 0:
-                            if value < features_min_value:
-                                features_min_value = value
-                            # only check when still no valid times found...
-                            if not features_have_valid_time and \
-                                            time is not None and time != "" and time > 0:
-                                features_have_valid_time = True
-                        else:
-                            # try to delete the features with Value = 0 Note that a zipped shp cannot be edited!
-                            if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
-                                j += 1
-                                jrodos_output_layer.deleteFeature(feature.id())
+                    # try to delete the features with Value = 0 Note that a zipped shp cannot be edited!
+                    if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
+                        j += 1
+                        jrodos_output_layer.deleteFeature(feature.id())
 
-                #jrodos_output_layer.loadNamedStyle(
-                #     os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-                self.style_layer(jrodos_output_layer)
 
-                self.iface.mapCanvas().refresh()
+        #jrodos_output_layer.loadNamedStyle(
+        #     os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+
+        self.style_layer(jrodos_output_layer)
+        self.iface.mapCanvas().refresh()
 
         #self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
         # ONLY when we received features back load it as a layer

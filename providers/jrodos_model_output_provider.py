@@ -14,6 +14,7 @@ class JRodosModelOutputConfig(ProviderConfig):
         ProviderConfig.__init__(self)
         self.url = 'http://localhost:8080/geoserver/wps'
         #self.url = 'http://172.19.115.90:8080/geoserver/wps'
+        self.wps_id = 'gs:JRodosGeopkgWPS'  # gs:JRodosWPS = one zipped shapefile, gs:JRodosGeopkgWPS = one GeoPackage
         self.user = 'admin'
         self.password = 'geoserver'
         # taskArg parameter:
@@ -30,7 +31,7 @@ class JRodosModelOutputConfig(ProviderConfig):
         self.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
         self.jrodos_model_time = -1  # IN MINUTES !
         self.jrodos_model_step = 3600  # IN SECONDS !
-        self.jrodos_columns = 0  # starting at 0, but can also be a range: '0,' '0-23'
+        self.jrodos_columns = 0  # starting at 0, but can also be a range: '0,' '0-23', '0-'
         # vertical parameter:
         self.jrodos_verticals = 0  # z / layers
         # actual output format for WPS
@@ -41,8 +42,8 @@ class JRodosModelOutputConfig(ProviderConfig):
         self.units = ''
 
     def __str__(self):
-        return u"""WPS settings:\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n modeltime(minutes): {} ({} hours)\n step(seconds): {} ({} minutes)\n columns: {}\n verticals: {}\n format: {}\n start : {}\n units : {}
-        """.format(self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
+        return u"""WPS settings:\n WPS id: {}\n WPS url: {}\n outputdir: {}\n user: {}\n password: {}\n project: {}\n path: {}\n format: {}\n modeltime(minutes): {} ({} hours)\n step(seconds): {} ({} minutes)\n columns: {}\n verticals: {}\n format: {}\n start : {}\n units : {}
+        """.format(self.wps_id, self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
                    self.jrodos_format, self.jrodos_model_time, self.jrodos_model_time/60, self.jrodos_model_step, self.jrodos_model_step/60, self.jrodos_columns, self.jrodos_verticals, self.jrodos_datetime_format,
                    self.jrodos_datetime_start.toString(self.jrodos_datetime_format), self.units)
 
@@ -67,11 +68,12 @@ class JRodosModelProvider(ProviderBase):
     The actual request is a WPS XML-request sent as a http-POST
 
     Using the WPS plugin you can for example test the WPS interface. Note the WPS can have different return format:
-    For example GML or zipped shapefiles.
-    Would be nice if in future we could retrieve all columns in one geopackage format :-)
+    For example GML, a zipped shapefiles or a zipped Geopacakge
 
-    Current implementation uses zipped shapefiles, and saves these in a uniquely named directory in the temp-dir of the
+    Old WPS implementation uses zipped shapefiles, and saves these in a uniquely named directory in the temp-dir of the
     user, named as: column_vertical.zip (so 0_0.zip, 1_0.zip etc etc)
+    Newer WPS implementations return a zipped shapefile with all timestep data in one shapefile, or a geopackage
+    with 3 tables: the grid used, the data and a view which relates these to have the time-data.
 
     Note that the WPS outputs one zipfile being a (model) grid with cells with just two columns: Cell and Value
     So the application is actually responsible for adding a time-column to the data. That is why for the loading of
@@ -98,7 +100,7 @@ class JRodosModelProvider(ProviderBase):
    xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc"
    xmlns:wcs="http://www.opengis.net/wcs/1.1.1" xmlns:xlink="http://www.w3.org/1999/xlink"
    xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
-   <ows:Identifier>gs:JRodosWPS</ows:Identifier>
+   <ows:Identifier>{wps_id}</ows:Identifier>
    <wps:DataInputs>
      <wps:Input>
        <ows:Identifier>taskArg</ows:Identifier>
@@ -146,11 +148,12 @@ class JRodosModelProvider(ProviderBase):
             f.write('\n'+self.xml())
 
     def xml(self):
-        return self._xml.format(project=self.config.jrodos_project,
-                         path=self.config.jrodos_path,
-                         format=self.config.jrodos_format,
-                         column=unicode(self.column),
-                         vertical=unicode(self.config.jrodos_verticals))
+        return self._xml.format(wps_id=self.config.wps_id,
+                                project=self.config.jrodos_project,
+                                path=self.config.jrodos_path,
+                                format=self.config.jrodos_format,
+                                column=unicode(self.column),
+                                vertical=unicode(self.config.jrodos_verticals))
 
     def _data_retrieved(self, reply, filename):
         result = ProviderResult()
@@ -158,7 +161,6 @@ class JRodosModelProvider(ProviderBase):
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = unicode(reply.readAll())
-
             # oops WPS emtpy json doc?
             if len(content) < 5:
                 result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
@@ -236,7 +238,7 @@ class JRodosModelProvider(ProviderBase):
                     data[prop] = obj['features'][0]['properties'][prop]
                 result.set_data(data, self.config.url)
             else:
-                result.set_error(-1, self.config.url, "Wong json: " + content)
+                result.set_error(-1, self.config.url, "Wrong json: " + content)
         self.finished.emit(result)
         self.ready = True
         reply.deleteLater()  # else timeouts on Windows

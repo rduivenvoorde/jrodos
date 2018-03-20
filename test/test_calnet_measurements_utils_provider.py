@@ -12,6 +12,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         TestProviderBase.setUp(self)
         self.config = CalnetMeasurementsUtilsConfig()
         self.config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
+        self.config.url = 'http://geoserver.acc.cal-net.nl/calnet-measurements-ws/utilService'
         self.prov = CalnetMeasurementsUtilsProvider(self.config)
 
     def test_calnet_measurements_quantities(self):

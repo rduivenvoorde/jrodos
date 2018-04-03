@@ -466,12 +466,10 @@ class JRodos:
 
         # IF there is a measurement layer disconnect selectionChanged signal
         if self.measurements_layer is not None:
-            self.info("TODO: Disconnecting Measurements Layer Signal")  # TODO
             self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
 
         # IF there is a JRodos group... remove it
         if self.layer_group is not None:
-            # self.info("TODO: Removing Layer Group")
             root = QgsProject.instance().layerTreeRoot()
             root.removeChildNode(self.layer_group)
 
@@ -1172,9 +1170,13 @@ class JRodos:
             self.measurements_settings.bbox = "{},{},{},{}".format(
                 current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
 
-    def measurement_selection_change(self, selected_ids, deselected_ids, clear_and_select):
-        #self.info(" selected: {}\n deselected: {}\n clear_and_select: {}".
-        #          format(selected_ids, deselected_ids, clear_and_select))
+    def measurement_selection_change(self):
+        """Select changed action when a selection of features changes in the measurements layer.
+
+        Signal is only connected when the user ticks the 'Show Time Graph' checkbox
+        Here used to create the line plot/graphic of the measurements.
+
+        """
         self.remove_device_pointer()
         # we do not use these selected_ids etc because selectedFeaturesIds is easier to use with CTRL-selects
         selected_features_ids = self.measurements_layer.selectedFeaturesIds()
@@ -1194,35 +1196,43 @@ class JRodos:
             features = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
             for selected_feature in features:
                 #self.info(selected_feature['device'])  # strings like: NL1212
-                device = selected_feature['device']
-                fr = QgsFeatureRequest()
+                # 'casting' device to a string, because from postgres we get a PyQtNullVariant in case of null device
+                device = '{}'.format(selected_feature['device'])
+                #self.info('device: >{}< type: {}'.format(device, type(device)))
                 # HACKY: disable current time-filter, to be able to find all features from same device
-                fr.disableFilter()
-                fr.setFilterExpression(u'"device" = \'{}\''.format(device))
-                x = []
-                y = []
-                for feature in (self.measurements_layer.getFeatures(fr)):
-                    #self.info(feature['gml_id'])
-                    t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
-                    x.append(t/1000)
-                    y.append(feature['valuemsv'])
+                if device is None or device == '' or device == 'NULL':
+                    self.info('Feature does not contain a device(id), so NOT shown in Time Graph')
+                else:
+                    fr = QgsFeatureRequest()
+                    fr.disableFilter()
+                    fr.setFilterExpression(u'"device" = \'{}\''.format(device))
+                    self.info('\nDevice {}'.format(device))
+                    x = []
+                    y = []
+                    time_sorted_features = sorted(self.measurements_layer.getFeatures(fr), key=lambda f: f['time'])
+                    for feature in (time_sorted_features):
+                        #self.info(feature['gml_id'])
+                        t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
+                        x.append(t/1000)
+                        y.append(feature['valuemsv'])
+                        self.info('{} - {}'.format(t/1000, feature['valuemsv']))
 
-                # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
-                # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
-                # NOT using shortcut notation above, because we want to keep a reference to the PlotCurveItem for click
-                curve = PlotCurveItem(x=x, y=y, pen='ff000099', mouseWidth=0)
-                curve.setClickable(True, 6)
-                curve.sigClicked.connect(self.curve_click)
-                self.graph_widget.graph.addItem(curve)
-                # create a curve <-> device,feature mapping as lookup for later use
-                self.curves[curve] = (device, selected_feature)
+                    # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
+                    # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
+                    # NOT using shortcut notation above, because we want to keep a reference to the PlotCurveItem for click
+                    curve = PlotCurveItem(x=x, y=y, pen='ff000099', mouseWidth=0)
+                    curve.setClickable(True, 6)
+                    curve.sigClicked.connect(self.curve_click)
+                    self.graph_widget.graph.addItem(curve)
+                    # create a curve <-> device,feature mapping as lookup for later use
+                    self.curves[curve] = (device, selected_feature)
 
-                label_point = CurvePoint(curve)
-                self.graph_widget.graph.addItem(label_point)
-                label = TextItem(device, anchor=(0, 0), color='0000ff')
-                label.setFont(font)
-                label_point.setPos(0)
-                label.setParentItem(label_point)
+                    label_point = CurvePoint(curve)
+                    self.graph_widget.graph.addItem(label_point)
+                    label = TextItem(device, anchor=(0, 0), color='0000ff')
+                    label.setFont(font)
+                    label_point.setPos(0)
+                    label.setParentItem(label_point)
             if first:
                 self.set_device_pointer(selected_feature.geometry())
                 first = False

@@ -1206,7 +1206,7 @@ class JRodos:
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
                     fr.setFilterExpression(u'"device" = \'{}\''.format(device))
-                    self.info('\nDevice {}'.format(device))
+                    #self.info('\nDevice {}'.format(device))
                     x = []
                     y = []
                     time_sorted_features = sorted(self.measurements_layer.getFeatures(fr), key=lambda f: f['time'])
@@ -1215,7 +1215,7 @@ class JRodos:
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
                         y.append(feature['valuemsv'])
-                        self.info('{} - {}'.format(t/1000, feature['valuemsv']))
+                        #self.info('{} - {}'.format(t/1000, feature['valuemsv']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')

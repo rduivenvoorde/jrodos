@@ -822,10 +822,11 @@ class JRodos:
                 conf.jrodos_project += "&amp;model='LSMC'"
             conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
             conf.jrodos_format = 'application/json'
-            project_info_provider = JRodosModelProvider(conf)
+            # saving handle of project_info_provider to self, as it seems that the provide is garbage collected sometimes
+            self.project_info_provider = JRodosModelProvider(conf)
             #self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
-            project_info_provider.finished.connect(self.provide_project_info_finished)
-            project_info_provider.get_data()
+            self.project_info_provider.finished.connect(self.provide_project_info_finished)
+            self.project_info_provider.get_data()
 
     def task_selected(self, tasks_model_idx):
         """

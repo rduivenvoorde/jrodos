@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=2.0
 description=Plugin to connect to JRodos via WPS
-version=0.3.16
+version=0.3.17
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog:
 changelog=
+    0.3.17  fix startup issue with null config
     0.3.15  use projectid in measurement wfs queries, use of geopackage (newest jrodos wps)
     0.3.14  show the units (from the new version of the jrodos rest service)
     0.3.13  use rivm toolbar

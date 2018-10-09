@@ -1603,8 +1603,9 @@ class JRodos:
                             # value is in milliS/H, value / 1000
                             valuemsv = value / 1000
                         else:
+                            valuemsv = value
                             if new_unit_msg:
-                                self.msg(None, self.tr("New unit in data: '%s', setting valuemsv to -1") % feature.attribute('unit'))
+                                self.msg(None, self.tr("New unit in data: '%s', setting valuemsv to given value.\nSo this is NOT microSv/h!") % feature.attribute('unit'))
                                 new_unit_msg = False
                         attributes.append(valuemsv)
                         f.setAttributes(attributes)

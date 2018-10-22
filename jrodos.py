@@ -702,10 +702,16 @@ class JRodos:
             # get the last used project from the settings
             last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
             items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
+            self.jrodosmodel_dlg.combo_project.setCurrentIndex(-1)  # SET -1 item (to be sure we fire events later)
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row())  # take first from result
+            else:
+                self.jrodosmodel_dlg.combo_project.setCurrentIndex(0)  # SET first item (to be sure we fire events)
 
     def project_selected(self, projects_model_idx):
+        if projects_model_idx < 0:
+            # NO project selected, do not use the index to set the other combo's
+            return
         # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
         self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project datapaths...")])

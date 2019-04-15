@@ -34,6 +34,41 @@ class CalnetMeasurementsConfig(ProviderConfig):
 
 class CalnetMeasurementsProvider(ProviderBase):
 
+    # def __init__(self, config):
+    #     ProviderBase.__init__(self, config)
+    #     # page_size comes from user config
+    #     self.page_size = self.config.page_size
+    #     # the page_count is the number of features returned in one 'page'-request.
+    #     # It can be found in the 'numberReturned' attribute of the gml response
+    #     self.page_count = 1
+    #     # total number of returned features in this run
+    #     self.total_count = 0
+    #     # runner number for the file numbers
+    #     self.file_count = 1
+    #
+    #     # create a QUrl object to use with query parameters
+    #     self.request = QUrl(self.config.url)
+    #     self.request.addQueryItem('Count', unicode(self.page_size))
+    #     self.request.addQueryItem('typeName', 'radiation.measurements:MEASUREMENT')
+    #     self.request.addQueryItem('version', '2.0.0')
+    #     self.request.addQueryItem('service', 'WFS')
+    #     self.request.addQueryItem('request', 'GetFeature')
+    #     # pity, below not working :-( so we have to check ourselves by counting
+    #     # self.request.addQueryItem('resultType', 'hits')
+    #     self.request.addQueryItem('startIndex', unicode(self.total_count))
+    #     # the actual cql filter, something like:
+    #     # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
+    #     cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
+    #         bbox=self.config.bbox,
+    #         start_datetime=self.config.start_datetime,
+    #         end_datetime=self.config.end_datetime,
+    #         quantity=self.config.quantity,
+    #         substance=self.config.substance,
+    #         endminusstart=self.config.endminusstart,
+    #         projectid=self.config.projectid
+    #     )
+    #     self.request.addQueryItem('CQL_FILTER', cql_filter)
+
     def __init__(self, config):
         ProviderBase.__init__(self, config)
         # page_size comes from user config
@@ -58,17 +93,21 @@ class CalnetMeasurementsProvider(ProviderBase):
         self.request.addQueryItem('startIndex', unicode(self.total_count))
         # the actual cql filter, something like:
         # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
+
+        # if endminusstart=0, leave out the "endTime-startTime={endminusstart}" part
+        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
             bbox=self.config.bbox,
             start_datetime=self.config.start_datetime,
             end_datetime=self.config.end_datetime,
             quantity=self.config.quantity,
             substance=self.config.substance,
-            endminusstart=self.config.endminusstart,
             projectid=self.config.projectid
         )
-        self.request.addQueryItem('CQL_FILTER', cql_filter)
 
+        if self.config.endminusstart > 0:
+            cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
+
+        self.request.addQueryItem('CQL_FILTER', cql_filter)
 
     def _data_retrieved(self, reply):
 
@@ -143,11 +182,13 @@ class CalnetMeasurementsProvider(ProviderBase):
 
 
     def get_data(self):
-        logging.debug('Getting measurements {}-minute data, firing WFS request: GET {}'.format(int(self.config.endminusstart)/60 ,self.request))
+        logging.debug('Getting measurements {}-minute data, firing WFS request: GET {}'.format(int(self.config.endminusstart)/60, self.request))
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
         with open(config_file, 'wb') as f:
             f.write(unicode(self.config))
+            f.write('\n')
+            f.write(self.request.toString())
 
         reply = self.network_manager.get(QNetworkRequest(self.request))
         reply.finished.connect(partial(self._data_retrieved, reply))

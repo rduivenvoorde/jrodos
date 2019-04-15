@@ -45,16 +45,29 @@ class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
         self.combo_endminusstart.addItems(self.MEASUREMENTS_ENDMINUSTART)
         self.combo_endminusstart.setCurrentIndex(1)
 
-        # Replace the default ComboBox with our better ExtendedCombo
-        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-        self.combo_quantity.close()  # this apparently also removes the widget??
-        self.combo_quantity = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_quantity, 3, 1, 1, 1)  # row, col, #rows, #cols
+        self.combis_progressbar.setMaximum(100)
 
-        # Replace the default ComboBox with our better ExtendedCombo
-        # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
-        self.combo_substance.close()  # this apparently also removes the widget??
-        self.combo_substance = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_substance, 4, 1, 1, 1)  # row, col, #rows, #cols
+        # # Replace the default ComboBox with our better ExtendedCombo
+        # # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        # self.combo_quantity_substance.close()  # this apparently also removes the widget??
+        # self.combo_quantity_substance = ExtendedCombo()
+        # self.gridLayout.addWidget(self.combo_quantity_substance, 4, 1, 1, 3)  # row, col, #rows, #cols
 
+        # # Replace the default ComboBox with our better ExtendedCombo
+        # # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        # self.combo_quantity.close()  # this apparently also removes the widget??
+        # self.combo_quantity = ExtendedCombo()
+        # self.gridLayout.addWidget(self.combo_quantity, 3, 1, 1, 1)  # row, col, #rows, #cols
+        #
+        # # Replace the default ComboBox with our better ExtendedCombo
+        # # self.measurements_dlg.gridLayout.removeWidget(self.measurements_dlg.combo_quantity)
+        # self.combo_substance.close()  # this apparently also removes the widget??
+        # self.combo_substance = ExtendedCombo()
+        # self.gridLayout.addWidget(self.combo_substance, 4, 1, 1, 1)  # row, col, #rows, #cols
+
+    def startProgressBar(self):
+        self.combis_progressbar.setMaximum(0)
+
+    def stopProgressBar(self):
+        self.combis_progressbar.setMaximum(100)
 

@@ -119,8 +119,6 @@ class JRodos:
         self.MAX_FLOAT = sys.float_info.max
 
         self.USER_DATA_ITEMS_PATH = self.plugin_dir + '/jrodos_user_data_items.pickle'
-        self.USER_QUANTITIES_PATH = self.plugin_dir + '/jrodos_user_quantities.pickle'
-        self.USER_SUBSTANCES_PATH = self.plugin_dir + '/jrodos_user_substances.pickle'
         self.USER_QUANTITIES_SUBSTANCES_PATH = self.plugin_dir + '/jrodos_user_quanties_substances.pickle'
 
         self.BAR_LOADING_TITLE = self.tr('Loading data...')
@@ -359,6 +357,15 @@ class JRodos:
         start_time = end_time.addSecs(-60 * 60 * 30 * 24)  # start end minus 30 days
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
+        self.measurements_dlg.cb_a1.clicked.connect(self.cb_a1_clicked)
+        self.measurements_dlg.cb_a2.clicked.connect(self.cb_a2_clicked)
+        self.measurements_dlg.cb_a3.clicked.connect(self.cb_a3_clicked)
+        self.measurements_dlg.cb_a4.clicked.connect(self.cb_a4_clicked)
+        self.measurements_dlg.cb_a5.clicked.connect(self.cb_a5_clicked)
+        self.measurements_dlg.cb_unknown.clicked.connect(self.cb_unknown_clicked)
+
+        self.measurements_dlg.btn_all_combis.clicked.connect(lambda: self.quantities_substances_set_all(True))
+        self.measurements_dlg.btn_no_combis.clicked.connect(lambda: self.quantities_substances_set_all(False))
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog(self.iface.mainWindow())
@@ -373,7 +380,7 @@ class JRodos:
     def get_rivm_toolbar(self):
         TOOLBAR_TITLE = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
         toolbars = self.iface.mainWindow().findChildren(QToolBar, TOOLBAR_TITLE)
-        if len(toolbars)==0:
+        if len(toolbars) == 0:
             toolbar = self.iface.addToolBar(TOOLBAR_TITLE)
             toolbar.setObjectName(TOOLBAR_TITLE)
         else:
@@ -501,24 +508,30 @@ class JRodos:
 
         quantities_substance_provider = CalnetMeasurementsUtilsProvider(config)
         quantities_substance_provider.finished.connect(self.quantities_substance_provider_finished)
-        quantities_substance_provider.get_data('MeasuredCombinations')
+
+        #quantities_substance_provider.get_data('MeasuredCombinations')
+
+        # for development! Open an example set of combi's
+        with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:
+            #print(f.readlines())
+            self.combis = json.load(f)
+            result = lambda: None
+            result.data = self.combis
+            #result.error = lambda error: False
+            self.quantities_substance_provider_finished(result)
 
     def quantities_substance_provider_finished(self, result):
 
         self.measurements_dlg.stopProgressBar()
 
-        # with open('/home/richard/git/JRodos/test/measurements.json', 'rb') as f:
-        #     #print(f.readlines())
-        #     self.combis = json.load(f)
-
-        if result.error():
+        if False: #result.error():
             self.msg(None,
              self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")
         else:
             self.combis = result.data
 
-            # load saved user data_items from pickled file
+            # LOAD saved user data_items from pickled file
             user_quantities_substances_from_disk = []
             if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
@@ -532,9 +545,9 @@ class JRodos:
                                                   combi['quantity'],
                                                   combi['substance_desc'],
                                                   combi['substance'])
-                selected = '0'
-                if description in user_quantities_substances_from_disk:
-                    selected = '1'
+                selected = False
+                if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
+                    selected = True
 
                 data_item = QStandardItem("{}{}".format(combi['quantity'], combi['substance']))
                 data_item.setData([combi['quantity'], combi['substance']])
@@ -559,10 +572,11 @@ class JRodos:
             self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
             self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
             self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_DESCRIPTION_IDX, 600)
-            self.measurements_dlg.tbl_combis.horizontalHeader().setStretchLastSection(True)
 
             self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_DATA_IDX, True)
-            self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_SEARCH_IDX, True)
+            self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_SEARCH_IDX, False)
+
+            self.measurements_dlg.tbl_combis.horizontalHeader().setStretchLastSection(True)
 
             # pre color rows
             for row in range(0, self.quantities_substances_model.rowCount()):
@@ -574,24 +588,57 @@ class JRodos:
     def quantities_substances_toggle(self, model_index):
         row = model_index.row()
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
-        selected = '1'
-        if self.measurements_dlg.tbl_combis.model().data(idx) == '1':
-            selected = '0'
+        selected = True
+        if self.measurements_dlg.tbl_combis.model().data(idx) == True:
+            selected = False
         self.measurements_dlg.tbl_combis.model().setData(idx, selected)
         self.quantities_substance_color_model(row)
 
     def quantities_substance_color_model(self, row):
         # color background based on selected ('1') or not
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
-        color = Qt.lightGray
-        if self.measurements_dlg.tbl_combis.model().data(idx) == '1':
-            color = Qt.white
+        color = Qt.lightGray # = 6
+        if self.measurements_dlg.tbl_combis.model().data(idx) == True:
+            color = Qt.white  # = 3
         for i in range(0, self.measurements_dlg.tbl_combis.model().columnCount()):
             idx2 = self.measurements_dlg.tbl_combis.model().index(row, i)
             self.measurements_dlg.tbl_combis.model().setData(idx2, QColor(color), Qt.BackgroundRole)
-            self.measurements_dlg.tbl_combis.model().setData(idx2,
-                                                             Qt.green,
-                                                             Qt.ForegroundRole)
+
+    def quantities_substances_set_all(self, checked):
+        for row in range(0, self.measurements_dlg.tbl_combis.model().rowCount()):
+            idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
+            self.measurements_dlg.tbl_combis.model().setData(idx, checked)
+            self.quantities_substance_color_model(row)
+
+    def quantities_substances_toggle_selection(self, text, checked):
+        for row in range(0, self.measurements_dlg.tbl_combis.model().rowCount()):
+            idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_NAME_IDX)
+            data = self.measurements_dlg.tbl_combis.model().data(idx)
+            if text in data:
+                idx = self.measurements_dlg.tbl_combis.model().index(row,
+                                                                     self.QMODEL_SEARCH_IDX)
+                self.measurements_dlg.tbl_combis.model().setData(idx, checked)
+                self.quantities_substance_color_model(row)
+
+    def cb_a1_clicked(self, checked):
+        self.quantities_substances_toggle_selection('A1', checked)
+
+    def cb_a2_clicked(self, checked):
+        self.quantities_substances_toggle_selection('A2', checked)
+
+    def cb_a3_clicked(self, checked):
+        self.quantities_substances_toggle_selection('A3', checked)
+
+    def cb_a4_clicked(self, checked):
+        self.quantities_substances_toggle_selection('A4', checked)
+
+    def cb_a5_clicked(self, checked):
+        self.quantities_substances_toggle_selection('A5', checked)
+
+    def cb_unknown_clicked(self, checked):
+        self.quantities_substances_toggle_selection('unknown', checked)
+
+
 
     def get_jrodos_projects(self):
         """Retrieve all JRodos projects via REST interface url like:
@@ -1045,77 +1092,26 @@ class JRodos:
         self.measurements_dlg.combo_endminusstart.setCurrentIndex(
             self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
 
-        # load saved user data_items from pickled file
-        if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
-            with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
-                user_quantities_substances_from_disk = pickle.load(f)
-                self.info("Combi's from disk 1:\n".format(user_quantities_substances_from_disk))
-
         self.measurements_dlg.show()
 
         result = self.measurements_dlg.exec_()
         if result:  # OK was pressed
-
-            # if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
-            #     self.msg(None, self.tr("No substances and quantities, network problem? \nSee messages panel ..."))
-            #     return
-            #
-            # # selected quantity + save to QSettings
-            # quantity_text = self.measurements_dlg.combo_quantity.itemText(self.measurements_dlg.combo_quantity.currentIndex())
-            # if quantity_text is None or quantity_text == '':
-            #     self.msg(None, self.tr("No Quantity selected, or quantity is emtpy ...\nFill dropdown via 'See All' button"))
-            #     self.show_measurements_dialog()
-            #     return
-            # # now find quantity_text (like: LANTANHUM-140(LA-140)' in model to find quantity_code (like 'LA-140')
-            # items = self.quantities_model.findItems(quantity_text, Qt.MatchExactly, self.QMODEL_DESCRIPTION_IDX)
-            # if len(items) == 1:
-            #     quantity = self.quantities_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
-            #     Utils.set_settings_value("measurements_last_quantity", quantity)
-            # else:
-            #     self.msg(None, self.tr("No or duplicate quantity (%s) found in model?") % quantity_text)
-            #     return
-            #
-            # # selected substance + save to QSettings
-            # substance_text = self.measurements_dlg.combo_substance.itemText(self.measurements_dlg.combo_substance.currentIndex())
-            # if substance_text is None or substance_text == '':
-            #     self.msg(None, self.tr("No substance selected, or substance is emtpy ...\nFill dropdown via 'See All' button"))
-            #     self.show_measurements_dialog()
-            #     return
-            # # now find id for quantity_text
-            # items = self.substances_model.findItems(substance_text, Qt.MatchExactly, self.QMODEL_DESCRIPTION_IDX)
-            # if len(items) == 1:
-            #     substance = self.substances_model.item(items[0].row(), self.JRODOS_CODE_IDX).text()
-            #     Utils.set_settings_value("measurements_last_substance", substance)
-            # else:
-            #     self.msg(None, self.tr("No or duplicate substance (%s) found in model?") % substance_text)
-            #     return
-
-            # save/pickle user quantities
-            quantities_substances = []
-            # run over model, and check if SEARCH column is 1 and so collect selected quantities
-            for row in range(0, self.quantities_substances_model.rowCount()):
-                if self.quantities_substances_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
-                    # for quantities we pickle 'description' which is in QMODEL_DESCRIPTION_IDX
-                    quantity = self.quantities_substances_model.item(row, self.QMODEL_DESCRIPTION_IDX).text()
-                    quantities_substances.append(quantity)
-
-            # pickle the user_data_items to disk
-            with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
-                self.info("Dumping to disk 1:\n".format(
-                    quantities_substances))
-                pickle.dump(quantities_substances, f)
-
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
             Utils.set_settings_value("endminusstart", endminusstart)
 
             quantities = []
             substances = []
-            # run over model, and check if SEARCH column is 1 and so collect selected quantities
+            quantity_substance_combis = []
+            # run over model, and check if SEARCH column is True and so collect selected quantities
             for row in range(0, self.quantities_substances_model.rowCount()):
-                if self.quantities_substances_model.item(row, self.QMODEL_SEARCH_IDX).text() == '1':
-                    # we pickle 'code' which is in QMODEL_ID_IDX
+                if self.quantities_substances_model.item(row, self.QMODEL_SEARCH_IDX).text() == 'true':
+                    # data is an combi array like: ['T-GAMMA', 'A1']
                     data = self.quantities_substances_model.item(row, self.QMODEL_DATA_IDX).data()
+
+                    # we pickle the data
+                    quantity_substance_combis.append(data)
+
                     # we make the two arrays unique, so no doublures in the array (no ['A5', 'A5']
                     # as this makes that we receive records double..
                     # TODO: fix in sql/stored-procedure in postgres
@@ -1123,6 +1119,11 @@ class JRodos:
                         quantities.append(data[0])
                     if not data[1] in substances:
                         substances.append(data[1])
+
+            with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
+
+                self.info("Dumping to disk 1:\n".format(quantity_substance_combis))
+                pickle.dump(quantity_substance_combis, f)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime() # UTC
             end_date = self.measurements_dlg.dateTime_end.dateTime() # UTC
@@ -1172,7 +1173,7 @@ class JRodos:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
-                self.load_measurements(result.data['output_dir'], 'measurements.qml')
+                self.load_measurements(result.data['output_dir'], 'measurements_randomplacement.qml')
             else:
                 self.msg(None, self.tr("No Measurements data? {}").format(result.data))
         self.measurements_settings = None
@@ -1527,13 +1528,21 @@ class JRodos:
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
 
-        layer_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+
+        layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
             self.measurements_settings.endminusstart + ", " + \
             start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
             end_time.toString(self.measurements_settings.date_time_format_short)
+
+        if 'T-GAMMA' in self.measurements_settings.quantity:
+            layer_display_name = "T-GAMMA"
+        else:
+            layer_display_name = "Measurements (TODO)"
+
         self.info('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         self.info('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
-        layer_name = "Measurements (TODO)"
+
+
 
         register_layers = False
         if self.measurements_layer is None:
@@ -1543,7 +1552,7 @@ class JRodos:
                                           'MM/dd HH:mm:ss'))
 
             # create layer name based on self.measurements_settings
-            self.measurements_layer = QgsVectorLayer("point", layer_name, "memory")
+            self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
 
             # add fields
             pr = self.measurements_layer.dataProvider()
@@ -1657,8 +1666,8 @@ class JRodos:
             self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
             # set the display field value
-            #self.measurements_layer.setDisplayField('[% measurement_values()%]')
-            self.measurements_layer.setDisplayField('Measurements')
+            self.measurements_layer.setDisplayField('[% measurement_values()%]')
+            #self.measurements_layer.setDisplayField('Measurements')
             # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
                 self.iface.actionMapTips().trigger()  # trigger action

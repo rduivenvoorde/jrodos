@@ -52,8 +52,8 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                   <soap:Header/>
                   <soap:Body>
                     <ws:getMeasuredCombinations>
-                    <arg0>2019-03-09T16:46:58.000Z</arg0>
-                    <arg1>2019-04-10T16:46:58.000Z</arg1>
+                    <arg0>2019-03-01T16:46:58.000Z</arg0>
+                    <arg1>2019-04-30T16:46:58.000Z</arg1>
                     </ws:getMeasuredCombinations>
                   </soap:Body>
                 </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"

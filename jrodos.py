@@ -88,7 +88,7 @@ class JRodos:
         """
         # Save reference to the QGIS interface
         self.iface = iface
-        log.debug('__init__ iface = {}'.format(self.iface))
+        log.debug('__init__   {}'.format(self.iface))
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
@@ -160,6 +160,7 @@ class JRodos:
         self.measurements_layer = None
         self.start_time = None
         self.end_time = None
+        self.combis = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
@@ -519,20 +520,11 @@ class JRodos:
 
         quantities_substance_provider.get_data('MeasuredCombinations')
 
-        # for development! Open an example set of combi's
-        # with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:
-        #     #print(f.readlines())
-        #     self.combis = json.load(f)
-        #     result = lambda: None
-        #     result.data = self.combis
-        #     #result.error = lambda error: False
-        #     self.quantities_substance_provider_finished(result)
-
     def quantities_substance_provider_finished(self, result):
 
         self.measurements_dlg.stopProgressBar()
 
-        if result.error():
+        if hasattr(result, "error") and result.error():
             self.msg(None,
              self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")
@@ -1099,6 +1091,15 @@ class JRodos:
         self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
         self.measurements_dlg.combo_endminusstart.setCurrentIndex(
             self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
+
+
+        if self.combis is None:
+            #with open('/home/richard/git/JRodos/measurement_start_combis.json', 'rb') as f:
+            with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:  # development
+                self.combis = json.load(f)
+                result = lambda: None  # 'empty' object
+                result.data = self.combis
+                self.quantities_substance_provider_finished(result)
 
         self.measurements_dlg.show()
 

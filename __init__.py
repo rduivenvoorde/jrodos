@@ -58,9 +58,10 @@ class QgisLogHandler(logging.StreamHandler):
         # Without this it will not be shown because it is something like
         # <qgisnetworklogger.plugin.QgisNetworkLogger object at 0x7f580dac6b38>
         # which looks like an html element so is not shown in the html panel
-        msg = msg.replace('<', '&lt;').replace('>', '&gt;')
+        # mm, not needed in qgis218
+        #msg = msg.replace('<', '&lt;').replace('>', '&gt;')
         #QgsMessageLog.logMessage('{}'.format(msg), self.topic, Qgis.Info)
-        from qgis.core import QgsMessageLog
+        from qgis.core import QgsMessageLog  # we need this... else QgsMessageLog is None after a plugin reload
         QgsMessageLog.logMessage(unicode(msg), LOGGER_NAME, QgsMessageLog.INFO)
 
 log = logging.getLogger(LOGGER_NAME)

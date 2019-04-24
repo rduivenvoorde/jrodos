@@ -5,7 +5,10 @@ from functools import partial
 import os
 import shutil
 import re
+
 import logging
+from .. import LOGGER_NAME
+log = logging.getLogger(LOGGER_NAME)
 
 
 class CalnetMeasurementsConfig(ProviderConfig):
@@ -164,7 +167,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             # print "self.page_count %s" % self.page_count
             # print "self.total_count: %s" % self.total_count
 
-            logging.debug('Ready saving measurement features, page-size: {}, page-count: {}, total-count: {}, start {} / end {}'.format(self.page_size, self.page_count, self.total_count, self.config.start_datetime, self.config.end_datetime))
+            log.debug('Ready saving measurement features, page-size: {}, page-count: {}, total-count: {}, start {} / end {}'.format(self.page_size, self.page_count, self.total_count, self.config.start_datetime, self.config.end_datetime))
 
             if self.total_count % self.page_size == 0 and self.page_count > 0:
                 # silly Qt way to update one query parameter
@@ -173,7 +176,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                 self.file_count += 1
                 self.get_data()
             else:
-                logging.debug('Finishing {}-minute data measurements retrieval: {} measurements received...'.format(int(self.config.endminusstart)/60 ,self.total_count))
+                log.debug('Finishing {}-minute data measurements retrieval: {} measurements received...'.format(int(self.config.endminusstart)/60 ,self.total_count))
                 result.set_data({'result': 'OK', 'output_dir': self.config.output_dir, 'count': self.total_count}, reply.url().toString())
                 # we nee to wait untill all pages are there before to emit the result; so: INSIDE de loop
                 self.ready = True
@@ -182,7 +185,7 @@ class CalnetMeasurementsProvider(ProviderBase):
 
 
     def get_data(self):
-        logging.debug('Getting measurements {}-minute data, firing WFS request: GET {}'.format(int(self.config.endminusstart)/60, self.request))
+        log.debug('Getting measurements {}-minute data, firing WFS request: GET {}'.format(int(self.config.endminusstart)/60, self.request))
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
         with open(config_file, 'wb') as f:

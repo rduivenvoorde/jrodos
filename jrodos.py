@@ -63,6 +63,11 @@ import pickle
 #pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
 
 
+import logging
+from . import LOGGER_NAME
+log = logging.getLogger(LOGGER_NAME)
+
+
 class JRodos:
     """QGIS Plugin Implementation."""
 
@@ -83,6 +88,7 @@ class JRodos:
         """
         # Save reference to the QGIS interface
         self.iface = iface
+        log.debug('__init__ iface = {}'.format(self.iface))
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
@@ -509,22 +515,22 @@ class JRodos:
         quantities_substance_provider = CalnetMeasurementsUtilsProvider(config)
         quantities_substance_provider.finished.connect(self.quantities_substance_provider_finished)
 
-        #quantities_substance_provider.get_data('MeasuredCombinations')
+        quantities_substance_provider.get_data('MeasuredCombinations')
 
         # for development! Open an example set of combi's
-        with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:
-            #print(f.readlines())
-            self.combis = json.load(f)
-            result = lambda: None
-            result.data = self.combis
-            #result.error = lambda error: False
-            self.quantities_substance_provider_finished(result)
+        # with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:
+        #     #print(f.readlines())
+        #     self.combis = json.load(f)
+        #     result = lambda: None
+        #     result.data = self.combis
+        #     #result.error = lambda error: False
+        #     self.quantities_substance_provider_finished(result)
 
     def quantities_substance_provider_finished(self, result):
 
         self.measurements_dlg.stopProgressBar()
 
-        if False: #result.error():
+        if result.error():
             self.msg(None,
              self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")

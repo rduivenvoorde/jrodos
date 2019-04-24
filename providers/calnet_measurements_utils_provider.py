@@ -5,6 +5,9 @@ from functools import partial
 from provider_base import ProviderConfig, ProviderBase, ProviderResult
 import xml.etree.ElementTree as ET
 
+import logging
+from .. import LOGGER_NAME
+log = logging.getLogger(LOGGER_NAME)
 
 class CalnetMeasurementsUtilsConfig(ProviderConfig):
     def __init__(self):
@@ -64,6 +67,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         ProviderBase.__init__(self, config)
 
     def _data_retrieved(self, reply):
+        log.debug('Data retrieved for MeasuredCombinations')
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.url().toString(),
@@ -141,6 +145,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                 </soap:Envelope>""" % (self.config.start_datetime, self.config.end_datetime)
 
         print(data)
+        log.debug('Start searching for MeasuredCombinations')
 
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, "application/soap+xml") # or? "text/xml; charset=utf-8"

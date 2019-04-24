@@ -158,6 +158,8 @@ class JRodos:
         self.task_model = None
 
         self.measurements_layer = None
+        self.start_time = None
+        self.end_time = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
@@ -1079,22 +1081,22 @@ class JRodos:
             self.msg(None, self.tr("Still busy retrieving Measurement data via WFS, please try later..."))
             return
 
-        end_time = QDateTime.currentDateTime()  # end NOW
-        hours = 24  # h
-        start_time = end_time.addSecs(-60 * 60 * hours)  # minus h hours
-
         if self.measurements_layer is not None:
+            # that is we have measurements from an earlier run
             self.measurements_settings = self.jrodos_settings[self.measurements_layer]
-            start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
-            end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
-        else:
+            self.start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
+            self.end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+        elif self.jrodos_output_settings is not None:
             # BUT if we just received a model, INIT the measurements dialog based on this
-            if self.jrodos_output_settings is not None:
-                start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
-                end_time = start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
+            self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
+            self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
+        elif self.start_time is None:
+            hours = 24  # h
+            self.end_time = QDateTime.currentDateTime()  # end NOW
+            self.start_time = self.end_time.addSecs(-60 * 60 * hours)  # minus h hours
 
-        self.measurements_dlg.dateTime_start.setDateTime(start_time)
-        self.measurements_dlg.dateTime_end.setDateTime(end_time)
+        self.measurements_dlg.dateTime_start.setDateTime(self.start_time)
+        self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
         self.measurements_dlg.combo_endminusstart.setCurrentIndex(
             self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
 

@@ -28,7 +28,7 @@
 # LOCALES = af
 LOCALES = nl
 
-VERSION=0.3.17
+VERSION=$(shell cat metadata.txt | grep version= | sed -e 's,version=,,')
 
 # If locales are enabled, set the name of the lrelease binary on your system. If
 # you have trouble compiling the translations, you may have to specify the full path to
@@ -55,7 +55,7 @@ UI_FILES = \
     ui \
     *.ui
 
-EXTRAS = metadata.txt icon.png styles schemas
+EXTRAS = metadata.txt icon.png styles schemas measurement_start_combis.json
 
 COMPILED_RESOURCE_FILES = resources.py
 
@@ -152,6 +152,7 @@ zip: deploy dclean
 	# content. You can then upload the zip file on http://plugins.qgis.org
 	rm -f $(CURDIR)/repo/$(PLUGINNAME).zip
 	cd $(HOME)/$(QGISDIR)/python/plugins; zip -9r $(CURDIR)/repo/$(PLUGINNAME).$(VERSION).zip $(PLUGINNAME)
+	@echo Successfully created zip: $(CURDIR)/repo/$(PLUGINNAME).$(VERSION).zip
 
 package: compile
 	# Create a zip package of the plugin named $(PLUGINNAME).zip.

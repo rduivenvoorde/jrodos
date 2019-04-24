@@ -1094,7 +1094,7 @@ class JRodos:
 
 
         if self.combis is None:
-            with open('/home/richard/git/JRodos/measurement_start_combis.json', 'rb') as f:
+            with open(self.plugin_dir + '/measurement_start_combis.json', 'rb') as f:
             #with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:  # development
                 self.combis = json.load(f)
                 result = lambda: None  # 'empty' object

@@ -120,10 +120,11 @@ class CalnetMeasurementsProvider(ProviderBase):
             # OK, we have an error... emit the result + error here and quit the loading loop
             self.ready = True
             self.finished.emit(result)
-            reply.deleteLater() # else timeouts on Windows
+            reply.deleteLater()  # else timeouts on Windows
             return
         else:
             filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
+            log.debug("Planning to save to: {}".format(filename))
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
 
                 # first read 1500 chars to check some stuff, like the 'numberReturned' attribute or an 'ExceptionText' element

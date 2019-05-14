@@ -508,7 +508,7 @@ class JRodos:
         s.setValue("/Projections/layerDefaultCrs", self.oldCrs)
 
     def get_quantities_and_substances_combis(self):
-        self.info("Getting Quantity/Substance combi's")
+        log.debug("Getting Quantity/Substance combi's")
         self.measurements_dlg.lbl_retrieving_combis.setText("Searching possible Quantity/Substance combi's in this period ....")
         self.measurements_dlg.startProgressBar()
         config = CalnetMeasurementsUtilsConfig()
@@ -948,9 +948,6 @@ class JRodos:
             parent = self.iface.mainWindow()
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
-    def info(self, msg=""):
-        QgsMessageLog.logMessage('{}'.format(msg), self.MSG_TITLE, Qgis.Info)
-
     def show_jrodos_output_dialog(self, jrodos_output_config=None):
 
         if jrodos_output_config is not None:
@@ -1051,7 +1048,7 @@ class JRodos:
         self.jrodos_output_provider.get_data()
 
     def finish_jrodos_model_output_provider(self, result):
-        self.info(result)
+        log.debug(result)
         self.jrodos_output_progress_bar.setMaximum(100) # stop progress
         self.jrodos_output_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents() # to be sure we have the loading msg
@@ -1174,7 +1171,7 @@ class JRodos:
         self.measurements_provider.get_data()
 
     def finish_measurements_provider(self, result):
-        self.info(result)
+        log.debug(result)
         self.measurements_progress_bar.setMaximum(100)
         self.measurements_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents() # to be sure we have the loading msg
@@ -1231,27 +1228,27 @@ class JRodos:
         for fid in selected_features_ids:
             features = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
             for selected_feature in features:
-                #self.info(selected_feature['device'])  # strings like: NL1212
+                #log.debug(selected_feature['device'])  # strings like: NL1212
                 # 'casting' device to a string, because from postgres we get a PyQtNullVariant in case of null device
                 device = '{}'.format(selected_feature['device'])
-                #self.info('device: >{}< type: {}'.format(device, type(device)))
+                #log.debug('device: >{}< type: {}'.format(device, type(device)))
                 # HACKY: disable current time-filter, to be able to find all features from same device
                 if device is None or device == '' or device == 'NULL':
-                    self.info('Feature does not contain a device(id), so NOT shown in Time Graph')
+                    log.debug('Feature does not contain a device(id), so NOT shown in Time Graph')
                 else:
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
                     fr.setFilterExpression(u'"device" = \'{}\''.format(device))
-                    #self.info('\nDevice {}'.format(device))
+                    #log.debug('\nDevice {}'.format(device))
                     x = []
                     y = []
                     time_sorted_features = sorted(self.measurements_layer.getFeatures(fr), key=lambda f: f['time'])
                     for feature in (time_sorted_features):
-                        #self.info(feature['gml_id'])
+                        #log.debug(feature['gml_id'])
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
                         y.append(feature['valuemsv'])
-                        #self.info('{} - {}'.format(t/1000, feature['valuemsv']))
+                        #log.debug('{} - {}'.format(t/1000, feature['valuemsv']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
@@ -1357,7 +1354,7 @@ class JRodos:
 
         if len(gpkgs) > 0:
             (gpkgdir, gpkgfile) = os.path.split(gpkgs[0])
-            #self.info("{}\n{}".format(gpkgdir, gpkgfile))
+            #log.debug("{}\n{}".format(gpkgdir, gpkgfile))
             if 'Empty' in gpkgfile:  # JRodos sents an 'Empty.gpkg' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
@@ -1365,7 +1362,7 @@ class JRodos:
                 jrodos_output_layer = QgsVectorLayer(uri, layer_name, 'ogr')
         elif len(shps) > 0:
             (shpdir, shpfile) = os.path.split(shps[0])
-            #self.info("{}\n{}".format(shpdir, shpfile))
+            #log.debug("{}\n{}".format(shpdir, shpfile))
             if 'Empty' in shpfile:  # JRodos sents an 'Empty.shp' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
@@ -1559,8 +1556,8 @@ class JRodos:
         else:
             layer_display_name = "Measurements (TODO)"
 
-        self.info('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
-        self.info('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
+        log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
+        log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 
 
 
@@ -1672,7 +1669,7 @@ class JRodos:
                 self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
                 return
             else:
-                self.info(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
+                log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
             self.measurements_layer.dataProvider().addFeatures(flist)
             self.measurements_layer.updateFields()

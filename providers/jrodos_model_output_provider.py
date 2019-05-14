@@ -237,7 +237,7 @@ class JRodosModelProvider(ProviderBase):
                 #                     "durationOfPrognosis": 86400,
                 #                     "releaseStart": "2016-04-25T08:00:00.000+0000"},
                 #      "id": "RodosLight"}]}
-                data = {'result': 'OK', 'project':obj['features'][0]['properties']}
+                data = {'result': 'OK', 'project': obj['features'][0]['properties']}
                 for prop in obj['features'][0]['properties']:
                     data[prop] = obj['features'][0]['properties'][prop]
                 result.set_data(data, self.config.url)

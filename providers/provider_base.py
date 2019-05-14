@@ -55,9 +55,8 @@ class ProviderResult:
 
     def __str__(self):
         if self.error_code:
-            return "ProviderError:\n  error_code: {}\n  error_msg: {}\n  url: {}".format(self.error_code,
-                                                                                         self.error_msg,
-                                                                                         self.url)
+            return "ProviderError:\n error_code: {}\n error_msg: {}\n url: {}".\
+                format(self.error_code, self.error_msg, self.url)
         else:
             return "ProviderResult:\n  data: {}\n  url: {}".format(self._data, self.url)
 
@@ -78,9 +77,10 @@ class ProviderResult:
         if self.error_msg == '':
             self.error_msg = self.network_error_msg(self.error_code)
         else:
-            self.error_msg = self.error_msg+' ... '+self.network_error_msg(self.error_code)
+            self.error_msg = "{} ... {}".format(self.error_msg, self.network_error_msg(self.error_code))
         self.url = url
-        logging.debug(self)
+        #log.debug(self.error_msg)
+        log.debug(self)
 
     def set_data(self, data, url=''):
         self.url = url

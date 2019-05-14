@@ -1390,11 +1390,11 @@ class JRodos:
                                     time is not None and time != "" and time > 0:
                         features_have_valid_time = True
                         break # we break here, as we apparently have valid features WITH valid times
-                else:
-                    # try to delete the features with Value = 0 Note that a zipped shp cannot be edited!
-                    if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
-                        j += 1
-                        jrodos_output_layer.deleteFeature(feature.id())
+                # else:
+                #     # try to delete the features with Value = 0, Note that a zipped shp cannot be edited!
+                #     if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
+                #         j += 1
+                #         jrodos_output_layer.deleteFeature(feature.id())
 
 
         #jrodos_output_layer.loadNamedStyle(
@@ -1501,38 +1501,32 @@ class JRodos:
 
         self.enable_timemanager(True)
 
-        # TODO make work for QGIS3
         timemanager = plugins['timemanager']
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = layer
         timelayer_settings.startTimeAttribute = time_column
-
         timelayer = TimeVectorLayer(timelayer_settings, self.iface)
-
         animation_frame_length = 2000
         frame_size = frame_size
         frame_type = frame_type
         timemanager.getController().setPropagateGuiChanges(False)
         timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
-        # this worked in QGIS2, but in QGIS2 we go via guiControl ?
-        #timemanager.getController().setTimeFrameType(frame_type)
-        #timemanager.getController().setTimeFrameSize(frame_size)
         timemanager.getController().guiControl.setTimeFrameType(frame_type)
         timemanager.getController().guiControl.setTimeFrameSize(frame_size)
         timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
         # set timeslider to zero, moving it to 1 and back, thereby calling some event?
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
+        #timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
+        #timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (until upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
             timemanager.getController().refreshGuiTimeFrameProperties()
             # set 'discrete checkbox' to True to be sure there is something to see...
             timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
-            # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
-            timemanager.getController().stepForward()
         else:
             log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
+        # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
+        timemanager.getController().stepForward()
         timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
 
     def load_measurements(self, output_dir, style_file):

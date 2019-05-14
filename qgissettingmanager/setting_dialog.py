@@ -26,9 +26,9 @@
 #
 #---------------------------------------------------------------------
 
-from PyQt4.QtGui import QDialog, QWidget, QButtonGroup
+from qgis.PyQt.QtWidgets import QDialog, QWidget, QButtonGroup
 
-from setting_manager import Debug
+from .setting_manager import Debug
 
 
 # TODO python3 use enum instead
@@ -40,7 +40,8 @@ class UpdateMode(object):
 
 class SettingDialog:
     # TODO Python 3 remove deprecated constructor (i.e. last argument)
-    def __init__(self, setting_manager, mode=UpdateMode.DialogAccept, set_value_on_widget_update=False ):
+    def __init__(self, setting_manager, mode=UpdateMode.DialogAccept,
+                 set_value_on_widget_update=False):
 
         # backward compatibility for old api
         if isinstance(mode, bool):
@@ -67,7 +68,7 @@ class SettingDialog:
                 widget = self.findChild(objectClass, setting_name)
                 if widget is not None:
                     if Debug:
-                        print "Widget found: {}".format(setting_name)
+                        print("Widget found: {}".format(setting_name))
 
                     # configure the widget
                     setting_widget = self.setting_manager.setting(setting_name).config_widget(widget)

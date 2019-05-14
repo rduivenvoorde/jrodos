@@ -22,15 +22,17 @@
 """
 
 import os
-from extended_combo import ExtendedCombo
 
-from PyQt4 import QtGui, uic
+#from extended_combo import ExtendedCombo
+
+from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt import uic
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_dialog_base.ui'))
 
 
-class JRodosDialog(QtGui.QDialog, FORM_CLASS):
+class JRodosDialog(QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
         super(JRodosDialog, self).__init__(parent)
@@ -42,14 +44,14 @@ class JRodosDialog(QtGui.QDialog, FORM_CLASS):
         self.setupUi(self)
 
         # Replace the default ComboBox's with our better ExtendedCombo widget
-        self.combo_project.close()  # this apparently also removes the widget??
-        self.combo_project = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_project, 0, 1, 1, 5) # row, col, #rows, #cols
+#        self.combo_project.close()  # this apparently also removes the widget??
+#        self.combo_project = ExtendedCombo()
+#        self.gridLayout.addWidget(self.combo_project, 0, 1, 1, 5) # row, col, #rows, #cols
 
         # self.combo_task.close()  # this apparently also removes the widget??
         # self.combo_task = ExtendedCombo()
         # self.gridLayout.addWidget(self.combo_task, 1, 1, 1, 4) # row, col, #rows, #cols
 
-        self.combo_path.close()  # this apparently also removes the widget??
-        self.combo_path = ExtendedCombo()
-        self.gridLayout.addWidget(self.combo_path, 2, 1, 1, 4) # row, col, #rows, #cols
+#        self.combo_path.close()  # this apparently also removes the widget??
+#        self.combo_path = ExtendedCombo()
+#        self.gridLayout.addWidget(self.combo_path, 2, 1, 1, 4) # row, col, #rows, #cols

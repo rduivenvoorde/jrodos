@@ -23,14 +23,16 @@
 
 import os
 
-from PyQt4 import QtGui, uic
-from extended_combo import ExtendedCombo
+from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt import uic
+
+#from extended_combo import ExtendedCombo
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_measurements_dialog_base.ui'))
 
 
-class JRodosMeasurementsDialog(QtGui.QDialog, FORM_CLASS):
+class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
         super(JRodosMeasurementsDialog, self).__init__(parent)

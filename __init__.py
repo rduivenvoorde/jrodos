@@ -21,19 +21,19 @@
  ***************************************************************************/
  This script initializes the plugin, making it known to QGIS.
 """
+import logging
 
 """
 The name of logger we use in this plugin.
 It is created in the plugin.py and logs to the QgsMessageLog under the 
 given LOGGER_NAME tab
 """
-LOGGER_NAME = 'JRodos Plugin 2'
-
+LOGGER_NAME = 'JRodos3 Plugin'
 # Create the logger for this QgisNetworkLogger plugin
-import logging
 from . import LOGGER_NAME
+
 from qgis.core import (
-    QgsMessageLog
+    Qgis
 )
 
 class QgisLogHandler(logging.StreamHandler):
@@ -58,11 +58,9 @@ class QgisLogHandler(logging.StreamHandler):
         # Without this it will not be shown because it is something like
         # <qgisnetworklogger.plugin.QgisNetworkLogger object at 0x7f580dac6b38>
         # which looks like an html element so is not shown in the html panel
-        # mm, not needed in qgis218
-        #msg = msg.replace('<', '&lt;').replace('>', '&gt;')
-        #QgsMessageLog.logMessage('{}'.format(msg), self.topic, Qgis.Info)
+        msg = msg.replace('<', '&lt;').replace('>', '&gt;')
         from qgis.core import QgsMessageLog  # we need this... else QgsMessageLog is None after a plugin reload
-        QgsMessageLog.logMessage(unicode(msg), LOGGER_NAME, QgsMessageLog.INFO)
+        QgsMessageLog.logMessage('{}'.format(msg), self.topic, Qgis.Info)
 
 log = logging.getLogger(LOGGER_NAME)
 # checking below is needed, else we add this handler every time the plugin

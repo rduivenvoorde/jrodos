@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtCore import QUrl, QCoreApplication
-from PyQt4.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtNetwork import QNetworkRequest
 from functools import partial
-from provider_base import ProviderConfig, ProviderBase, ProviderResult
+from .provider_base import ProviderConfig, ProviderBase, ProviderResult
 import json
-
+import logging
+#from .. import LOGGER_NAME
+log = logging.getLogger('JRodos3 Plugin')
 
 class JRodosProjectConfig(ProviderConfig):
     def __init__(self):
@@ -21,6 +23,7 @@ class JRodosProjectProvider(ProviderBase):
         ProviderBase.__init__(self, config)
 
     def _data_retrieved(self, reply):
+        log.debug("JRodosProjectProvider: projects retrieved, start looking into reply... ")
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos project provider (REST)')
@@ -40,13 +43,14 @@ class JRodosProjectProvider(ProviderBase):
             # mmm, service returns HTML instead of JSON in case of a problem
             try:
                 r = reply.readAll()  # QByteArray
-                content = unicode(r, 'utf-8')  # decode as unicode! Because it can contain strings like Bq/m²
+                content = r.data().decode('utf-8')
                 result._data = json.loads(content)
-            except Exception, e:
+            except Exception as e:
                 result.set_error(-1, reply.request().url().toString(),
-                                 u'{}\nError converting the JRodos projects reply to json: {}'.format(e, r))
+                    'Error converting the JRodos projects reply to json: {}'.format(e))
         self.finished.emit(result)
         self.ready = True
+        log.debug("JRodosProjectProvider: projects read, finished ... ")
         reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self, path=None):
@@ -54,6 +58,7 @@ class JRodosProjectProvider(ProviderBase):
             request = QUrl(self.config.url + path)
         else:
             request = QUrl(self.config.url)
+        log.debug("JRodosProjectProvider: requesting projects from {}".format(request))
         reply = self.network_manager.get(QNetworkRequest(request))
         reply.finished.connect(partial(self._data_retrieved, reply))
         # this part is needed to be sure we do not return immidiatly (NOT to be used when used as plugin)

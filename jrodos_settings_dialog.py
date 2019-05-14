@@ -1,14 +1,17 @@
 import os
 
-from PyQt4 import QtGui, uic
-from jrodos_settings import JRodosSettings
-from qgissettingmanager import SettingDialog
+from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt import uic
+
+
+from .jrodos_settings import JRodosSettings
+from .qgissettingmanager import SettingDialog
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_settings_dialog_base.ui'))
 
 
-class JRodosSettingsDialog(QtGui.QDialog, FORM_CLASS, SettingDialog):
+class JRodosSettingsDialog(QDialog, FORM_CLASS, SettingDialog):
     def __init__(self, parent=None):
         """Constructor."""
         super(JRodosSettingsDialog, self).__init__(parent)

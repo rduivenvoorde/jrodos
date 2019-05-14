@@ -20,42 +20,47 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant, QDateTime, Qt, QUrl
-from qgis.PyQt.QtGui import QAction, QIcon, QMessageBox, QProgressBar, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QSortFilterProxyModel, QCheckBox, QFont, QToolBar, QFileDialog, QTableView
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QVariant, \
+    QCoreApplication, QDateTime, Qt, QUrl, QSortFilterProxyModel
+from qgis.PyQt.QtGui import QIcon, QStandardItemModel, QStandardItem, \
+    QDesktopServices,  QColor, QFont
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
+    QFileDialog, QTableView, QCheckBox
+from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsMessageLog, \
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
+    QgsRasterLayer, QgsVectorDataProvider, QgsFeatureRequest, QgsGeometry, \
+    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject
 
-from qgis.core import QgsVectorLayer, QgsMapLayerRegistry, QgsField, QgsFeature, QgsCoordinateReferenceSystem, \
-    QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsRasterLayer, QgsVectorDataProvider, QgsSymbolV2, \
-    QgsRuleBasedRendererV2, QgsFeatureRequest, QgsGeometry
-from qgis.utils import qgsfunction, plugins, QgsExpression
+from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
+
 from pyqtgraph import CurvePoint, TextItem, PlotCurveItem
 
 from glob import glob
 from datetime import datetime
-from utils import Utils
 from copy import deepcopy
-from ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog, JRodosGraphWidget
-from jrodos_settings import JRodosSettings
-from jrodos_settings_dialog import JRodosSettingsDialog
-from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
-from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
-from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
-from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
-from providers.utils import Utils as ProviderUtils
-from timemanager.layer_settings import LayerSettings
-from timemanager.timevectorlayer import TimeVectorLayer
-from timemanager.raster.wmstlayer import WMSTRasterLayer
-
-from style_utils import RangeCreator
-
-import resources # needed for button images!
 
 import os.path
 import json
 import sys
 import pickle
 
+from .utils import Utils
+from .ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog, JRodosGraphWidget
+from .jrodos_settings import JRodosSettings
+from .jrodos_settings_dialog import JRodosSettingsDialog
+from .providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
+from .providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
+from .providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
+from .providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
+from .providers.utils import Utils as ProviderUtils
+from timemanager.layers.layer_settings import LayerSettings
+from timemanager.layers.timevectorlayer import TimeVectorLayer
+from timemanager.raster.wmstlayer import WMSTRasterLayer
+
+from .style_utils import RangeCreator
+
+import resources # needed for button images!
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
@@ -383,7 +388,7 @@ class JRodos:
         self.graph_widget = JRodosGraphWidget()
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
-        QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
+        QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
 
     # TODO: move this to a commons class/module
     def get_rivm_toolbar(self):
@@ -438,7 +443,7 @@ class JRodos:
 
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
-        QgsMapLayerRegistry.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
+        QgsProject.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
         # remove pointer
         self.remove_device_pointer()
 
@@ -457,13 +462,13 @@ class JRodos:
     def run(self):
 
         # we REALLY need OTF enabled
-        if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
-            QMessageBox.warning(self.iface.mainWindow(), self.MSG_TITLE, self.tr(
-                "This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.\n\n" +
-                "Please enable OTF for this project or open a project with OTF enabled."),
-                                QMessageBox.Ok, QMessageBox.Ok)
-            return
-        self.setProjectionsBehaviour()
+        # if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
+        #     QMessageBox.warning(self.iface.mainWindow(), self.MSG_TITLE, self.tr(
+        #         "This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.\n\n" +
+        #         "Please enable OTF for this project or open a project with OTF enabled."),
+        #                         QMessageBox.Ok, QMessageBox.Ok)
+        #     return
+        self.setProjectionsBehavior()
         try:
             # we try to retrieve the quantities and substances just once, but not earlier then a user actually
             # starts using the plugin (that is call this run)...
@@ -486,20 +491,20 @@ class JRodos:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
             raise
 
-    def setProjectionsBehaviour(self):
-        # we do NOT want the default behaviour: prompting for a crs
+    def setProjectionsBehavior(self):
+        # we do NOT want the default behavior: prompting for a crs
         # we want to set it to epsg:4326, see
         # http://gis.stackexchange.com/questions/27745/how-can-i-specify-the-crs-of-a-raster-layer-in-pyqgis
         s = QSettings()
-        self.oldCrsBehaviour = s.value("/Projections/defaultBehaviour", "useGlobal")
-        s.setValue("/Projections/defaultBehaviour", "useGlobal")
+        self.oldCrsBehavior = s.value("/Projections/defaultBehavior", "useGlobal")
+        s.setValue("/Projections/defaultBehavior", "useGlobal")
         self.oldCrs = s.value("/Projections/layerDefaultCrs", "EPSG:4326")
         s.setValue("/Projections/layerDefaultCrs", "EPSG:4326")
 
-    def unsetProjectionsBehaviour(self):
-        # change back to default action of asking for crs or whatever the old behaviour was!
+    def unsetProjectionsBehavior(self):
+        # change back to default action of asking for crs or whatever the old behavior was!
         s = QSettings()
-        s.setValue("/Projections/defaultBehaviour", self.oldCrsBehaviour)
+        s.setValue("/Projections/defaultBehavior", self.oldCrsBehavior)
         s.setValue("/Projections/layerDefaultCrs", self.oldCrs)
 
     def get_quantities_and_substances_combis(self):
@@ -696,7 +701,7 @@ class JRodos:
                     if l['rel'] == 'self':
                         link = l['href']
                         break
-                project_id = unicode(project['projectId'])
+                project_id = '{}'.format(project['projectId'])
                 project_name = project['name']
                 # we want the dropdown te be sorted so the last models are on top
                 # using a QSortFilterProxyModel becomes too much a hassle because we need the model on some places
@@ -917,26 +922,26 @@ class JRodos:
             self.jrodosmodel_dlg.le_steps.setText('')
         else:
             # model Timestep in the dialog is shown in minutes (as in JRodos), but retrieved seconds!!
-            self.jrodosmodel_dlg.lbl_steps2.setText(unicode(time_step / 60) + self.tr(" minutes"))
-            self.jrodosmodel_dlg.le_steps.setText(unicode(time_step))  # steptime (seconds to minutes)
+            self.jrodosmodel_dlg.lbl_steps2.setText('{}'.format(time_step / 60) + self.tr(" minutes"))
+            self.jrodosmodel_dlg.le_steps.setText('{}'.format(time_step))  # steptime (seconds to minutes)
         if model_time is None:
             self.jrodosmodel_dlg.lbl_model_length2.setText('-')
             self.jrodosmodel_dlg.le_model_length.setText('')
         else:
             # model time / duration of prognosis is shown in hours (as in JRodos), but retrieved in seconds!!
-            self.jrodosmodel_dlg.lbl_model_length2.setText(unicode(model_time / 3600) + self.tr(" hours"))  # modeltime (seconds to hours)
-            self.jrodosmodel_dlg.le_model_length.setText(unicode(model_time))  # modeltime (seconds to hours)
+            self.jrodosmodel_dlg.lbl_model_length2.setText('{}'.format(model_time / 3600) + self.tr(" hours"))  # modeltime (seconds to hours)
+            self.jrodosmodel_dlg.le_model_length.setText('{}'.format(model_time))  # modeltime (seconds to hours)
         if model_start is None:
             self.jrodosmodel_dlg.lbl_start2.setText('-')
             self.jrodosmodel_dlg.le_start.setText('')  # modeltime (hours)
         else:
-            self.jrodosmodel_dlg.le_start.setText(unicode(model_start))  # modeltime (hours)
+            self.jrodosmodel_dlg.le_start.setText('{}'.format(model_start))  # modeltime (hours)
             if type(model_start) == int:
                 # OLD model start / start of release is in milli(!)seconds since 1970 UTC like: "1477146000000"
                 self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
             else:
                 # NEW model start / start of release is string like: "2016-04-25T08:00:00.000+0000"
-                self.jrodosmodel_dlg.lbl_start2.setText(unicode(model_start))
+                self.jrodosmodel_dlg.lbl_start2.setText('{}'.format(model_start))
 
     def msg(self, parent=None, msg=""):
         if parent is None:
@@ -944,7 +949,7 @@ class JRodos:
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
     def info(self, msg=""):
-        QgsMessageLog.logMessage(unicode(msg), self.MSG_TITLE, QgsMessageLog.INFO)
+        QgsMessageLog.logMessage('{}'.format(msg), self.MSG_TITLE, Qgis.Info)
 
     def show_jrodos_output_dialog(self, jrodos_output_config=None):
 
@@ -1100,8 +1105,9 @@ class JRodos:
                 result = lambda: None  # 'empty' object
                 result.data = self.combis
                 self.quantities_substance_provider_finished(result)
+
             # but also retrieve a fresh list in the background
-            self.get_quantities_and_substances_combis()
+            #self.get_quantities_and_substances_combis()
 
 
         self.measurements_dlg.show()
@@ -1134,7 +1140,7 @@ class JRodos:
 
             with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
 
-                self.info("Dumping to disk 1:\n".format(quantity_substance_combis))
+                log.debug("Dumping to disk:\n".format(quantity_substance_combis))
                 pickle.dump(quantity_substance_combis, f)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime() # UTC
@@ -1181,7 +1187,6 @@ class JRodos:
             self.msg(None, result)
             self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
         else:
-            # self.iface.messageBar().pushMessage("Retrieved all measurement data, loading layer...", self.iface.messageBar().INFO, 1)
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
@@ -1192,10 +1197,10 @@ class JRodos:
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
     def update_measurements_bbox(self):
-            # bbox in epsg:4326
+            # bbox in epsg:4326 !
             crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
-            crsTransform = QgsCoordinateTransform(crs_project, crs_4326)
+            crsTransform = QgsCoordinateTransform(crs_project, crs_4326, QgsProject.instance())
             current_bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
             # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
             self.measurements_settings.bbox = "{},{},{},{}".format(
@@ -1210,7 +1215,7 @@ class JRodos:
         """
         self.remove_device_pointer()
         # we do not use these selected_ids etc because selectedFeaturesIds is easier to use with CTRL-selects
-        selected_features_ids = self.measurements_layer.selectedFeaturesIds()
+        selected_features_ids = self.measurements_layer.selectedFeatureIds()
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
         # With a connected signal measurement_selection_change function would have been called again because
         # timemanager set's the subsetstring again
@@ -1273,7 +1278,7 @@ class JRodos:
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
-        self.measurements_layer.setSelectedFeatures(selected_features_ids)
+        self.measurements_layer.selectByIds(selected_features_ids)
         # and connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
@@ -1290,7 +1295,7 @@ class JRodos:
         self.graph_device_pointer.setIconType(QgsVertexMarker.ICON_CIRCLE)
         to_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
         from_crs = self.measurements_layer.crs()
-        crs_transformer = QgsCoordinateTransform(from_crs, to_crs)
+        crs_transformer = QgsCoordinateTransform(from_crs, to_crs, QgsProject.instance())
         copy_geom = QgsGeometry(geom)  # doing transformation on the copy, else the original is transformed
         copy_geom.transform(crs_transformer)
 
@@ -1405,7 +1410,7 @@ class JRodos:
         # ONLY when we received features back load it as a layer
         if features_added:
             # add layer to the map
-            QgsMapLayerRegistry.instance().addMapLayer(jrodos_output_layer,
+            QgsProject.instance().addMapLayer(jrodos_output_layer,
                                                        False)  # False, meaning not ready to add to legend
             self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
         # ONLY when we received features back AND the time component is valid: register the layer to the timemanager etc
@@ -1419,8 +1424,8 @@ class JRodos:
 
     def style_layer(self, layer):
         # create a new rule-based renderer
-        symbol = QgsSymbolV2.defaultSymbol(layer.geometryType())
-        renderer = QgsRuleBasedRendererV2(symbol)
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        renderer = QgsRuleBasedRenderer(symbol)
         # get the "root" rule
         root_rule = renderer.rootRule()
 
@@ -1435,7 +1440,7 @@ class JRodos:
             rule.setFilterExpression(expression)
             rule.symbol().symbolLayer(0).setFillColor(color)
             # outline transparent
-            rule.symbol().symbolLayer(0).setOutlineColor(QColor.fromRgb(255,255,255,0))
+            rule.symbol().symbolLayer(0).setStrokeColor(QColor.fromRgb(255, 255, 255, 0))
             # set the scale limits if they have been specified
             # if scale is not None:
             #     rule.setScaleMinDenom(scale[0])
@@ -1446,7 +1451,7 @@ class JRodos:
         # delete the default rule
         root_rule.removeChildAt(0)
         # apply the renderer to the layer
-        layer.setRendererV2(renderer)
+        layer.setRenderer(renderer)
 
     def enable_timemanager(self, enable):
         """
@@ -1454,7 +1459,7 @@ class JRodos:
         :param enable: 
         :return: 
         """
-        if plugins.has_key('timemanager'):
+        if 'timemanager' in plugins:
             timemanager = plugins['timemanager']
         # enable timemanager by 'clicking' on enable button (if not enabled)
         if enable and not timemanager.getController().getTimeLayerManager().isEnabled():
@@ -1463,7 +1468,6 @@ class JRodos:
             timemanager.getController().getGui().dock.pushButtonToggleTime.click()
 
     def add_rainradar_to_timemanager(self, layer_for_settings):
-
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
         url = settings.value("rainradar_wmst_url")
@@ -1475,11 +1479,10 @@ class JRodos:
         uri = "crs=" + crs + "&layers=" + layers + "&styles=" + styles + "&format=" + imgformat + "&url=" + url;
 
         rain_layer = QgsRasterLayer(uri, name, "wms")
-        QgsMapLayerRegistry.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
+        QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
         self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
 
         measurements_settings = self.jrodos_settings[layer_for_settings]  # we keep (deep)copies of the settings of the layers here
-
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = rain_layer
         start = QDateTime.fromString(measurements_settings.start_datetime, measurements_settings.date_time_format)
@@ -1501,6 +1504,7 @@ class JRodos:
 
         self.enable_timemanager(True)
 
+        # TODO make work for QGIS3
         timemanager = plugins['timemanager']
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = layer
@@ -1513,11 +1517,14 @@ class JRodos:
         frame_type = frame_type
         timemanager.getController().setPropagateGuiChanges(False)
         timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
-        timemanager.getController().setTimeFrameType(frame_type)
-        timemanager.getController().setTimeFrameSize(frame_size)
-
+        # this worked in QGIS2, but in QGIS2 we go via guiControl ?
+        #timemanager.getController().setTimeFrameType(frame_type)
+        #timemanager.getController().setTimeFrameSize(frame_size)
+        timemanager.getController().guiControl.setTimeFrameType(frame_type)
+        timemanager.getController().guiControl.setTimeFrameSize(frame_size)
         timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
-        # set timeslider to zero
+        # set timeslider to zero, moving it to 1 and back, thereby calling some event?
+        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (until upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
@@ -1527,6 +1534,7 @@ class JRodos:
             # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
             timemanager.getController().stepForward()
         else:
+            log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
         timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
 
@@ -1582,7 +1590,7 @@ class JRodos:
                               ])
             self.measurements_layer.updateFields()
 
-            QgsMapLayerRegistry.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
+            QgsProject.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
             self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
 
             # put a copy of the settings into our map<=>settings dict
@@ -1670,21 +1678,21 @@ class JRodos:
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 
-            timemanager = plugins['timemanager'].getController().getTimeLayerManager()
-            timemanager.setTimeFrameDiscrete(timemanager.timeFrameDiscrete)
+            #timemanager = plugins['timemanager'].getController().getTimeLayerManager()
+            #timemanager.setTimeFrameDiscrete(timemanager.timeFrameDiscrete)
 
         if register_layers:
             # add this layer to the TimeManager
             self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
             # set the display field value
-            self.measurements_layer.setDisplayField('[% measurement_values()%]')
+            self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
             #self.measurements_layer.setDisplayField('Measurements')
             # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
                 self.iface.actionMapTips().trigger()  # trigger action
-            self.iface.legendInterface().setCurrentLayer(self.measurements_layer)
-            #self.iface.mapCanvas().refresh()
+            self.iface.layerTreeView().setCurrentLayer(self.measurements_layer)
+            self.iface.mapCanvas().refresh()
 
             # add rainradar and to the TimeManager IF enabled
             if self.settings.value('rainradar_enabled'):
@@ -1711,7 +1719,7 @@ class JRodos:
         if shape_file == "":  # user choose cancel
             return
 
-        file_name, extension = os.path.splitext(unicode(shape_file))
+        file_name, extension = os.path.splitext('{}'.format(shape_file))
 
         layer = QgsVectorLayer(shape_file, file_name, "ogr")
 
@@ -1747,12 +1755,12 @@ class JRodos:
         layer.loadSldStyle(sld_file_fixed)
 
         if not layer.isValid():
-            print "Layer failed to load!"
+            print("Layer failed to load!")
 
         else:
-            print "Layer was loaded successfully!"
+            print("Layer was loaded successfully!")
 
-        QgsMapLayerRegistry.instance().addMapLayer(layer)
+        QgsProject.instance().addMapLayer(layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
     @qgsfunction(0, "RIVM")
@@ -1781,7 +1789,7 @@ class JRodos:
         for field in feature.fields():
             # skip info
             if not field.name() == 'info':
-                field_string += field.name() + ': ' + unicode(feature[field.name()]) + '<br/>'
+                field_string += field.name() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
             else:
                 # try to do the 'info'-field which is a json object
                 try:

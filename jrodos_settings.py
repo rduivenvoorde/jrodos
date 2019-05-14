@@ -1,4 +1,7 @@
-from qgissettingmanager import *
+from .qgissettingmanager import SettingManager, Scope
+from .qgissettingmanager.types.bool import Bool
+from .qgissettingmanager.types.string import String
+from .qgissettingmanager.types.integer import Integer
 
 # Working with: https://github.com/3nids/qgissettingmanager
 # learning from: https://github.com/3nids/wincan2qgep

@@ -1,4 +1,5 @@
-from PyQt4.QtGui import QColor
+from qgis.PyQt.QtGui import QColor
+
 
 class RangeCreator:
     """
@@ -73,11 +74,11 @@ class RangeCreator:
         bounds = RangeCreator.create_decimal_range(start_exponent, end_exponent, min_inf, max_inf)
         colors = RangeCreator.full_cream_color_ramp(len(bounds))
         r = []
-        for i in xrange(len(bounds)):
+        for i in range(len(bounds)):
             # a rule is a set of: label, expression, color
             bound = bounds[i]
             color = colors[i]
-            expression = 'Value >= ' + unicode(bound[0]) + ' AND Value < ' + unicode(bound[1])
+            expression = 'Value >= ' + str(bound[0]) + ' AND Value < ' + str(bound[1])
             label = expression
             rule = (label, expression, color)
             #print rule
@@ -108,9 +109,6 @@ class RangeCreator:
         # R = (255 * n) / 100
         # G = (255 * (100 - n)) / 100
         # B = 0
-
-
-
 
 if __name__ == '__main__':
     RangeCreator.create_decimal_range(-1, 1, True, True)

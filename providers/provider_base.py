@@ -1,8 +1,13 @@
 import logging
 from functools import partial
-from qgis.core import QgsNetworkAccessManager, QgsMessageLog
-from PyQt4.QtCore import QUrl, QCoreApplication, QObject, pyqtSignal
-from PyQt4.QtNetwork import QNetworkRequest
+from qgis.core import QgsNetworkAccessManager, QgsMessageLog, Qgis
+
+from qgis.PyQt.QtCore import QCoreApplication, QUrl,  QObject, pyqtSignal
+from qgis.PyQt.QtNetwork import QNetworkRequest
+
+import logging
+#from .. import LOGGER_NAME
+log = logging.getLogger('JRodos3 Plugin')
 
 """
 
@@ -25,10 +30,6 @@ Idea:
 - a provider implements a handleResponse (? separate thread ?) to handle/process retreived data
 
 """
-
-# https://pymotw.com/2/threading/
-logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s',)
-
 
 class ProviderConfig:
     def __init__(self):
@@ -70,8 +71,8 @@ class ProviderResult:
         :param msg:  Either a descriptive message, or ''. In case of '' we will try to find a msg based on code
         :return:
         """
-        if code ==0 and msg == '':
-            code = -1 # just to be sure we do not have a 0 code
+        if code == 0 and msg == '':
+            code = -1  # just to be sure we do not have a 0 code
         self.error_code = code
         self.error_msg = msg
         if self.error_msg == '':
@@ -79,7 +80,7 @@ class ProviderResult:
         else:
             self.error_msg = self.error_msg+' ... '+self.network_error_msg(self.error_code)
         self.url = url
-        QgsMessageLog.logMessage(unicode(self), 'Network providers', QgsMessageLog.INFO)
+        logging.debug(self)
 
     def set_data(self, data, url=''):
         self.url = url
@@ -116,6 +117,8 @@ class ProviderResult:
             return "UnknownContentError (server returned 500)"
         elif network_error == 301:
             return "ProtocolUnknownError"
+        elif network_error == 401:
+            return "The server encountered an unexpected condition which prevented it from fulfilling the request."
         else:
             raise TypeError("New NetworkError: {} ?".format(network_error))
 
@@ -171,8 +174,8 @@ class SimpleProvider(ProviderBase):
             self.error = reply.error()
             result.error_code = reply.error()
         else:
-            content = unicode(reply.readAll())
-            s = str(content)
+            r = reply.readAll()
+            content = str(r, 'utf-8')
             result._data = content
         self.finished.emit(result)
         self.ready = True

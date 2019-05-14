@@ -3,11 +3,10 @@
 # TODO python 3: remove
 import qgis
 
-from setting_manager import SettingManager
-from setting import Setting, Scope
-from setting_dialog import SettingDialog, UpdateMode
-
-from types import *
+from .setting_manager import SettingManager
+from .setting import Setting, Scope
+from .setting_dialog import SettingDialog, UpdateMode
+#from .types import bool.Bool, String, Integer, Color, Double
 
 
 

@@ -24,8 +24,9 @@
 
 import os
 
-from PyQt4 import uic
-from PyQt4.QtGui import QDockWidget, QFont
+from qgis.PyQt.QtGui import QFont
+from qgis.PyQt.QtWidgets import QDockWidget
+from qgis.PyQt import uic
 
 from .. import pyqtgraph as pg
 import time

@@ -1,13 +1,12 @@
-from qgis.core import QgsApplication  # fake import to force sip version 2
-from PyQt4.QtCore import QUrl, QCoreApplication
-from PyQt4.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtNetwork import QNetworkRequest, QNetworkAccessManager
 from functools import partial
-from provider_base import ProviderConfig, ProviderBase, ProviderResult
+from .provider_base import ProviderConfig, ProviderBase, ProviderResult
 import xml.etree.ElementTree as ET
 
 import logging
-from .. import LOGGER_NAME
-log = logging.getLogger(LOGGER_NAME)
+#from .. import LOGGER_NAME
+log = logging.getLogger('JRodos3 Plugin')
 
 class CalnetMeasurementsUtilsConfig(ProviderConfig):
     def __init__(self):
@@ -18,11 +17,8 @@ class CalnetMeasurementsUtilsConfig(ProviderConfig):
         self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000Z' # 2019-03-06T00:00:00.000Z
 
 
-
 class CalnetMeasurementsUtilsProvider(ProviderBase):
-
     """
-
     curl -v -XPOST -H "Content-Type: application/soap+xml" -d '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:xsd="http://www.w3.org/2001/XMLSchema"
     xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
@@ -72,10 +68,17 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         if reply.error():
             result.set_error(reply.error(), reply.url().toString(),
                              'Calnet quantities, substances, units provider')
+            log.debug("Error retrieved for MeasuredCombinations: {} {}".format(result.error_code, result.error_msg))
+            # try to read content
+            content = reply.readAll()
+            log.debug("Received: {}".format(content.data().decode('utf-8')))
+
+
         else:
-            content = unicode(reply.readAll())
+            content = reply.readAll()  # then content = QByteArray
+            log.debug("Received: {}".format(content.data().decode('utf-8')))
             data = []
-            root = ET.fromstring(content)
+            root = ET.fromstring(content.data().decode('utf-8'))
 
             for ret in root.findall(".//return"):
                 if ret.find('quantity') is not None:
@@ -126,9 +129,9 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                      xmlns:ws="http://service.ws.calnet.rivm.nl/">
                       <soap:Header/>
                       <soap:Body>
-                        <ws:get%s />
+                        <ws:get{} />
                       </soap:Body>
-                    </soap:Envelope>""" % param
+                    </soap:Envelope>""".format(param)
 
         if param == 'MeasuredCombinations':
             data = """<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
@@ -138,17 +141,19 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                   <soap:Header/>
                   <soap:Body>
                     <ws:getMeasuredCombinations>
-                    <arg0>%s</arg0>
-                    <arg1>%s</arg1>
+                    <arg0>{}</arg0>
+                    <arg1>{}</arg1>
                     </ws:getMeasuredCombinations>
                   </soap:Body>
-                </soap:Envelope>""" % (self.config.start_datetime, self.config.end_datetime)
+                </soap:Envelope>""".format(self.config.start_datetime, self.config.end_datetime)
 
-        print(data)
-        log.debug('Start searching for MeasuredCombinations')
+        log.debug('Start searching for MeasuredCombinations, url: {}'.format(self.config.url))
+        log.debug('POST data: {}'.format(data))
 
+        data = bytearray(data, 'utf-8')
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, "application/soap+xml") # or? "text/xml; charset=utf-8"
+        #reply = self.network_manager.createRequest(QNetworkAccessManager.PostOperation, request, data)
         reply = self.network_manager.post(request, data)
         reply.finished.connect(partial(self._data_retrieved, reply))
         # this part is needed to be sure we do not return immidiatly

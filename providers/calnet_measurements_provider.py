@@ -1,14 +1,14 @@
-from provider_base import ProviderConfig, ProviderBase, ProviderResult
-from PyQt4.QtCore import QUrl
-from PyQt4.QtNetwork import QNetworkRequest
+from .provider_base import ProviderConfig, ProviderBase, ProviderResult
+from qgis.PyQt.QtCore import QUrl,QUrlQuery
+from qgis.PyQt.QtNetwork import QNetworkRequest
 from functools import partial
 import os
 import shutil
 import re
 
 import logging
-from .. import LOGGER_NAME
-log = logging.getLogger(LOGGER_NAME)
+#from .. import LOGGER_NAME
+log = logging.getLogger('JRodos3 Plugin')
 
 
 class CalnetMeasurementsConfig(ProviderConfig):
@@ -24,7 +24,7 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.quantity = ''
         self.substance = ''
         self.projectid = ''
-        self.endminusstart = ''
+        self.endminusstart = 0
         self.bbox = '50,0,60,20'
         self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000 00:00'  # '2016-04-25T08:00:00.000+00:00'
         self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
@@ -34,43 +34,10 @@ class CalnetMeasurementsConfig(ProviderConfig):
             """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime,
                        self.endminusstart, self.quantity, self.substance, self.projectid, self.bbox)
 
+    def __bytes__(self):
+        return str(self).encode('utf-8')
 
 class CalnetMeasurementsProvider(ProviderBase):
-
-    # def __init__(self, config):
-    #     ProviderBase.__init__(self, config)
-    #     # page_size comes from user config
-    #     self.page_size = self.config.page_size
-    #     # the page_count is the number of features returned in one 'page'-request.
-    #     # It can be found in the 'numberReturned' attribute of the gml response
-    #     self.page_count = 1
-    #     # total number of returned features in this run
-    #     self.total_count = 0
-    #     # runner number for the file numbers
-    #     self.file_count = 1
-    #
-    #     # create a QUrl object to use with query parameters
-    #     self.request = QUrl(self.config.url)
-    #     self.request.addQueryItem('Count', unicode(self.page_size))
-    #     self.request.addQueryItem('typeName', 'radiation.measurements:MEASUREMENT')
-    #     self.request.addQueryItem('version', '2.0.0')
-    #     self.request.addQueryItem('service', 'WFS')
-    #     self.request.addQueryItem('request', 'GetFeature')
-    #     # pity, below not working :-( so we have to check ourselves by counting
-    #     # self.request.addQueryItem('resultType', 'hits')
-    #     self.request.addQueryItem('startIndex', unicode(self.total_count))
-    #     # the actual cql filter, something like:
-    #     # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-    #     cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and endTime-startTime={endminusstart} and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
-    #         bbox=self.config.bbox,
-    #         start_datetime=self.config.start_datetime,
-    #         end_datetime=self.config.end_datetime,
-    #         quantity=self.config.quantity,
-    #         substance=self.config.substance,
-    #         endminusstart=self.config.endminusstart,
-    #         projectid=self.config.projectid
-    #     )
-    #     self.request.addQueryItem('CQL_FILTER', cql_filter)
 
     def __init__(self, config):
         ProviderBase.__init__(self, config)
@@ -86,18 +53,16 @@ class CalnetMeasurementsProvider(ProviderBase):
 
         # create a QUrl object to use with query parameters
         self.request = QUrl(self.config.url)
-        self.request.addQueryItem('Count', unicode(self.page_size))
-        self.request.addQueryItem('typeName', 'radiation.measurements:MEASUREMENT')
-        self.request.addQueryItem('version', '2.0.0')
-        self.request.addQueryItem('service', 'WFS')
-        self.request.addQueryItem('request', 'GetFeature')
+        query = QUrlQuery()
+        query.addQueryItem('typeName', 'radiation.measurements:MEASUREMENT')
+        query.addQueryItem('version', '2.0.0')
+        query.addQueryItem('service', 'WFS')
+        query.addQueryItem('request', 'GetFeature')
         # pity, below not working :-( so we have to check ourselves by counting
         # self.request.addQueryItem('resultType', 'hits')
-        self.request.addQueryItem('startIndex', unicode(self.total_count))
+        query.addQueryItem('startIndex', str(self.total_count))
         # the actual cql filter, something like:
         # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-
-        # if endminusstart=0, leave out the "endTime-startTime={endminusstart}" part
         cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
             bbox=self.config.bbox,
             start_datetime=self.config.start_datetime,
@@ -106,14 +71,13 @@ class CalnetMeasurementsProvider(ProviderBase):
             substance=self.config.substance,
             projectid=self.config.projectid
         )
-
-        if self.config.endminusstart > 0:
+        if int(self.config.endminusstart) > 0:
             cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
-
-        self.request.addQueryItem('CQL_FILTER', cql_filter)
+        query.addQueryItem('CQL_FILTER', cql_filter)
+        self.request.setQuery(query)
 
     def _data_retrieved(self, reply):
-
+        log.debug('CalnetMeasurementsProvider, data retrieved from: {}'.format(self.request.url()))
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.url().toString(), 'Calnet measurements provider')
@@ -123,12 +87,13 @@ class CalnetMeasurementsProvider(ProviderBase):
             reply.deleteLater()  # else timeouts on Windows
             return
         else:
-            filename = self.config.output_dir + '/data' + unicode(self.file_count) + '.gml'
+            filename = self.config.output_dir + '/data' + str(self.file_count) + '.gml'
             log.debug("Planning to save to: {}".format(filename))
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
 
                 # first read 1500 chars to check some stuff, like the 'numberReturned' attribute or an 'ExceptionText' element
                 first1500chars = reply.read(1500)
+                first1500chars_str = first1500chars.decode('utf-8')
 
                 # could be an exception
                 # <ows:ExceptionReport version="2.0.0" xsi:schemaLocation="http://www.opengis.net/ows/1.1 http://geoserver.dev.cal-net.nl:80/geoserver/schemas/ows/1.1.0/owsAll.xsd">
@@ -137,10 +102,10 @@ class CalnetMeasurementsProvider(ProviderBase):
                 #     </ows:ExceptionText>
                 #     </ows:Exception>
                 # </ows:ExceptionReport>
-                exception = re.findall('<ows:ExceptionText>', first1500chars)
+                exception = re.findall('<ows:ExceptionText>', first1500chars_str)
                 if len(exception)>0:
                     # oops WFS returned an exception
-                    result.set_error(-1, reply.url().toString(), first1500chars)
+                    result.set_error(-1, reply.url().toString(), first1500chars_str)
                     self.ready = True
                     self.finished.emit(result)
                     reply.deleteLater()  # else timeouts on Windows
@@ -148,8 +113,8 @@ class CalnetMeasurementsProvider(ProviderBase):
                 else:
                     # if all OK we should have a page count:
                     # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
-                    print(first1500chars)
-                    page_count = re.findall('numberReturned="([0-9.]+)"', first1500chars)
+                    log.debug('First 1500 chars in result: {}'.format(first1500chars_str))
+                    page_count = re.findall('numberReturned="([0-9.]+)"', first1500chars_str)
                     self.page_count = int(page_count[0])
                     self.total_count += self.page_count
                 f.write(first1500chars)
@@ -158,11 +123,11 @@ class CalnetMeasurementsProvider(ProviderBase):
 
             # note: if copying with shutil.copy2 or shutil.copy, QGIS only reads gml when you touch gfs file???
             shutil.copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'schemas', 'measurements.gfs'),
-                            os.path.join(self.config.output_dir, 'data' + unicode(self.file_count) + '.gfs'))
+                            os.path.join(self.config.output_dir, 'data' + str(self.file_count) + '.gfs'))
             # IMPORTANT !!!
             #  OGR only uses the gfs file if the modification time is >= modification time of gml file !!!
             #  set it to NOW with os.utime !!!
-            os.utime(os.path.join(self.config.output_dir, 'data' + unicode(self.file_count) + '.gfs'), None)
+            os.utime(os.path.join(self.config.output_dir, 'data' + str(self.file_count) + '.gfs'), None)
 
             # print "self.page_size %s" % self.page_size
             # print "self.page_count %s" % self.page_count
@@ -173,7 +138,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             if self.total_count % self.page_size == 0 and self.page_count > 0:
                 # silly Qt way to update one query parameter
                 self.request.removeQueryItem('startIndex')
-                self.request.addQueryItem('startIndex', unicode(self.total_count))
+                self.request.addQueryItem('startIndex', str(self.total_count))
                 self.file_count += 1
                 self.get_data()
             else:
@@ -190,9 +155,13 @@ class CalnetMeasurementsProvider(ProviderBase):
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
         with open(config_file, 'wb') as f:
-            f.write(unicode(self.config))
-            f.write('\n')
-            f.write(self.request.toString())
+            # f.write(str(self.config))
+            # f.write('\n')
+            # f.write(self.request.toString())
+            s = self.config
+            f.write(bytes(s))
+            f.write(b'\n')
+            f.write(bytes(self.request.url(), 'utf-8'))
 
         reply = self.network_manager.get(QNetworkRequest(self.request))
         reply.finished.connect(partial(self._data_retrieved, reply))

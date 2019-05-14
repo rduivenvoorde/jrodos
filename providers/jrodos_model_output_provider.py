@@ -1,12 +1,11 @@
-from PyQt4.QtCore import QUrl, QCoreApplication, QDate, QTime, QDateTime
-from PyQt4.QtNetwork import QNetworkRequest
+from qgis.PyQt.QtCore import QUrl, QDate, QTime, QDateTime
+from qgis.PyQt.QtNetwork import QNetworkRequest
 from datetime import datetime
 from functools import partial
-from provider_base import ProviderConfig, ProviderBase, ProviderResult
-from utils import Utils
-import logging
 import json
 import re
+from .provider_base import ProviderConfig, ProviderBase, ProviderResult
+from .utils import Utils
 
 
 class JRodosModelOutputConfig(ProviderConfig):
@@ -28,7 +27,7 @@ class JRodosModelOutputConfig(ProviderConfig):
         # jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Activity concentrations=;=Ground contamination dry+wet=;=Cs-137'" # 24
         # jrodos_path = "'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
         # this 3 props define the column parameter
-        self.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
+        self.jrodos_datetime_start = QDateTime(QDate(2016, 5, 17), QTime(6, 0))
         self.jrodos_model_time = -1  # IN MINUTES !
         self.jrodos_model_step = 3600  # IN SECONDS !
         self.jrodos_columns = 0  # starting at 0, but can also be a range: '0,' '0-23', '0-'
@@ -36,7 +35,7 @@ class JRodosModelOutputConfig(ProviderConfig):
         self.jrodos_verticals = 0  # z / layers
         # actual output format for WPS
         self.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-        self.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
+        self.jrodos_datetime_start = QDateTime(QDate(2016, 5, 17), QTime(6, 0))
         self.jrodos_datetime_format = "yyyy-MM-ddTHH:mm:ss.000 00:00"  # '2016-04-25T08:00:00.000+00:00'
         self.timestamp = datetime.now().strftime("%Y%m%d%H%M%f")
         self.units = ''
@@ -46,6 +45,10 @@ class JRodosModelOutputConfig(ProviderConfig):
         """.format(self.wps_id, self.url, self.output_dir, self.user, self.password, self.jrodos_project, self.jrodos_path,
                    self.jrodos_format, self.jrodos_model_time, self.jrodos_model_time/60, self.jrodos_model_step, self.jrodos_model_step/60, self.jrodos_columns, self.jrodos_verticals, self.jrodos_datetime_format,
                    self.jrodos_datetime_start.toString(self.jrodos_datetime_format), self.units)
+
+    def __bytes__(self):
+        return str(self).encode('utf-8')
+
 
     @property
     def output_dir(self):
@@ -85,12 +88,13 @@ class JRodosModelProvider(ProviderBase):
     """
     def __init__(self, config):
         ProviderBase.__init__(self, config)
-        if unicode(config.jrodos_columns).isdigit():
-            # this means a number(!) of columns is given, and we receive them one by one
-            self.column = 0
-        else:
-            # this means there is probable a range of columns given, we receive them in one batch
-            self.column = config.jrodos_columns
+        # if config.jrodos_columns.isdigit():
+        #     # this means a number(!) of columns is given, and we receive them one by one
+        #     self.column = 0
+        # else:
+        #     # this means there is probable a range of columns given, we receive them in one batch
+        #     self.column = config.jrodos_columns
+        self.column = config.jrodos_columns
         # NOTE 1 !!! 'project' parameter value surrounded by single quotes in this request ??????
         # NOTE 2 !!! 'path' parameter value surrounded by single quotes in this request ??????
         self._xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -143,24 +147,25 @@ class JRodosModelProvider(ProviderBase):
         # write settings to file in output dir to be able to do some checking
         wps_settings_file = self.config.output_dir + '/jrodos_output_settings.txt'
         with open(wps_settings_file, 'wb') as f:
-            s = unicode(self.config)  # config can contain utf-8 chars
-            f.write(s.encode('utf-8'))
-            f.write('\n'+self.xml())
+            s = self.config
+            f.write(bytes(s))
+            f.write(b'\n')
+            f.write(self.xml().encode('utf-8'))
 
     def xml(self):
         return self._xml.format(wps_id=self.config.wps_id,
                                 project=self.config.jrodos_project,
                                 path=self.config.jrodos_path,
                                 format=self.config.jrodos_format,
-                                column=unicode(self.column),
-                                vertical=unicode(self.config.jrodos_verticals))
+                                column=self.column,
+                                vertical=self.config.jrodos_verticals)
 
     def _data_retrieved(self, reply, filename):
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
-            content = unicode(reply.readAll())
+            content = reply.readAll()
             # oops WPS emtpy json doc?
             if len(content) < 5:
                 result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
@@ -185,7 +190,7 @@ class JRodosModelProvider(ProviderBase):
             #       </wps:ProcessFailed>
             #       </wps:Status>
             # </wps:ExecuteResponse>
-            exception = re.findall('<ows:ExceptionText>', content)
+            exception = re.findall('<ows:ExceptionText>', content.data().decode('utf-8'))
             if len(exception) > 0:
                 # oops WPS returned an exception
                 result.set_error(-1, reply.url().toString(), content)
@@ -193,8 +198,7 @@ class JRodosModelProvider(ProviderBase):
                 self.finished.emit(result)
                 reply.deleteLater()  # else timeouts on Windows
                 return
-
-            obj = json.loads(content)
+            obj = json.loads(content.data().decode('utf-8'))
 
 
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
@@ -246,7 +250,7 @@ class JRodosModelProvider(ProviderBase):
     def get_data(self):
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, 'text/xml')  # or? "text/xml; charset=utf-8"
-        reply = self.network_manager.post(request, self.xml())
+        reply = self.network_manager.post(request, bytearray(self.xml(), 'utf-8'))
         filename = self.config.output_dir + '/modelinfo.json'
         reply.finished.connect(partial(self._data_retrieved, reply, filename))
 
@@ -305,7 +309,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(reply.readAll())
 
-        if unicode(self.config.jrodos_columns).isdigit() and self.column < self.config.jrodos_columns-1:
+        if str(self.config.jrodos_columns).isdigit() and self.column < self.config.jrodos_columns-1:
             # note self.column will live long enough to be used here?
             self.column += 1
             self.get_data()
@@ -320,10 +324,10 @@ class JRodosModelOutputProvider(JRodosModelProvider):
     def get_data(self):
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, 'text/xml')  # or? "text/xml; charset=utf-8"
-        reply = self.network_manager.post(request, self.xml())
+        reply = self.network_manager.post(request, bytearray(self.xml(), 'utf-8'))
         extension = '.zip'
         if self.config.jrodos_format == 'application/json':
             extension = '.json'
-        filename = self.config.output_dir + '/' + unicode(self.column) + '_' + unicode(
+        filename = self.config.output_dir + '/' + str(self.column) + '_' + str(
             self.config.jrodos_verticals) + extension
         reply.finished.connect(partial(self._data_retrieved, reply, filename))

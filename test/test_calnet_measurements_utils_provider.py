@@ -1,8 +1,7 @@
-from qgis.core import QgsApplication  # fake import to force sip version 2
 import unittest
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
-from test_provider_base import TestProviderBase
-from PyQt4.QtCore import QCoreApplication
+from .test_provider_base import TestProviderBase
+from qgis.PyQt.QtCore import QCoreApplication
 
 class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
 
@@ -12,7 +11,6 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         TestProviderBase.setUp(self)
         self.config = CalnetMeasurementsUtilsConfig()
         self.config.url = 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
-        #self.config.url = 'http://geoserver.rsc.cal-net.nl/calnet-measurements-ws/utilService'
         self.prov = CalnetMeasurementsUtilsProvider(self.config)
 
     #@unittest.skip
@@ -20,7 +18,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         def prov_finished(result):
             # TODO some better testing here
             # [{'code': 'ZR-97', 'description': 'ZIRCONIUM-97 (ZR-97)'}, ...
-            print result
+            print(result)
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Quantities')
         while not self.prov.is_finished():
@@ -49,7 +47,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         def prov_finished(result):
             # [{'code': 'C501', 'description': 'JUICE - FRUIT UNSPECIFIED (C501)'}, ...
             # TODO some better testing here
-            print result
+            print(result)
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Substances')
         while not self.prov.is_finished():
@@ -60,7 +58,7 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
         def prov_finished(result):
             # TODO some better testing here
             # [{'code': ' ', 'description': 'BLANKFIELD ( )'}, {'code': '%', 'description': 'PERCENTAGE (%)'},
-            print result
+            print(result)
         self.prov.finished.connect(prov_finished)
         self.prov.get_data('Units')
         while not self.prov.is_finished():
@@ -75,9 +73,9 @@ class TestCalnetMeasurementsUtilsProvider(TestProviderBase):
 
             #  {"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION","unit":"NGY/H"}
 
-            print result
+            print(result)
         self.prov.finished.connect(prov_finished)
-        self.prov.get_data('MeasuredCombinations', '2019-03-06T12:00:00.000Z', '2019-01-06T12:00:00.000Z')
+        self.prov.get_data('MeasuredCombinations', '2019-01-06T12:00:00.000Z', '2019-05-06T12:00:00.000Z')
         while not self.prov.is_finished():
             QCoreApplication.processEvents()
 

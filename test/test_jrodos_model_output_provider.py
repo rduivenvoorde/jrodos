@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from qgis.core import QgsApplication  # fake import to force sip version 2
 import unittest
 from providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
-from test_provider_base import TestProviderBase
-from PyQt4.QtCore import QCoreApplication, QDateTime, QDate, QTime
+from .test_provider_base import TestProviderBase
+from qgis.PyQt.QtCore import QCoreApplication, QDateTime, QDate, QTime
 
 
 class TestJRodosModelOutputProvider(TestProviderBase):
@@ -12,7 +11,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         TestProviderBase.setUp(self)
         self.conf = JRodosModelOutputConfig()
         #self.conf.url = 'http://localhost:8080/geoserver/wps'
-        self.conf.url = 'http://172.19.115.90:8080/geoserver/wps'
+        self.conf.url = 'http://geoserver.dev.cal-net.nl/geoserver/wps'
         self.conf.jrodos_project = "project='wps-test-3'"
         # a zipped
         self.conf.jrodos_path = "path='Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Total potential dose=;=effective'"
@@ -22,11 +21,11 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         self.conf.jrodos_model_time = 24*60
         self.conf.jrodos_model_step = 60*60  # timeStep is in seconds!!
         self.conf.jrodos_verticals = 0  # z / layers
-        self.conf.jrodos_datetime_start = QDateTime(QDate(2016, 05, 17), QTime(6, 0))
+        self.conf.jrodos_datetime_start = QDateTime(QDate(2016, 5, 17), QTime(6, 0))
         self.conf.units = u'Bq/m²'
 
     def test_jrodos_model_output_settings(self):
-        print unicode(self.conf)
+        print(str(self.conf))
 
     # To run just this test:
     # nosetests test / test_jrodos_model_output_provider.py:TestJRodosModelOutputProvider.test_jrodos_model_shapezip_24cols_output_url_zip
@@ -39,7 +38,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelOutputProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()
@@ -57,7 +56,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelOutputProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()
@@ -74,7 +73,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelOutputProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()
@@ -91,7 +90,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         self.assertIsNotNone(prov)
 
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
 
         prov.finished.connect(prov_finished)
@@ -109,7 +108,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelOutputProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()
@@ -126,7 +125,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelOutputProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()
@@ -143,7 +142,7 @@ class TestJRodosModelOutputProvider(TestProviderBase):
         prov = JRodosModelProvider(self.conf)
         self.assertIsNotNone(prov)
         def prov_finished(result):
-            print result
+            print(result)
             self.assertIsNotNone(result.data)
         prov.finished.connect(prov_finished)
         prov.get_data()

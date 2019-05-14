@@ -26,14 +26,11 @@
 #
 #---------------------------------------------------------------------
 
-from setting import Scope
+from .setting import Scope
 import inspect
 
 # to print debug info
 Debug = False
-
-# TODO remove this import used in deprecated method
-from types import *
 
 
 class SettingManager():
@@ -43,7 +40,7 @@ class SettingManager():
 
     def add_setting(self, setting):
         if setting.name in self.__settings:
-            raise NameError("%s already exist in settings." % name)
+            raise NameError("%s already exist in settings." % setting.name)
         setting.set_plugin_name(self.plugin_name)
         self.__settings[setting.name] = setting
 

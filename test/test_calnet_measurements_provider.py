@@ -1,8 +1,9 @@
 import unittest
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 from providers.utils import Utils
-from test_provider_base import TestProviderBase
-from PyQt4.QtCore import QCoreApplication, QDateTime
+from .test_provider_base import TestProviderBase
+
+from qgis.PyQt.QtCore import QCoreApplication, QDateTime
 from datetime import datetime
 
 class TestCalnetMeasurementsProvider(TestProviderBase):
@@ -21,14 +22,14 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
 
         # BBOX, start and endtime to be set in test !!!
         self.ZEELAND_BBOX = '51,3,52,6'  # south Netherlands
-        self.EU_BBOX = '38,-8,61,30' # europe
         self.BENELUX_BOX = '50.3723647997,1.51982637865,52.3253260358,7.03980085372'
+        self.EU_BBOX = '38,-8,61,30'  # europe
 
     def test_calnet_measurements_config(self):
-        c = unicode(self.config)
+        c = str(self.config)
         self.assertIsNotNone(c)
         self.assertIsNot(len(c), 0)
-        print c
+        print(c)
 
     #
     # http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?Count=10000&typeName=radiation.measurements:MEASUREMENT&version=2.0.0&service=WFS&request=GetFeature&startIndex=0&CQL_FILTER=bbox(location,51,3,52,6) and time > '2016-10-03T04:38:08.000 00:00' and time < '2016-10-03T16:38:08.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'
@@ -45,7 +46,7 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
         prov = CalnetMeasurementsProvider(self.config)
         def prov_finished(result):
             self.assertFalse(result.error())
-            self.assertIsNot(result.data['count'], 0, "No 3600 measurements in Zeeland, last 12 hours")
+            self.assertIsNot(result.data['count'], 0, "ZERO 3600minute measurements in Zeeland, last 12 hours")
         prov.finished.connect(prov_finished)
         prov.get_data()
         while not prov.is_finished():

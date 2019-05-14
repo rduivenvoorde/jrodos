@@ -24,9 +24,10 @@
 
 import os
 
-from PyQt4 import uic
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QDialog, QSortFilterProxyModel, QAbstractItemView, QColor
+from qgis.PyQt.QtCore import Qt, QSortFilterProxyModel
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtWidgets import QDialog, QAbstractItemView
+from qgis.PyQt import uic
 
 from .. constants import QMODEL_ID_IDX, QMODEL_NAME_IDX, QMODEL_DESCRIPTION_IDX, QMODEL_DATA_IDX, QMODEL_SEARCH_IDX
 

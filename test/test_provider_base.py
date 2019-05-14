@@ -1,10 +1,9 @@
 import unittest
-import sys
 import os
 
-from providers.provider_base import ProviderBase, ProviderConfig, SimpleProvider, SimpleConfig
+from providers.provider_base import ProviderBase, SimpleProvider, SimpleConfig
 
-from PyQt4.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import QgsApplication
 
@@ -17,9 +16,9 @@ class TestProviderBase(unittest.TestCase):
         # https://hub.qgis.org/issues/13494#note-19
         os.environ["QGIS_DEBUG"] = str(-1)
         QCoreApplication.setOrganizationName('QGIS')
-        QCoreApplication.setApplicationName('QGIS2')
+        QCoreApplication.setApplicationName('QGIS3')
         QgsApplication.setPrefixPath(os.getenv("QGIS_PREFIX_PATH"), True)
-        QgsApplication.setAuthDbDirPath('/home/richard/.qgis2/')
+        #QgsApplication.setAuthDbDirPath('/home/richard/.qgis2/')
 
         # ARGH... proxy, be sure that you have proxy enabled in QGIS IF you want to test within rivm (behind proxy)
         # else it keeps hanging/running after the tests
@@ -34,10 +33,10 @@ class TestProviderBase(unittest.TestCase):
         # if you do create >1 QgsApplications (QtApplications) then you will have non exit code 0
         self.qgs = QgsApplication.instance()  # checks if QApplication already exists
         if not self.qgs:  # create QApplication if it doesnt exist
-            self.qgs = QgsApplication(sys.argv, False)
+            self.qgs = QgsApplication([], False)
             self.qgs.initQgis()  # nessecary for opening auth db etc etc
             # out = self.qgs.showSettings()
-            # print out
+            # print(out)
 
     def test_qgs_OK(self):
         out = self.qgs.showSettings()
@@ -83,7 +82,7 @@ class TestProviderBase(unittest.TestCase):
         prov = SimpleProvider(conf)
         def prov_finished(result):
             self.assertFalse(result.error())
-            self.assertEquals(result.data.strip(), "ok")
+            self.assertEqual(result.data.strip(), "ok")
         prov.finished.connect(prov_finished)
         prov.get_data()
         while not prov.is_finished():

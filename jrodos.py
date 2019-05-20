@@ -34,7 +34,7 @@ from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsMessageLog, \
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
 
-from pyqtgraph import CurvePoint, TextItem, PlotCurveItem
+from .pyqtgraph import CurvePoint, TextItem, PlotCurveItem
 
 from glob import glob
 from datetime import datetime
@@ -54,13 +54,10 @@ from .providers.calnet_measurements_utils_provider import CalnetMeasurementsUtil
 from .providers.jrodos_project_provider import JRodosProjectConfig, JRodosProjectProvider
 from .providers.jrodos_model_output_provider import JRodosModelOutputConfig, JRodosModelOutputProvider, JRodosModelProvider
 from .providers.utils import Utils as ProviderUtils
-from timemanager.layers.layer_settings import LayerSettings
-from timemanager.layers.timevectorlayer import TimeVectorLayer
-from timemanager.raster.wmstlayer import WMSTRasterLayer
 
 from .style_utils import RangeCreator
 
-import resources # needed for button images!
+from . import resources # needed for button images!
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
@@ -184,6 +181,7 @@ class JRodos:
         self.jrodos_settings = {}
 
         self.layer_group = None
+
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -461,13 +459,25 @@ class JRodos:
 
     def run(self):
 
-        # we REALLY need OTF enabled
-        # if self.iface.mapCanvas().hasCrsTransformEnabled() == False:
-        #     QMessageBox.warning(self.iface.mainWindow(), self.MSG_TITLE, self.tr(
-        #         "This Plugin ONLY works when you have OTF (On The Fly Reprojection) enabled for current QGIS Project.\n\n" +
-        #         "Please enable OTF for this project or open a project with OTF enabled."),
-        #                         QMessageBox.Ok, QMessageBox.Ok)
-        #     return
+        if not 'RIVM_PluginConfigManager' in plugins:
+            QMessageBox.warning(self.iface.mainWindow(),
+            self.MSG_TITLE, self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                QMessageBox.Ok, QMessageBox.Ok)
+
+            return
+
+        if not 'timemanager' in plugins:
+            QMessageBox.warning(self.iface.mainWindow(),
+            self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                QMessageBox.Ok, QMessageBox.Ok)
+
+            return
+        # Because we check for timemanager, not earlier then now
+        # we import timemanager modules here (else module import error)
+        from timemanager.layers.layer_settings import LayerSettings
+        from timemanager.layers.timevectorlayer import TimeVectorLayer
+        from timemanager.raster.wmstlayer import WMSTRasterLayer
+
         self.setProjectionsBehavior()
         try:
             # we try to retrieve the quantities and substances just once, but not earlier then a user actually

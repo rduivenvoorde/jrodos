@@ -22,9 +22,9 @@ class JRodosSettings(SettingManager):
         # jrodos_enabled
         self.add_setting(Bool('jrodos_enabled', Scope.Global, True))
         # jrodos_wps_url
-        self.add_setting(String('jrodos_wps_url', Scope.Global, 'http://geoserver.dev.cal-net.nl/geoserver/wps'))
+        self.add_setting(String('jrodos_wps_url', Scope.Global, 'http://geoserver.prd.cal-net.nl/geoserver/wps'))
         # jrodos_rest_url
-        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://geoserver.dev.cal-net.nl/rest/jrodos'))
+        self.add_setting(String('jrodos_rest_url', Scope.Global, 'http://geoserver.prd.cal-net.nl/rest/jrodos'))
 
 
         # CalNet Measurements WFS service url
@@ -32,11 +32,11 @@ class JRodosSettings(SettingManager):
         self.add_setting(Bool('measurements_enabled', Scope.Global, True))
         # measurements_wfs_url
         self.add_setting(String('measurements_wfs_url', Scope.Global,
-                                'http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?'))
+                                'http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?'))
         self.add_setting(Integer('measurements_wfs_page_size', Scope.Global, 10000))
         # measurements_soap_utils_url
         self.add_setting(String('measurements_soap_utils_url', Scope.Global,
-                                'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'))
+                                'http://geoserver.prd.cal-net.nl/calnet-measurements-ws/utilService'))
 
 
         # Rainradar WMS-T service

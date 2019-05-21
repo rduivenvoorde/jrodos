@@ -459,10 +459,13 @@ class JRodos:
         if self.measurements_layer is not None:
             self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
 
-        # IF there is a JRodos group... remove it
-        if self.layer_group is not None:
-            root = QgsProject.instance().layerTreeRoot()
-            root.removeChildNode(self.layer_group)
+        # IF there is a JRodos group... try to remove it (sometimes deleted?)
+        try:
+            if self.layer_group is not None:
+                root = QgsProject.instance().layerTreeRoot()
+                root.removeChildNode(self.layer_group)
+        except Exception:
+            pass
 
         # delete the graph widget
         del self.graph_widget

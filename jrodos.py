@@ -59,11 +59,21 @@ from .style_utils import RangeCreator
 
 from . import resources # needed for button images!
 
+# silly try catch around this one, because
+# IF user has timemanager installed it can be loaded here
+# IF NOT timemanager installed this raises an exception
+# the late import in the run method apparently does not work??
+try:
+    from timemanager.layers.layer_settings import LayerSettings
+    from timemanager.layers.timevectorlayer import TimeVectorLayer
+    from timemanager.raster.wmstlayer import WMSTRasterLayer
+except Exception as e:
+    pass
+
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
 #import pydevd
 #pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
-
 
 import logging
 from . import LOGGER_NAME

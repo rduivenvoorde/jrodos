@@ -7,6 +7,9 @@ import re
 from .provider_base import ProviderConfig, ProviderBase, ProviderResult
 from .utils import Utils
 
+import logging
+from .. import LOGGER_NAME
+log = logging.getLogger(LOGGER_NAME)
 
 class JRodosModelOutputConfig(ProviderConfig):
     def __init__(self):
@@ -53,6 +56,7 @@ class JRodosModelOutputConfig(ProviderConfig):
     @property
     def output_dir(self):
         return Utils.jrodos_dirname(self.jrodos_project, self.jrodos_path, self.timestamp)
+
 
 class JRodosModelProvider(ProviderBase):
     """A provider which connects using the WPS interface to a Geoserver-enabled JRodos WPS to retrieve
@@ -133,7 +137,7 @@ class JRodosModelProvider(ProviderBase):
      <wps:Input>
        <ows:Identifier>threshold</ows:Identifier>
        <wps:Data>
-         <wps:LiteralData>0</wps:LiteralData>
+         <wps:LiteralData> 0</wps:LiteralData>
        </wps:Data>
      </wps:Input>
    </wps:DataInputs>
@@ -161,11 +165,14 @@ class JRodosModelProvider(ProviderBase):
                                 vertical=self.config.jrodos_verticals)
 
     def _data_retrieved(self, reply, filename):
+
         result = ProviderResult()
         if reply.error():
+            log.debug('JRodosModelProvider ERROR: {}'.format(reply.error()))
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
         else:
             content = reply.readAll()
+            # log.debug(content)
             # oops WPS emtpy json doc?
             if len(content) < 5:
                 result.set_error(-1, reply.url().toString(), 'Project info retrieved is empty: "{}"'.format(content))
@@ -173,34 +180,7 @@ class JRodosModelProvider(ProviderBase):
                 self.finished.emit(result)
                 reply.deleteLater()  # else timeouts on Windows
                 return
-
-            # could be an exception, eg:
-            # <wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" service="WPS" serviceInstance="http://geoserver.prd.cal-net.nl:80/geoserver/ows?" version="1.0.0">
-            #       <wps:Process wps:processVersion="1.0.0">
-            #       <ows:Identifier>gs:JRodosWPS</ows:Identifier>
-            #       <ows:Title>jrodosWPS</ows:Title>
-            #       <ows:Abstract>JRodos Result Access</ows:Abstract>
-            #       </wps:Process><wps:Status creationTime="2017-04-25T13:36:24.287Z">
-            #       <wps:ProcessFailed>
-            #           <ows:ExceptionReport version="1.1.0">
-            #               <ows:Exception exceptionCode="NoApplicableCode">
-            #                   <ows:ExceptionText>Process failed during execution org.dom4j.DocumentException: Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.  Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.</ows:ExceptionText>
-            #               </ows:Exception>
-            #           </ows:ExceptionReport>
-            #       </wps:ProcessFailed>
-            #       </wps:Status>
-            # </wps:ExecuteResponse>
-            exception = re.findall('<ows:ExceptionText>', content.data().decode('utf-8'))
-            if len(exception) > 0:
-                # oops WPS returned an exception
-                result.set_error(-1, reply.url().toString(), content)
-                self.ready = True
-                self.finished.emit(result)
-                reply.deleteLater()  # else timeouts on Windows
-                return
             obj = json.loads(content.data().decode('utf-8'))
-
-
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)
 
@@ -212,7 +192,8 @@ class JRodosModelProvider(ProviderBase):
             #      "id": "RodosLight"}]
             # }
 
-            if 'features' in obj and len(obj['features'])>0 and 'properties' in obj['features'][0] \
+            if 'features' in obj and len(obj['features']) > 0 \
+                    and 'properties' in obj['features'][0] \
                     and 'Value' in obj['features'][0]['properties']:
                 # TODO remove this one?
                 # {u'type': u'FeatureCollection', u'features': [
@@ -224,11 +205,12 @@ class JRodosModelProvider(ProviderBase):
                 #      u'id': u'RodosLight'}]}
                 values = obj['features'][0]['properties']['Value']
                 # preprocess the data to a nice object
-                data = {'result': 'OK', 'project':self.config.jrodos_project}
+                data = {'result': 'OK', 'project': self.config.jrodos_project}
                 for prop in values[1:-1].split(','):
                     data[prop.split(':')[0]] = int(prop.split(':')[1])
                 result.set_data(data, self.config.url)
-            elif 'features' in obj and len(obj['features'])>0 and 'properties' in obj['features'][0] \
+            elif 'features' in obj and len(obj['features']) > 0 \
+                    and 'properties' in obj['features'][0] \
                     and 'timeStep' in obj['features'][0]['properties']:
                 # NEW:
                 # {"type": "FeatureCollection", "features": [
@@ -253,6 +235,8 @@ class JRodosModelProvider(ProviderBase):
         reply = self.network_manager.post(request, bytearray(self.xml(), 'utf-8'))
         filename = self.config.output_dir + '/modelinfo.json'
         reply.finished.connect(partial(self._data_retrieved, reply, filename))
+
+
 
 class JRodosModelOutputProvider(JRodosModelProvider):
     """A provider which connects using the WPS interface to a Geoserver-enabled JRodos WPS to retrieve
@@ -299,6 +283,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
         """
         result = ProviderResult()
         if reply.error():
+            log.debug('JRodosModelOutputProvider ERROR: {}'.format(reply.error()))
             result.set_error(reply.error(), reply.request().url().toString(), 'JRodos model output provider (WPS)')
             # OK, we have an error... emit the result + error here and quit the loading loop
             self.ready = True
@@ -306,7 +291,71 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             reply.deleteLater()  # else timeouts on Windows
             return
         else:
+
+            # log.debug('JRodosModelOutputProvider Content: {}'.format(
+            # content))
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
+                first1500bytes = reply.read(1500)
+                try:
+                    first1500bytes_str = first1500bytes.decode('utf-8')
+                    log.debug('first1500bytes_str type: {}'.format(type(first1500bytes_str)))
+                    if len(first1500bytes) < 5 or len(first1500bytes_str) < 5:
+                        result.set_error(-1, reply.url().toString(), 'JRodosModelOutputProvider Model retrieved is empty: "{}"'.format(first1500bytes))
+                        self.ready = True
+                        self.finished.emit(result)
+                        reply.deleteLater()  # else timeouts on Windows
+                        return
+
+                    # could be an exception, eg:
+
+                    # <wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" service="WPS" serviceInstance="http://geoserver.prd.cal-net.nl:80/geoserver/ows?" version="1.0.0">
+                    #       <wps:Process wps:processVersion="1.0.0">
+                    #       <ows:Identifier>gs:JRodosWPS</ows:Identifier>
+                    #       <ows:Title>jrodosWPS</ows:Title>
+                    #       <ows:Abstract>JRodos Result Access</ows:Abstract>
+                    #       </wps:Process><wps:Status creationTime="2017-04-25T13:36:24.287Z">
+                    #       <wps:ProcessFailed>
+                    #           <ows:ExceptionReport version="1.1.0">
+                    #               <ows:Exception exceptionCode="NoApplicableCode">
+                    #                   <ows:ExceptionText>Process failed during execution org.dom4j.DocumentException: Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.  Error on line 1 of document  : Content is not allowed in prolog. Nested exception: Content is not allowed in prolog.</ows:ExceptionText>
+                    #               </ows:Exception>
+                    #           </ows:ExceptionReport>
+                    #       </wps:ProcessFailed>
+                    #       </wps:Status>
+                    # </wps:ExecuteResponse>
+
+                    # <?xml version="1.0" encoding="UTF-8"?>
+                    # <wps:ExecuteResponse xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="en" service="WPS" serviceInstance="http://geoserver.dev.cal-net.nl:80/geoserver/ows?" version="1.0.0">
+                    #   <wps:Process wps:processVersion="1.0.0">
+                    #     <ows:Identifier>gs:JRodosGeopkgWPS</ows:Identifier>
+                    #     <ows:Title>jrodosGeopkgWPS</ows:Title>
+                    #     <ows:Abstract>JRodos Result Access as a Geopackage file</ows:Abstract>
+                    #   </wps:Process>
+                    #   <wps:Status creationTime="2019-06-04T06:29:25.602Z">
+                    #     <wps:ProcessFailed>
+                    #       <ows:ExceptionReport version="1.1.0">
+                    #         <ows:Exception exceptionCode="NoApplicableCode">
+                    #           <ows:ExceptionText>
+                    #              Process failed during execution java.lang.IllegalArgumentException: Column of series should be one of the following types: float[], double[], int[], byte[] Column of series should be one of the following types: float[], double[], int[], byte[]
+                    #           </ows:ExceptionText>
+                    #         </ows:Exception>
+                    #       </ows:ExceptionReport>
+                    #     </wps:ProcessFailed>
+                    #   </wps:Status>
+                    # </wps:ExecuteResponse>
+                    exception = re.findall('<wps:ProcessFailed>', first1500bytes_str)
+                    if len(exception) > 0:
+                        # oops WPS returned an exception
+                        result.set_error(-1, reply.url().toString(), first1500bytes_str)
+                        self.ready = True
+                        self.finished.emit(result)
+                        reply.deleteLater()  # else timeouts on Windows
+                        return
+
+                except Exception as e:
+                    log.debug('JRodosModelOutputProvider: Exception! So probably data is NOT an exception xml... {}'.format(e))
+
+                f.write(first1500bytes)
                 f.write(reply.readAll())
 
         if str(self.config.jrodos_columns).isdigit() and self.column < self.config.jrodos_columns-1:

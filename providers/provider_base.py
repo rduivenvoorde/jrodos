@@ -119,6 +119,8 @@ class ProviderResult:
             return "ProtocolUnknownError"
         elif network_error == 401:
             return "The server encountered an unexpected condition which prevented it from fulfilling the request."
+        elif network_error == 499:
+            return "An unknown error related to the server response was detected."
         else:
             raise TypeError("New NetworkError: {} ?".format(network_error))
 

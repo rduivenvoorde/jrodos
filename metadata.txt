@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.4
 description=Plugin to connect to JRodos via WPS
-version=1.0.2
+version=1.0.3
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog:
 changelog=
+    1.0.3   Handle return of WPS exception xml
     1.0.2   Bugfix
     1.0.1   Adding checks for dependent plugins
     1.0.0   port to QGIS3

@@ -29,7 +29,7 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
 from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsMessageLog, \
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
     QgsRasterLayer, QgsVectorDataProvider, QgsFeatureRequest, QgsGeometry, \
-    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject
+    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, QgsApplication
 
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
@@ -104,18 +104,18 @@ class JRodos:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            '{}.qm'.format(locale))
+        locale = QgsApplication.instance().locale()
+        if locale and len(locale) >= 2:
+            locale_path = os.path.join(
+                self.plugin_dir,
+                'i18n',
+                '{}.qm'.format(locale))
 
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-
-            if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.translator)
+            if os.path.exists(locale_path):
+                self.translator = QTranslator()
+                self.translator.load(locale_path)
+                if qVersion() > '4.3.3':
+                    QCoreApplication.installTranslator(self.translator)
 
         self.MSG_TITLE = self.tr("JRodos Plugin")
 

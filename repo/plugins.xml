@@ -2,13 +2,13 @@
 <?xml-stylesheet type="text/xsl" href="plugins.xsl"?>
  <plugins>
 
-   <pyqgis_plugin name="SectorPlot" version="1.0.1">
+   <pyqgis_plugin name="SectorPlot" version="1.0.2">
      <description>Plots sector areas on risk management map</description>
      <homepage>https://github.com/rduivenvoorde/sectorplot</homepage>
      <qgis_minimum_version>3.4</qgis_minimum_version>
      <file_name>SectorPlot.zip</file_name>
      <author_name>RIVM, Marnix de Ridder</author_name>
-     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/SectorPlot.1.0.1.zip</download_url>
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/SectorPlot.1.0.2.zip</download_url>
    </pyqgis_plugin>
 
    <pyqgis_plugin name="SectorPlot" version="0.8.0">
@@ -29,21 +29,13 @@
      <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/RegenRadar.zip</download_url>
    </pyqgis_plugin>
 
-   <pyqgis_plugin name="JRodos (RIVM)" version="0.3.17">
-     <description>This plugin shows JRodos model output, measurements and weather data</description>
-     <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
-     <qgis_minimum_version>2.14</qgis_minimum_version>
-     <file_name>JRodos.zip</file_name>
-     <author_name>RIVM, Marnix de Ridder</author_name>
-     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.0.3.17.zip</download_url>
-   </pyqgis_plugin>
-   <pyqgis_plugin name="JRodos (RIVM)" version="1.0.3">
+   <pyqgis_plugin name="JRodos (RIVM)" version="1.0.4">
      <description>This plugin shows JRodos model output, measurements and weather data</description>
      <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
      <qgis_minimum_version>3.4</qgis_minimum_version>
      <file_name>JRodos.zip</file_name>
      <author_name>RIVM, Marnix de Ridder</author_name>
-     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.1.0.3.zip</download_url>
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.1.0.4.zip</download_url>
    </pyqgis_plugin>
 
    <!--<pyqgis_plugin name="JRodos" version="0.4.0">

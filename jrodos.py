@@ -1538,8 +1538,8 @@ class JRodos:
         timemanager.getController().guiControl.setTimeFrameSize(frame_size)
         timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
         # set timeslider to zero, moving it to 1 and back, thereby calling some event?
-        #timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
-        #timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
+        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
+        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (until upstream has it too)
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
             timemanager.getController().refreshGuiTimeFrameProperties()

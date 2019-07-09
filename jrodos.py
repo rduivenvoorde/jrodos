@@ -1217,10 +1217,11 @@ class JRodos:
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
     def update_measurements_bbox(self):
-            # bbox in epsg:4326 !
+            # bbox in url should be epsg:4326 !
             crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
             crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
             crsTransform = QgsCoordinateTransform(crs_project, crs_4326, QgsProject.instance())
+
             current_bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
             # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
             self.measurements_settings.bbox = "{},{},{},{}".format(

@@ -180,7 +180,17 @@ class JRodosModelProvider(ProviderBase):
                 self.finished.emit(result)
                 reply.deleteLater()  # else timeouts on Windows
                 return
-            obj = json.loads(content.data().decode('utf-8'))
+            try:
+                obj = json.loads(content.data().decode('utf-8'))
+            except Exception:
+                result.set_error(-1, reply.url().toString(),
+                             'JRodosModelOutputProvider json contains '
+                             'error: "{}"'.format(content.data()))
+                self.ready = True
+                self.finished.emit(result)
+                reply.deleteLater()  # else timeouts on Windows
+                return
+
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 f.write(content)
 
@@ -300,7 +310,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
                     first1500bytes_str = first1500bytes.decode('utf-8')
                     log.debug('first1500bytes_str type: {}'.format(type(first1500bytes_str)))
                     if len(first1500bytes) < 5 or len(first1500bytes_str) < 5:
-                        result.set_error(-1, reply.url().toString(), 'JRodosModelOutputProvider Model retrieved is empty: "{}"'.format(first1500bytes))
+                        result.set_error(-1, reply.url().toString(), 'JRodosModelOutputProvider Model retrieved has error: "{}"'.format(first1500bytes))
                         self.ready = True
                         self.finished.emit(result)
                         reply.deleteLater()  # else timeouts on Windows

@@ -37,6 +37,7 @@ from qgis.gui import QgsVertexMarker
 from .pyqtgraph import CurvePoint, TextItem, PlotCurveItem
 
 from glob import glob
+import re
 from datetime import datetime
 from copy import deepcopy
 
@@ -863,6 +864,7 @@ class JRodos:
             items = self.task_model.findItems(last_used_task, Qt.MatchExactly, self.QMODEL_NAME_IDX)
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_task.setCurrentIndex(items[0].row())
+
             # Retrieve some metadata of the model, like
             #  timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
             conf = JRodosModelOutputConfig()
@@ -1368,6 +1370,7 @@ class JRodos:
 
         shps = glob(os.path.join(output_dir, "*.shp"))
         gpkgs = glob(os.path.join(output_dir, "*.gpkg"))
+        slds = glob(os.path.join(output_dir, "*.sld"))
 
         features_added = False
         features_have_valid_time = False
@@ -1419,12 +1422,27 @@ class JRodos:
                 #     if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
                 #         j += 1
                 #         jrodos_output_layer.deleteFeature(feature.id())
-
-
-        #jrodos_output_layer.loadNamedStyle(
-        #     os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-
-        self.style_layer(jrodos_output_layer)
+        sld_loaded_ok = False
+        if len(slds) > 0:
+            log.debug(slds[0])
+            # /tmp/201909030816650371_R1LongReleaseLongRunHighRelease_NPKPUFF_Dose-rates_Ground-gamma-total-dose-rate/doserate.sld
+            result = jrodos_output_layer.loadSldStyle(slds[0])
+            if not result[1]:
+                log.debug('Problem loading sld: {}: {}'.format(slds[0], result[0]))
+                fixed = self.fix_jrodos_style_sld(slds[0])
+                log.debug('Trying {} now'.format(fixed))
+                result = jrodos_output_layer.loadSldStyle(fixed)
+                if result[1] == False:
+                    log.debug('Also problem loading sld: {}: {}'.format(fixed, result[0]))
+                else:
+                    sld_loaded_ok = True
+                    log.debug('Layer styled using sld from zip: {}'.format(fixed))
+            else:
+                sld_loaded_ok = True
+                log.debug('Layer styled using sld from zip: {}'.format(slds[0]))
+        #sld_loaded_ok = False
+        if not sld_loaded_ok:
+            self.style_layer(jrodos_output_layer)
         self.iface.mapCanvas().refresh()
 
         #self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
@@ -1443,6 +1461,41 @@ class JRodos:
             step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # jrodos_model_step is in seconds!!!
             self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
+    def fix_jrodos_style_sld(self, jrodos_style_sld):
+        """
+        JRodos sld's can be old styles, that is do not
+        :return: File (full path) to 'fixed' sld
+        """
+        with open(jrodos_style_sld, 'r') as f:
+            original = f.read()
+
+        before = """<?xml version="1.0" encoding="UTF-8"?>
+        <sld:StyledLayerDescriptor version="1.0.0"
+         xmlns:sld="http://www.opengis.net/sld"
+         xmlns:ogc="http://www.opengis.net/ogc"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <sld:NamedLayer>
+          <sld:Name>Fixed style</sld:Name>"""
+
+        after = """
+          </sld:NamedLayer>
+        </sld:StyledLayerDescriptor>"""
+
+        # HACK: should be a regular expression
+        # remove '<?xml version="1.0" encoding="UTF-8" .... ?> header
+        original_no_header = re.sub('<\?.*\?>', 'xxx', original)
+
+        fixed = "{}{}{}".format(before, original_no_header, after)
+
+        sld_file_fixed = jrodos_style_sld + '.fixed'
+
+        with open(sld_file_fixed, 'w') as f:  # using 'with open', then file is explicitly closed
+            f.write(fixed)
+
+        return sld_file_fixed
+
+
     def style_layer(self, layer):
         # create a new rule-based renderer
         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
@@ -1450,6 +1503,7 @@ class JRodos:
         # get the "root" rule
         root_rule = renderer.rootRule()
 
+        # create a nice 'Full Cream' color ramp ourselves
         rules = RangeCreator.create_rule_set(-5, 4, False, True)
 
         #for label, expression, color_name, scale in rules:
@@ -1724,6 +1778,7 @@ class JRodos:
         index = model.node2index(treenode)
         model.setData(index, name)
 
+    # TODO remove all shape file loading related code
     def load_jrodos_shape(self):
         shape_file = QFileDialog.getOpenFileName(
             self.iface.mainWindow(),
@@ -1741,32 +1796,7 @@ class JRodos:
         # sld_file = '/home/richard/z/17/rivm/20170906_JRodosOutputBeverwijk/test.sld'
         sld_file = file_name + '.sld'
 
-        with open(sld_file, 'rb') as f:
-            original = f.read()
-
-        before = """<?xml version="1.0" encoding="UTF-8"?>
-        <sld:StyledLayerDescriptor version="1.0.0"
-         xmlns:sld="http://www.opengis.net/sld"
-         xmlns:ogc="http://www.opengis.net/ogc"
-         xmlns:xlink="http://www.w3.org/1999/xlink"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <sld:NamedLayer>
-          <sld:Name>Fixed style</sld:Name>"""
-
-        after = """
-          </sld:NamedLayer>
-        </sld:StyledLayerDescriptor>"""
-
-        # HACK: should be a regular expression
-        original_no_header = original.replace('<?xml version="1.0" encoding="UTF-8"?>', '')
-
-        fixed = "{}{}{}".format(before, original_no_header, after)
-
-        sld_file_fixed = sld_file + '.fixed'
-
-        with open(sld_file_fixed, 'wb') as f:  # using 'with open', then file is explicitly closed
-            f.write(fixed)
-
+        sld_file_fixed = self.fix_jrodos_style_sld(sld_file)
         layer.loadSldStyle(sld_file_fixed)
 
         if not layer.isValid():

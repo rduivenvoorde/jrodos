@@ -1361,12 +1361,18 @@ class JRodos:
         :return:
         """
 
-        import zipfile
-        zips = glob(os.path.join(output_dir, "*.zip"))
-        for zip_file in zips:
-            zip_ref = zipfile.ZipFile(zip_file, 'r')
-            zip_ref.extractall(output_dir)
-            zip_ref.close()
+        try:
+            import zipfile
+            zips = glob(os.path.join(output_dir, "*.zip"))
+            for zip_file in zips:
+                zip_ref = zipfile.ZipFile(zip_file, 'r')
+                zip_ref.extractall(output_dir)
+                zip_ref.close()
+        except Exception as e:
+            self.msg(None, self.tr(
+                "Received Data. \nBut no ZIP file..\nTry other model or Check log for more information "))
+            log.debug("PROBLEM loading a zip from {}\nProbably no zip received?".format(zip))
+
 
         shps = glob(os.path.join(output_dir, "*.shp"))
         gpkgs = glob(os.path.join(output_dir, "*.gpkg"))
@@ -1435,10 +1441,13 @@ class JRodos:
                 if result[1] == False:
                     log.debug('Also problem loading sld: {}: {}'.format(fixed, result[0]))
                 else:
+                    # problem loading the sld, BUT we can try to fix the JRodos styles...
                     sld_loaded_ok = True
+                    jrodos_output_layer.setName(jrodos_output_layer.name() + ' (JRodos-styled)')
                     log.debug('Layer styled using sld from zip: {}'.format(fixed))
             else:
                 sld_loaded_ok = True
+                jrodos_output_layer.setName(jrodos_output_layer.name()+' (JRodos-styled)')
                 log.debug('Layer styled using sld from zip: {}'.format(slds[0]))
         #sld_loaded_ok = False
         if not sld_loaded_ok:

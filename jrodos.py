@@ -1370,8 +1370,9 @@ class JRodos:
                 zip_ref.close()
         except Exception as e:
             self.msg(None, self.tr(
-                "Received Data. \nBut no ZIP file..\nTry other model or Check log for more information "))
-            log.debug("PROBLEM loading a zip from {}\nProbably no zip received?".format(zip))
+                'Received Data. \nBut no ZIP file..\nTry other model or Check log for more information '))
+            log.debug('PROBLEM unpacking ZIP from "{}"\nProbably no ZIP received?'.format(output_dir))
+            return
 
 
         shps = glob(os.path.join(output_dir, "*.shp"))

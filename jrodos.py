@@ -865,25 +865,34 @@ class JRodos:
             if len(items) > 0:
                 self.jrodosmodel_dlg.combo_task.setCurrentIndex(items[0].row())
 
-            # Retrieve some metadata of the model, like
-            #  timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
-            conf = JRodosModelOutputConfig()
-            # NOTE: only wps endpoint 'gs:JRodosWPS' has currently this project info ('gs:JRodosGeopkgWPS' does not)
-            # in future we can hopefully use 'gs:JRodosMetadataWPS' to get model info
-            conf.wps_id = "gs:JRodosWPS"
-            conf.url = self.settings.value('jrodos_wps_url')
-            conf.jrodos_project = "project='"+result.data['name']+"'"
-            # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
-            # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
-            if self.task_model.rowCount() > 1:
-                conf.jrodos_project += "&amp;model='LSMC'"
-            conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
-            conf.jrodos_format = 'application/json'
-            # saving handle of project_info_provider to self, as it seems that the provide is garbage collected sometimes
-            self.project_info_provider = JRodosModelProvider(conf)
-            #self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
-            self.project_info_provider.finished.connect(self.provide_project_info_finished)
-            self.project_info_provider.get_data()
+            # 201907 REST output now also contains timestep, duration and release information
+            if 'extendedProjectInfo' in result.data:
+                extendedProjectInfo = result.data['extendedProjectInfo']
+                self.set_dialog_project_info(
+                    extendedProjectInfo['timestepOfPrognosis'],
+                    extendedProjectInfo['durationOfPrognosis'],
+                    extendedProjectInfo['startOfRelease'])
+            else:
+                # TODO: can BE REMOVED after all WPS-instances provide extendedProjectInfo information
+                # Retrieve some metadata of the model, like
+                #  timeStep, modelTime/durationOfPrognosis and ModelStartTime using a JRodosModelProvider
+                conf = JRodosModelOutputConfig()
+                # NOTE: only wps endpoint 'gs:JRodosWPS' has currently this project info ('gs:JRodosGeopkgWPS' does not)
+                # in future we can hopefully use 'gs:JRodosMetadataWPS' to get model info
+                conf.wps_id = "gs:JRodosWPS"
+                conf.url = self.settings.value('jrodos_wps_url')
+                conf.jrodos_project = "project='"+result.data['name']+"'"
+                # some trickery to get: "project='wps-test-multipath'&amp;model='LSMC'" in template
+                # ONLY when there is >1 task in the project add "'&amp;model='LSMC'"
+                if self.task_model.rowCount() > 1:
+                    conf.jrodos_project += "&amp;model='LSMC'"
+                conf.jrodos_path = "path='Model data=;=Input=;=UI-input=;=RodosLight'"
+                conf.jrodos_format = 'application/json'
+                # saving handle of project_info_provider to self, as it seems that the provide is garbage collected sometimes
+                self.project_info_provider = JRodosModelProvider(conf)
+                #self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
+                self.project_info_provider.finished.connect(self.provide_project_info_finished)
+                self.project_info_provider.get_data()
 
     def task_selected(self, tasks_model_idx):
         """

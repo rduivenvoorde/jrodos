@@ -5,6 +5,15 @@ from providers.jrodos_project_provider import JRodosProjectConfig, JRodosProject
 from .test_provider_base import TestProviderBase
 from qgis.PyQt.QtCore import QCoreApplication
 
+"""
+To test the WPS:
+
+Create a valid request.xml (see below or in your /tmp/ dir)
+Use curl:
+  # NOTE the @-sign in the -d option (meaning FILE)
+  # NOTE because a binary ZIP is returned, use --output to save to file 
+  curl -v -XPOST -H "Content-Type: Content-Type: text/xml" -d @request.xml --output data.zip "http://geoserver.dev.cal-net.nl/geoserver/wps"
+"""
 
 class TestJRodosProjectProvider(TestProviderBase):
 
@@ -16,11 +25,17 @@ class TestJRodosProjectProvider(TestProviderBase):
         #conf.url = 'http://geoserver.dev.cal-net.nl/rest-1.0-TEST-1/jrodos/projects/2532'
         prov = JRodosProjectProvider(conf)
         def prov_finished(result):
+
+            # check for extendedProjectInfo
+            self.assertTrue('extendedProjectInfo' in result.data)
+            extendedProjectInfo = result.data['extendedProjectInfo']
+            self.assertTrue('startOfRelease' in extendedProjectInfo)
+            self.assertTrue('startOfPrognosis' in extendedProjectInfo)
+
             # get first dataitem form first task from first project
             #dataitems = result.data['project']['tasks'][0]['dataitems']
             dataitems = result.data['tasks'][0]['dataitems']
             self.assertEqual(577, len(dataitems))
-
             one_item = dataitems[361]
             unit = one_item['unit']
             # on rest-1.0-TEST-1 we do not have units yet

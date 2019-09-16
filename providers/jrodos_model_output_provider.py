@@ -11,6 +11,16 @@ import logging
 from .. import LOGGER_NAME
 log = logging.getLogger(LOGGER_NAME)
 
+"""
+To test the WPS:
+
+Create a valid request.xml (see below or in your /tmp/ dir)
+Use curl:
+  # NOTE the @-sign in the -d option (meaning FILE)
+  # NOTE because a binary ZIP is returned, use --output to save to file 
+  curl -v -XPOST -H "Content-Type: Content-Type: text/xml" -d @request.xml --output data.zip "http://geoserver.dev.cal-net.nl/geoserver/wps"
+"""
+
 class JRodosModelOutputConfig(ProviderConfig):
     def __init__(self):
         ProviderConfig.__init__(self)
@@ -213,6 +223,11 @@ class JRodosModelProvider(ProviderBase):
             s = self.config
             f.write(bytes(s))
             f.write(b'\n')
+            f.write(self.xml().encode('utf-8'))
+        # ALSO write the request as xml so you can do:
+        # curl -v -XPOST -H "Content-Type: Content-Type: text/xml" -d @request.xml --output data.zip "http://geoserver.dev.cal-net.nl/geoserver/wps"
+        request_xml_file = self.config.output_dir + '/request.xml'
+        with open(request_xml_file, 'wb') as f:
             f.write(self.xml().encode('utf-8'))
 
     def xml(self):

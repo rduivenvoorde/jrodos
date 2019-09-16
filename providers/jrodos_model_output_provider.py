@@ -147,7 +147,7 @@ class JRodosModelProvider(ProviderBase):
      <wps:Input>
        <ows:Identifier>threshold</ows:Identifier>
        <wps:Data>
-         <wps:LiteralData> 0</wps:LiteralData>
+         <wps:LiteralData>1.0E-15</wps:LiteralData>
        </wps:Data>
      </wps:Input>   
    </wps:DataInputs>
@@ -200,7 +200,7 @@ class JRodosModelProvider(ProviderBase):
             <wps:Input>
               <ows:Identifier>threshold</ows:Identifier>
               <wps:Data>
-                <wps:LiteralData> 0</wps:LiteralData>
+                <wps:LiteralData>1.0E-15</wps:LiteralData>
               </wps:Data>
             </wps:Input>
             <wps:Input>

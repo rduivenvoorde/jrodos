@@ -101,7 +101,6 @@ class JRodos:
         """
         # Save reference to the QGIS interface
         self.iface = iface
-        log.debug('__init__   {}'.format(self.iface))
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale

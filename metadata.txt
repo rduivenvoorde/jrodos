@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.4
 description=Plugin to connect to JRodos via WPS
-version=1.1.0
+version=1.1.1
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog:
 changelog=
+    1.1.1   Use Threshold, Use REST info for projectinfo, catch exception
     1.1.0   Handle sld from jrodos zip if sent
     1.0.6   Better handle WPS errors
     1.0.5   Fix issue where slider is on wrong start

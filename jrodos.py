@@ -375,8 +375,8 @@ class JRodos:
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
         # value BEFORE the dlg is already shown...
-        end_time = QDateTime.currentDateTime()  # end is NOW
-        start_time = end_time.addSecs(-60 * 60 * 30 * 24)  # start end minus 30 days
+        end_time = QDateTime.currentDateTimeUtc()  # end is NOW
+        start_time = end_time.addSecs(-60 * 60 * 30 * 24) # minus 24 hour
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
         self.measurements_dlg.cb_a1.clicked.connect(self.cb_a1_clicked)
@@ -1118,8 +1118,8 @@ class JRodos:
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
         elif self.start_time is None:
-            hours = 24  # h
-            self.end_time = QDateTime.currentDateTime()  # end NOW
+            hours = 2  # h
+            self.end_time = QDateTime.currentDateTimeUtc()  # end NOW
             self.start_time = self.end_time.addSecs(-60 * 60 * hours)  # minus h hours
 
         self.measurements_dlg.dateTime_start.setDateTime(self.start_time)

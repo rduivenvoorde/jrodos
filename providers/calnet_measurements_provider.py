@@ -71,8 +71,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             substance=self.config.substance,
             projectid=self.config.projectid
         )
-        if int(self.config.endminusstart) > 0:
-            cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
+        cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
         query.addQueryItem('CQL_FILTER', cql_filter)
         self.request.setQuery(query)
 

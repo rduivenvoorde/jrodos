@@ -1265,6 +1265,8 @@ class JRodos:
                 #log.debug(selected_feature['device'])  # strings like: NL1212
                 # 'casting' device to a string, because from postgres we get a PyQtNullVariant in case of null device
                 device = '{}'.format(selected_feature['device'])
+                quantity = '{}'.format(selected_feature['quantity'])
+                unit = '{}'.format(selected_feature['unit'])
                 #log.debug('device: >{}< type: {}'.format(device, type(device)))
                 # HACKY: disable current time-filter, to be able to find all features from same device
                 if device is None or device == '' or device == 'NULL':
@@ -1272,7 +1274,7 @@ class JRodos:
                 else:
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
-                    fr.setFilterExpression(u'"device" = \'{}\''.format(device))
+                    fr.setFilterExpression(u'"device" = \'{}\' AND "quantity" = \'{}\' AND "unit" = \'{}\''.format(device, quantity, unit))
                     #log.debug('\nDevice {}'.format(device))
                     x = []
                     y = []
@@ -1282,7 +1284,7 @@ class JRodos:
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
                         y.append(feature['valuemsv'])
-                        #log.debug('{} - {}'.format(t/1000, feature['valuemsv']))
+                        #log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['valuemsv'], feature['device'], feature['quantity'], feature['unit']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')

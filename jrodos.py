@@ -1118,7 +1118,7 @@ class JRodos:
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
         elif self.start_time is None:
-            hours = 2  # h
+            hours = 1  # h
             self.end_time = QDateTime.currentDateTimeUtc()  # end NOW
             self.start_time = self.end_time.addSecs(-60 * 60 * hours)  # minus h hours
 

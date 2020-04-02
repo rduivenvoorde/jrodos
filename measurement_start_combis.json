@@ -64,5 +64,17 @@
     "substance": "Meetwagen",
     "substance_desc": "Meetwagen metingen",
     "quantity": "T-GAMMA"
+  },
+  {
+    "quantity_desc": "TOTAL ALFA",
+    "substance": "Meetwagen",
+    "substance_desc": "Meetwagen metingen",
+    "quantity": "T-ALFA"
+  },
+  {
+    "quantity_desc": "TOTAL BETA",
+    "substance": "Meetwagen",
+    "substance_desc": "Meetwagen metingen",
+    "quantity": "T-BETA"
   }
 ]

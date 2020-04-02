@@ -1296,7 +1296,7 @@ class JRodos:
 
                     label_point = CurvePoint(curve)
                     self.graph_widget.graph.addItem(label_point)
-                    label = TextItem(device, anchor=(0, 0), color='0000ff')
+                    label = TextItem('{} {} {}'.format(device, feature['quantity'], feature['unit']), anchor=(0, 0), color='0000ff')
                     label.setFont(font)
                     label_point.setPos(0)
                     label.setParentItem(label_point)

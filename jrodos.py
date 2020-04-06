@@ -505,7 +505,9 @@ class JRodos:
             if self.settings.value('jrodos_enabled'):
                 self.show_jrodos_output_dialog()
             if self.settings.value('measurements_enabled'):
-                self.show_measurements_dialog()
+                    finished = False
+                    while not finished:
+                        finished = self.show_measurements_dialog()
 
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
@@ -1106,7 +1108,7 @@ class JRodos:
 
         if self.measurements_settings is not None:
             self.msg(None, self.tr("Still busy retrieving Measurement data via WFS, please try later..."))
-            return
+            return False
 
         if self.measurements_layer is not None:
             # that is we have measurements from an earlier run
@@ -1156,10 +1158,8 @@ class JRodos:
                 if self.quantities_substances_model.item(row, self.QMODEL_SEARCH_IDX).text() == 'true':
                     # data is an combi array like: ['T-GAMMA', 'A1']
                     data = self.quantities_substances_model.item(row, self.QMODEL_DATA_IDX).data()
-
-                    # we pickle the data
+                    # we pickle the data for later use
                     quantity_substance_combis.append(data)
-
                     # we make the two arrays unique, so no doublures in the array (no ['A5', 'A5']
                     # as this makes that we receive records double..
                     # TODO: fix in sql/stored-procedure in postgres
@@ -1168,8 +1168,17 @@ class JRodos:
                     if not data[1] in substances:
                         substances.append(data[1])
 
-            with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
+            log.info(f'Length quantities: {len(quantities)}')
+            log.info(f'Length substances: {len(substances)}')
+            log.info(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
 
+            if len(quantity_substance_combis)==0:
+                # mmm, nothing selected... show message
+                self.msg(None, self.tr('Please select at least ONE quantity-substance combination'))
+                return False
+
+            # dumping/pickling selected quantity/substance combi's to disk
+            with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
                 log.debug("Dumping to disk:\n".format(quantity_substance_combis))
                 pickle.dump(quantity_substance_combis, f)
 
@@ -1194,8 +1203,10 @@ class JRodos:
             self.measurements_settings = measurements_settings
             self.update_measurements_bbox()
             self.start_measurements_provider()
-        else: # cancel pressed
+            return True
+        else:  # cancel pressed
             self.measurements_settings = None
+            return True
 
     def start_measurements_provider(self):
         self.measurements_progress_bar.setMaximum(0)

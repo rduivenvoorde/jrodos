@@ -31,22 +31,22 @@
     <edittype widgetv2type="TextEdit" name="device">
       <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="valuemsv">
+    <edittype widgetv2type="TextEdit" name="valuemicrosvh">
       <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
   </edittypes>
   <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     <rules key="{e7991823-286e-4757-abcb-af6991a87fb7}">
-      <rule description="Abstract" filter="valuemsv &lt;= 0.1" key="{bd7e31b7-fd0a-41d4-9f3f-354edaa4ee63}" symbol="0" label="&lt;= 1E-1 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 0.1 AND valuemsv &lt;= 1" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" symbol="1" label="1E-1 - 1 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 1 AND valuemsv &lt;= 10" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" symbol="2" label="1 - 10 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 10 AND valuemsv &lt;= 100" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" symbol="3" label="10 - 100 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 100 AND valuemsv &lt;= 1000" key="{41bc24bd-294c-4818-ae41-17744878653f}" symbol="4" label="100 - 1000 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 1000 AND valuemsv &lt;= 10000" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" symbol="5" label="1000 - 10000 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 10000 AND valuemsv &lt;= 100000" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" symbol="6" label="10000 - 100000 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 100000 AND valuemsv &lt;= 1000000" key="{b2906596-36e6-4582-b813-885480ddf6ab}" symbol="7" label="100000 - 1000000 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 1000000 AND valuemsv &lt;= 10000000" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" symbol="8" label="1000000 - 10000000 USV/H"/>
-      <rule description="Abstract" filter="valuemsv >= 10000000" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" symbol="9" label=">10000000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh &lt;= 0.1" key="{bd7e31b7-fd0a-41d4-9f3f-354edaa4ee63}" symbol="0" label="&lt;= 1E-1 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 0.1 AND valuemicrosvh &lt;= 1" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" symbol="1" label="1E-1 - 1 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 1 AND valuemicrosvh &lt;= 10" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" symbol="2" label="1 - 10 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 10 AND valuemicrosvh &lt;= 100" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" symbol="3" label="10 - 100 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 100 AND valuemicrosvh &lt;= 1000" key="{41bc24bd-294c-4818-ae41-17744878653f}" symbol="4" label="100 - 1000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 1000 AND valuemicrosvh &lt;= 10000" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" symbol="5" label="1000 - 10000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 10000 AND valuemicrosvh &lt;= 100000" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" symbol="6" label="10000 - 100000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 100000 AND valuemicrosvh &lt;= 1000000" key="{b2906596-36e6-4582-b813-885480ddf6ab}" symbol="7" label="100000 - 1000000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 1000000 AND valuemicrosvh &lt;= 10000000" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" symbol="8" label="1000000 - 10000000 USV/H"/>
+      <rule description="Abstract" filter="valuemicrosvh >= 10000000" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" symbol="9" label=">10000000 USV/H"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
@@ -288,7 +288,7 @@
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/drawLabels" value="true"/>
     <property key="labeling/enabled" value="true"/>
-    <property key="labeling/fieldName" value="&#xa; &quot;valuemsv&quot;  || '\n' ||  &quot;device&quot;"/>
+    <property key="labeling/fieldName" value="&#xa; &quot;valuemicrosvh&quot;  || '\n' ||  &quot;device&quot;"/>
     <property key="labeling/fitInPolygonOnly" value="false"/>
     <property key="labeling/fontCapitals" value="0"/>
     <property key="labeling/fontFamily" value="Cantarell"/>
@@ -448,7 +448,7 @@
     <alias field="time" index="7" name=""/>
     <alias field="unit" index="5" name=""/>
     <alias field="value" index="6" name=""/>
-    <alias field="valuemsv" index="10" name=""/>
+    <alias field="valuemicrosvh" index="10" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>

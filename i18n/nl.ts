@@ -925,8 +925,8 @@ Maar dataset &apos;</translation>
     </message>
     <message>
         <location filename="jrodos.py" line="1602"/>
-        <source>New unit in data: &apos;%s&apos;, setting valuemsv to -1</source>
-        <translation>Nieuwe eenheid in data: &apos;%s&apos;, waarde van valuemsv op -1 gezet</translation>
+        <source>New unit in data: &apos;%s&apos;, setting valuemicrosvh to -1</source>
+        <translation>Nieuwe eenheid in data: &apos;%s&apos;, waarde van valuemicrosvh op -1 gezet</translation>
     </message>
     <message>
         <location filename="jrodos.py" line="1613"/>

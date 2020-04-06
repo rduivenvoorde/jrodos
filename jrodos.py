@@ -1283,8 +1283,8 @@ class JRodos:
                         #log.debug(feature['gml_id'])
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
-                        y.append(feature['valuemsv'])
-                        #log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['valuemsv'], feature['device'], feature['quantity'], feature['unit']))
+                        y.append(feature['valuemicrosvh'])
+                        #log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['valuemicrosvh'], feature['device'], feature['quantity'], feature['unit']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
@@ -1675,7 +1675,7 @@ class JRodos:
                               QgsField("time", QVariant.String),
                               QgsField("info", QVariant.String),
                               QgsField("device", QVariant.String),
-                              QgsField("valuemsv", QVariant.Double)
+                              QgsField("valuemicrosvh", QVariant.Double)
                               ])
             self.measurements_layer.updateFields()
 
@@ -1726,26 +1726,26 @@ class JRodos:
                     feature_count += 1
                     step_count += 1
                     fields = feature.fields()
-                    fields.append(QgsField('valuemsv'))
+                    fields.append(QgsField('valuemicrosvh'))
                     f = QgsFeature(fields)
                     if feature.geometry() is not None:
                         attributes = feature.attributes()
                         value = float(feature.attribute('value'))
-                        valuemsv = -1  # set value to '-1' not sure if NULL is better...
+                        valuemicrosvh = -1  # set value to '-1' not sure if NULL is better...
                         # preferred unit is microSv/h, but the data contains value+unit column
-                        # set all values in column valuemsv in microS/H
+                        # set all values in column valuemicrosvh in microS/H
                         if feature.attribute('unit') == 'USV/H':
                             # value is in microSv/h all OK
-                            valuemsv = value
+                            valuemicrosvh = value
                         elif feature.attribute('unit') == 'NSV/H':
                             # value is in nanoSv/h, value / 1000
-                            valuemsv = value / 1000
+                            valuemicrosvh = value / 1000
                         else:
-                            valuemsv = value
+                            valuemicrosvh = value
                             if new_unit_msg:
-                                #self.msg(None, self.tr("New unit in data: '%s', setting valuemsv to given value.\nSo this is NOT µSv/h!") % feature.attribute('unit'))
+                                #self.msg(None, self.tr("New unit in data: '%s', setting valuemicrosvh to given value.\nSo this is NOT µSv/h!") % feature.attribute('unit'))
                                 new_unit_msg = False
-                        attributes.append(valuemsv)
+                        attributes.append(valuemicrosvh)
                         f.setAttributes(attributes)
                         f.setGeometry(feature.geometry())
                         flist.append(f)

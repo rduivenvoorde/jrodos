@@ -58,23 +58,5 @@
     "substance": "A5",
     "substance_desc": "EXTERNAL RADIATION",
     "quantity": "T-GAMMA"
-  },
-  {
-    "quantity_desc": "TOTAL GAMMA",
-    "substance": "meetwagen",
-    "substance_desc": "Meetwagen metingen",
-    "quantity": "T-GAMMA"
-  },
-  {
-    "quantity_desc": "TOTAL ALFA",
-    "substance": "meetwagen",
-    "substance_desc": "Meetwagen metingen",
-    "quantity": "T-ALFA"
-  },
-  {
-    "quantity_desc": "TOTAL BETA",
-    "substance": "meetwagen",
-    "substance_desc": "Meetwagen metingen",
-    "quantity": "T-BETA"
   }
 ]

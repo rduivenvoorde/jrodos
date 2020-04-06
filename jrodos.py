@@ -1309,7 +1309,14 @@ class JRodos:
 
                     label_point = CurvePoint(curve)
                     self.graph_widget.graph.addItem(label_point)
-                    label = TextItem('{} {} {}'.format(device, feature['quantity'], feature['unit']), anchor=(0, 0), color='0000ff')
+                    # for T-GAMMA we always show microSv/h, for other it is quantity dependent
+                    quantity = feature['quantity']
+                    if quantity.upper() == 'T-GAMMA':
+                        unit = 'USV/H'  # we keep notation as eurdep data: USV/H == microSv/h
+                    else:
+                        unit = feature['unit']  # for other
+
+                    label = TextItem('{} {} {}'.format(device, quantity, unit), anchor=(0, 0), color='0000ff')
                     label.setFont(font)
                     label_point.setPos(0)
                     label.setParentItem(label_point)

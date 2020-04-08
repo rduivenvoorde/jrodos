@@ -58,5 +58,17 @@
     "substance": "A5",
     "substance_desc": "EXTERNAL RADIATION",
     "quantity": "T-GAMMA"
+  },
+  {
+    "quantity_desc": "TOTAL BETA",
+    "substance": "A5",
+    "substance_desc": "EXTERNAL RADIATION",
+    "quantity": "T-BETA"
+  },
+  {
+    "quantity_desc": "TOTAL ALFA",
+    "substance": "A5",
+    "substance_desc": "EXTERNAL RADIATION",
+    "quantity": "T-ALFA"
   }
 ]

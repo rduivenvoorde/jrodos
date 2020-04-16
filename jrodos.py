@@ -1231,7 +1231,7 @@ class JRodos:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
-                self.load_measurements(result.data['output_dir'], 'measurements_randomplacement.qml')
+                self.load_measurements(result.data['output_dir'], 'measurements_rotation.qml')
             else:
                 self.msg(None, self.tr("No Measurements data? {}").format(result.data))
         self.measurements_settings = None

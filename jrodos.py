@@ -1129,6 +1129,7 @@ class JRodos:
         self.measurements_dlg.combo_endminusstart.setCurrentIndex(
             self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
 
+        self.measurements_dlg.le_project_id.setText(Utils.get_settings_value('projectid', ''))
 
         if self.combis is None:
             with open(self.plugin_dir + '/measurement_start_combis.json', 'rb') as f:
@@ -1172,7 +1173,7 @@ class JRodos:
             log.info(f'Length substances: {len(substances)}')
             log.info(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
 
-            if len(quantity_substance_combis)==0:
+            if len(quantity_substance_combis) == 0:
                 # mmm, nothing selected... show message
                 self.msg(None, self.tr('Please select at least ONE quantity-substance combination'))
                 return False
@@ -1186,6 +1187,14 @@ class JRodos:
             end_date = self.measurements_dlg.dateTime_end.dateTime() # UTC
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
+
+            project_id = self.measurements_dlg.le_project_id.text()
+            if len(project_id) != 0:
+                log.info(f'Project_id: {project_id} found! Adding to CQL in WFS request')
+                measurements_settings.projectid = project_id
+                Utils.set_settings_value("projectid", project_id)
+            else:
+                Utils.set_settings_value("projectid", '')
 
             if self.jrodos_output_settings is None:
                 project = "'measurements'"

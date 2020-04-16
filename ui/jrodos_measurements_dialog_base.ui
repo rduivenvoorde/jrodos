@@ -14,10 +14,61 @@
    <string>Eurdep Measurements Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="11" column="1" colspan="3">
-    <widget class="QComboBox" name="combo_endminusstart">
-     <property name="editable">
-      <bool>false</bool>
+   <item row="6" column="3">
+    <widget class="QPushButton" name="btn_all_combis">
+     <property name="text">
+      <string>Select All</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0">
+    <widget class="QLabel" name="lbl_endminusstart">
+     <property name="text">
+      <string>Endtime - Starttime</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
+    <widget class="QDateTimeEdit" name="dateTime_end">
+     <property name="locale">
+      <locale language="Dutch" country="Netherlands"/>
+     </property>
+     <property name="dateTime">
+      <datetime>
+       <hour>1</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>2016</year>
+       <month>1</month>
+       <day>1</day>
+      </datetime>
+     </property>
+     <property name="displayFormat">
+      <string>d MMM yyyy - HH:mm</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0">
+    <widget class="QLabel" name="lbl_project_id">
+     <property name="text">
+      <string>Project id (optional filter)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="lbl_start_time">
+     <property name="text">
+      <string>Start time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QCheckBox" name="cb_a4">
+     <property name="text">
+      <string>A4 Depo+</string>
      </property>
     </widget>
    </item>
@@ -31,13 +82,6 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="lbl_start_time">
-     <property name="text">
-      <string>Start time (UTC)</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0" colspan="4">
     <widget class="QLabel" name="lbl_title2">
      <property name="text">
@@ -45,20 +89,27 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="0" colspan="4">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   <item row="6" column="2">
+    <widget class="QCheckBox" name="cb_a5">
+     <property name="text">
+      <string>A5 ExtRad+</string>
      </property>
     </widget>
    </item>
-   <item row="11" column="0">
-    <widget class="QLabel" name="lbl_endminusstart">
+   <item row="5" column="0">
+    <widget class="QLabel" name="lbl_retrieving_combis">
      <property name="text">
-      <string>Endtime - Starttime</string>
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="4">
+    <widget class="QTableView" name="tbl_combis"/>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="cb_a1">
+     <property name="text">
+      <string>A1 Air+</string>
      </property>
     </widget>
    </item>
@@ -92,57 +143,13 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="lbl_retrieving_combis">
-     <property name="text">
-      <string>...</string>
+   <item row="16" column="0" colspan="4">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="4">
-    <widget class="QTableView" name="tbl_combis"/>
-   </item>
-   <item row="0" column="0" colspan="4">
-    <widget class="QLabel" name="lbl_title">
-     <property name="text">
-      <string>Fetch Measurements from Eurdep Database, AdHoc Measurement Database and CalWeb Database</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QDateTimeEdit" name="dateTime_end">
-     <property name="locale">
-      <locale language="Dutch" country="Netherlands"/>
-     </property>
-     <property name="dateTime">
-      <datetime>
-       <hour>1</hour>
-       <minute>0</minute>
-       <second>0</second>
-       <year>2016</year>
-       <month>1</month>
-       <day>1</day>
-      </datetime>
-     </property>
-     <property name="displayFormat">
-      <string>d MMM yyyy - HH:mm</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QLabel" name="lbl_end_time">
-     <property name="text">
-      <string>End time (UTC)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QCheckBox" name="cb_a1">
-     <property name="text">
-      <string>A1 Air+</string>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
@@ -153,6 +160,13 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="0" colspan="4">
+    <widget class="QLabel" name="lbl_title">
+     <property name="text">
+      <string>Fetch Measurements from Eurdep Database, AdHoc Measurement Database and CalWeb Database</string>
+     </property>
+    </widget>
+   </item>
    <item row="6" column="1">
     <widget class="QCheckBox" name="cb_a3">
      <property name="text">
@@ -160,24 +174,17 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="1">
-    <widget class="QCheckBox" name="cb_a4">
-     <property name="text">
-      <string>A4 Depo+</string>
+   <item row="11" column="1" colspan="3">
+    <widget class="QComboBox" name="combo_endminusstart">
+     <property name="editable">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
-   <item row="6" column="2">
-    <widget class="QCheckBox" name="cb_a5">
+   <item row="2" column="2">
+    <widget class="QLabel" name="lbl_end_time">
      <property name="text">
-      <string>A5 ExtRad+</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="3">
-    <widget class="QPushButton" name="btn_all_combis">
-     <property name="text">
-      <string>Select All</string>
+      <string>End time (UTC)</string>
      </property>
     </widget>
    </item>
@@ -194,6 +201,9 @@
       <string>Unknown</string>
      </property>
     </widget>
+   </item>
+   <item row="14" column="1" colspan="3">
+    <widget class="QLineEdit" name="le_project_id"/>
    </item>
   </layout>
  </widget>

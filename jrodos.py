@@ -1667,20 +1667,20 @@ class JRodos:
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
 
 
-        layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-            self.measurements_settings.endminusstart + ", " + \
+        #layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+        #    self.measurements_settings.endminusstart + ", " + \
+        #    start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
+        #    end_time.toString(self.measurements_settings.date_time_format_short)
+        layer_display_name = "Measurements " + \
             start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
             end_time.toString(self.measurements_settings.date_time_format_short)
-
-        if 'T-GAMMA' in self.measurements_settings.quantity:
-            layer_display_name = "T-GAMMA"
-        else:
-            layer_display_name = "Measurements (TODO)"
+        #if 'T-GAMMA' in self.measurements_settings.quantity:
+        #    layer_display_name = "T-GAMMA"
+        #else:
+        #    layer_display_name = "Measurements (TODO)"
 
         log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
-
-
 
         register_layers = False
         if self.measurements_layer is None:
@@ -1704,7 +1704,8 @@ class JRodos:
                               QgsField("time", QVariant.String),
                               QgsField("info", QVariant.String),
                               QgsField("device", QVariant.String),
-                              QgsField("unitvalue", QVariant.Double)
+                              QgsField("projectid", QVariant.String),
+                              QgsField("unitvalue", QVariant.Double),
                               ])
             self.measurements_layer.updateFields()
 
@@ -1762,7 +1763,7 @@ class JRodos:
                         value = float(feature.attribute('value'))
                         unitvalue = -1  # set value to '-1' not sure if NULL is better...
                         # preferred unit is microSv/h, but the data contains value+unit column
-                        # set all values in column unitvalue in microS/H
+                        # set all values in column unitvalue in microSv/H
                         if feature.attribute('unit') == 'USV/H':
                             # value is in microSv/h all OK
                             unitvalue = value

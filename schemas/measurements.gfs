@@ -56,5 +56,11 @@
       <Type>String</Type>
       <Width>15</Width>
     </PropertyDefn>
+    <PropertyDefn>
+      <Name>projectid</Name>
+      <ElementPath>projectid</ElementPath>
+      <Type>String</Type>
+      <Width>25</Width>
+    </PropertyDefn>
   </GMLFeatureClass>
 </GMLFeatureClassList>

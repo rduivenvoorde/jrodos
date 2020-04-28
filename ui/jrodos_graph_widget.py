@@ -63,9 +63,7 @@ class JRodosGraphWidget(QDockWidget, FORM_CLASS):
 
         pw = pg.PlotWidget(axisItems={'bottom': x_axis, 'left': y_axis},
                            enableMenu=False,
-                           title=unicode(
-                               "y: values  -   x: time (UTC)"))
-                           #title=unicode("y: "+u"\u03BC"+"Sv/h   -   x: time"))
+                           title="y: Values  -   x: Time (UTC)")
 
         pw.show()
         self.graph = pw

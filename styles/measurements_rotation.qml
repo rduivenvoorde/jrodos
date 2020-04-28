@@ -8,16 +8,16 @@
   <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="1">
     <rules key="{e7991823-286e-4757-abcb-af6991a87fb7}">
       <rule label="Other Units" symbol="0" key="{b963d1de-6b64-4ac0-a0ce-627f2d540007}" description="Abstract" filter="(upper(&quot;unit&quot;) != 'NSV/H' and upper(&quot;unit&quot;) != 'USV/H')"/>
-      <rule label="&lt;= 1E-1 µSv/h" symbol="1" key="{46d02429-d5ec-4fa0-964f-992313bf794f}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh &lt;= 0.1"/>
-      <rule label="1E-1 - 1 µSv/h" symbol="2" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 0.1 AND valuemicrosvh &lt;= 1"/>
-      <rule label="1 - 10 µSv/h" symbol="3" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 1 AND valuemicrosvh &lt;= 10"/>
-      <rule label="10 - 100 µSv/h" symbol="4" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 10 AND valuemicrosvh &lt;= 100"/>
-      <rule label="100 - 1000 µSv/h" symbol="5" key="{41bc24bd-294c-4818-ae41-17744878653f}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 100 AND valuemicrosvh &lt;= 1000"/>
-      <rule label="1000 - 10000 µSv/h" symbol="6" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 1000 AND valuemicrosvh &lt;= 10000"/>
-      <rule label="10000 - 100000 µSv/h" symbol="7" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 10000 AND valuemicrosvh &lt;= 100000"/>
-      <rule label="100000 - 1000000 µSv/h" symbol="8" key="{b2906596-36e6-4582-b813-885480ddf6ab}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 100000 AND valuemicrosvh &lt;= 1000000"/>
-      <rule label="1000000 - 10000000 µSv/h" symbol="9" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 1000000 AND valuemicrosvh &lt;= 10000000"/>
-      <rule label=">10000000 µSv/h" symbol="10" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and valuemicrosvh >= 10000000"/>
+      <rule label="&lt;= 1E-1 µSv/h" symbol="1" key="{46d02429-d5ec-4fa0-964f-992313bf794f}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue &lt;= 0.1"/>
+      <rule label="1E-1 - 1 µSv/h" symbol="2" key="{0d506bed-7e29-4951-8dd6-950f7450eec1}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 0.1 AND unitvalue &lt;= 1"/>
+      <rule label="1 - 10 µSv/h" symbol="3" key="{8071164e-e3dc-4aab-86ea-e5bf80fb8a64}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 1 AND unitvalue &lt;= 10"/>
+      <rule label="10 - 100 µSv/h" symbol="4" key="{6763d8b5-1b32-4621-a388-498ec613aba3}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 10 AND unitvalue &lt;= 100"/>
+      <rule label="100 - 1000 µSv/h" symbol="5" key="{41bc24bd-294c-4818-ae41-17744878653f}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 100 AND unitvalue &lt;= 1000"/>
+      <rule label="1000 - 10000 µSv/h" symbol="6" key="{a26143cf-f0d8-4a5c-8ebb-e31e5d3ece27}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 1000 AND unitvalue &lt;= 10000"/>
+      <rule label="10000 - 100000 µSv/h" symbol="7" key="{dc24e19b-9919-4eed-9b5b-d5a7b3e6d3f7}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 10000 AND unitvalue &lt;= 100000"/>
+      <rule label="100000 - 1000000 µSv/h" symbol="8" key="{b2906596-36e6-4582-b813-885480ddf6ab}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 100000 AND unitvalue &lt;= 1000000"/>
+      <rule label="1000000 - 10000000 µSv/h" symbol="9" key="{4147d8ff-4b6e-4dfe-a935-474d1c1f9572}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 1000000 AND unitvalue &lt;= 10000000"/>
+      <rule label=">10000000 µSv/h" symbol="10" key="{54a5d065-9ab5-4c17-ae53-6686d5b0a354}" description="Abstract" filter="(upper(&quot;unit&quot;) = 'NSV/H' or upper(&quot;unit&quot;) = 'USV/H') and unitvalue >= 10000000"/>
     </rules>
     <symbols>
       <symbol alpha="0.486275" type="marker" name="0" force_rhr="0" clip_to_extent="1">
@@ -550,7 +550,7 @@
         </config>
       </editWidget>
     </field>
-    <field name="valuemicrosvh">
+    <field name="unitvalue">
       <editWidget type="TextEdit">
         <config>
           <Option/>
@@ -569,7 +569,7 @@
     <alias field="time" index="7" name=""/>
     <alias field="info" index="8" name=""/>
     <alias field="device" index="9" name=""/>
-    <alias field="valuemicrosvh" index="10" name=""/>
+    <alias field="unitvalue" index="10" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -584,7 +584,7 @@
     <default expression="" field="time" applyOnUpdate="0"/>
     <default expression="" field="info" applyOnUpdate="0"/>
     <default expression="" field="device" applyOnUpdate="0"/>
-    <default expression="" field="valuemicrosvh" applyOnUpdate="0"/>
+    <default expression="" field="unitvalue" applyOnUpdate="0"/>
   </defaults>
   <constraints>
     <constraint unique_strength="0" exp_strength="0" field="gml_id" constraints="0" notnull_strength="0"/>
@@ -597,7 +597,7 @@
     <constraint unique_strength="0" exp_strength="0" field="time" constraints="0" notnull_strength="0"/>
     <constraint unique_strength="0" exp_strength="0" field="info" constraints="0" notnull_strength="0"/>
     <constraint unique_strength="0" exp_strength="0" field="device" constraints="0" notnull_strength="0"/>
-    <constraint unique_strength="0" exp_strength="0" field="valuemicrosvh" constraints="0" notnull_strength="0"/>
+    <constraint unique_strength="0" exp_strength="0" field="unitvalue" constraints="0" notnull_strength="0"/>
   </constraints>
   <constraintExpressions>
     <constraint desc="" field="gml_id" exp=""/>
@@ -610,7 +610,7 @@
     <constraint desc="" field="time" exp=""/>
     <constraint desc="" field="info" exp=""/>
     <constraint desc="" field="device" exp=""/>
-    <constraint desc="" field="valuemicrosvh" exp=""/>
+    <constraint desc="" field="unitvalue" exp=""/>
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
@@ -628,7 +628,7 @@
       <column type="field" width="-1" hidden="0" name="time"/>
       <column type="field" width="148" hidden="0" name="info"/>
       <column type="field" width="-1" hidden="0" name="device"/>
-      <column type="field" width="-1" hidden="0" name="valuemicrosvh"/>
+      <column type="field" width="-1" hidden="0" name="unitvalue"/>
       <column type="actions" width="-1" hidden="1"/>
     </columns>
   </attributetableconfig>
@@ -671,7 +671,7 @@ def my_form_open(dialog, layer, feature):
     <field editable="1" name="time"/>
     <field editable="1" name="unit"/>
     <field editable="1" name="value"/>
-    <field editable="1" name="valuemicrosvh"/>
+    <field editable="1" name="unitvalue"/>
   </editable>
   <labelOnTop>
     <field labelOnTop="0" name="device"/>
@@ -684,7 +684,7 @@ def my_form_open(dialog, layer, feature):
     <field labelOnTop="0" name="time"/>
     <field labelOnTop="0" name="unit"/>
     <field labelOnTop="0" name="value"/>
-    <field labelOnTop="0" name="valuemicrosvh"/>
+    <field labelOnTop="0" name="unitvalue"/>
   </labelOnTop>
   <dataDefinedFieldProperties/>
   <widgets/>

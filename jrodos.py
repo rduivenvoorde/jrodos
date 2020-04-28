@@ -1294,6 +1294,7 @@ class JRodos:
                 else:
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
+                    # we can only create graphs from ONE DEVICE if UNIT and QUANTITY are the same, hence the filter below:
                     fr.setFilterExpression(u'"device" = \'{}\' AND "quantity" = \'{}\' AND "unit" = \'{}\''.format(device, quantity, unit))
                     #log.debug('\nDevice {}'.format(device))
                     x = []
@@ -1318,10 +1319,11 @@ class JRodos:
 
                     label_point = CurvePoint(curve)
                     self.graph_widget.graph.addItem(label_point)
+
                     # for T-GAMMA we always show microSv/h, for other it is quantity dependent
                     quantity = feature['quantity']
-                    if quantity.upper() == 'T-GAMMA':
-                        unit = 'USV/H'  # we keep notation as eurdep data: USV/H == microSv/h
+                    if quantity.upper() == 'T-GAMMA' and feature['unit'] in ['NSV/H','USV/H']:
+                        unit = 'µSv/h' # 'USV/H' we (apr2020 NOT) keep notation as eurdep data: USV/H == microSv/h
                     else:
                         unit = feature['unit']  # for other
 
@@ -1880,18 +1882,20 @@ class JRodos:
         field_string = '<div style="width:300px; font-family: Sans-Serif;font-size: small" >'
         for field in feature.fields():
             # skip info
-            if not field.name() == 'info':
-                field_string += field.name() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
+            if not field.name() in ('Info', 'info'):
+                field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
             else:
                 # try to do the 'info'-field which is a json object
                 try:
                     info_string = json.loads(feature['info'])
+                    if len(info_string)==0:
+                        info_string = json.loads(feature['Info'])
                     if 'fields' in info_string:
                         for field in info_string['fields']:
                             if 'mnemonic' in field:
-                                field_string += field['mnemonic'] + ': ' + field['value'] + '<br/>'
+                                field_string += field['mnemonic'].title() + ': ' + field['value'] + '<br/>'
                             elif 'name' in field:
-                                field_string += field['name'] + ': ' + field['value'] + '<br/>'
+                                field_string += field['name'].title() + ': ' + field['value'] + '<br/>'
                 except Exception as e:
                     field_string += "Failed to parse: "+feature['info']
         return field_string + '</div>'

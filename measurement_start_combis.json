@@ -1,5 +1,11 @@
 [
   {
+    "quantity_desc": "TOTAL GAMMA",
+    "substance": "A5",
+    "substance_desc": "EXTERNAL RADIATION",
+    "quantity": "T-GAMMA"
+  },
+  {
     "quantity_desc": "TOTAL ALPHA",
     "substance": "A11",
     "substance_desc": "OUTDOOR AIR",
@@ -52,12 +58,6 @@
     "substance": "A11",
     "substance_desc": "OUTDOOR AIR",
     "quantity": "T-BETA-ART"
-  },
-  {
-    "quantity_desc": "TOTAL GAMMA",
-    "substance": "A5",
-    "substance_desc": "EXTERNAL RADIATION",
-    "quantity": "T-GAMMA"
   },
   {
     "quantity_desc": "TOTAL BETA",

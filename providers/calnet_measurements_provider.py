@@ -32,9 +32,9 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 
     def __str__(self):
-        return """CalnetMeasurementsConfig:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n projectid: {}\n bbox: {}
+        return """CalnetMeasurementsConfig:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n projectid: {}\n lower_bound: {}\n upper_bound: {}\n bbox: \n {}
             """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime,
-                       self.endminusstart, self.quantity, self.substance, self.projectid, self.bbox)
+                       self.endminusstart, self.quantity, self.substance, self.projectid, self.lower_bound, self.upper_bound, self.bbox)
 
     def __bytes__(self):
         return str(self).encode('utf-8')

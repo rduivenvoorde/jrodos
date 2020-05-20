@@ -371,6 +371,7 @@ class JRodos:
         self.measurements_dlg = JRodosMeasurementsDialog(self.iface.mainWindow())
         self.measurements_dlg.btn_get_combis.clicked.connect(self.get_quantities_and_substances_combis)
         self.measurements_dlg.tbl_combis.clicked.connect(self.quantities_substances_toggle)
+        self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time)
         #self.quantities_substance_provider_finished(None) # development
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
@@ -566,9 +567,9 @@ class JRodos:
             if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
                     user_quantities_substances_from_disk = pickle.load(f)
-
             self.measurements_dlg.lbl_retrieving_combis.setText("Please select one or more combi's")
             self.quantities_substances_model = QStandardItemModel()
+            self.measurements_dlg.tbl_combis.setModel(self.quantities_substances_model)
 
             for combi in self.combis:
                 description = '{} ({}), {} ({})'.format(combi['quantity_desc'],
@@ -581,18 +582,21 @@ class JRodos:
 
                 data_item = QStandardItem("{}{}".format(combi['quantity'], combi['substance']))
                 data_item.setData([combi['quantity'], combi['substance']])
+                selected_item = QStandardItem(True)
+                selected_item.setData(True)
                 self.quantities_substances_model.appendRow([
                     QStandardItem(combi['quantity']),   # self.QMODEL_ID_IDX
                     QStandardItem(combi['substance']),  # self.QMODEL_NAME_IDX
                     QStandardItem(description),         # self.QMODEL_DESCRIPTION_IDX
                     data_item,                          # self.QMODEL_DATA_IDX
-                    QStandardItem(selected)             # self.QMODEL_SEARCH_IDX
+                    selected_item                       # self.QMODEL_SEARCH_IDX
                 ])
+                self.quantities_substances_model.setData(self.quantities_substances_model.indexFromItem(selected_item), selected)
+
             self.measurements_dlg.tbl_combis.setDragEnabled(False)
             self.measurements_dlg.tbl_combis.setSelectionBehavior(QTableView.SelectRows)
             self.measurements_dlg.tbl_combis.setSelectionMode(QTableView.NoSelection)
-            self.measurements_dlg.tbl_combis.setEditTriggers(QTableView.NoEditTriggers) # disable editing of table cells
-            self.measurements_dlg.tbl_combis.setModel(self.quantities_substances_model)
+            self.measurements_dlg.tbl_combis.setEditTriggers(QTableView.NoEditTriggers)  # disable editing of table cells
 
             self.quantities_substances_model.setHeaderData(self.QMODEL_ID_IDX, Qt.Horizontal, "Quantity")
             self.quantities_substances_model.setHeaderData(self.QMODEL_NAME_IDX, Qt.Horizontal, "Substance")
@@ -612,9 +616,6 @@ class JRodos:
             for row in range(0, self.quantities_substances_model.rowCount()):
                 self.quantities_substance_color_model(row)
 
-        last_used_substance_code = Utils.get_settings_value('measurements_last_quantitysubstance', ['T-GAMMA', 'A5'])
-        #s = self.quantities_substances_model.findItems(last_used_substance_code)
-
     def quantities_substances_toggle(self, model_index):
         row = model_index.row()
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
@@ -625,9 +626,9 @@ class JRodos:
         self.quantities_substance_color_model(row)
 
     def quantities_substance_color_model(self, row):
-        # color background based on selected ('1') or not
+        # color background based on selected (True) or not
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
-        color = Qt.lightGray # = 6
+        color = Qt.lightGray  # = 6
         if self.measurements_dlg.tbl_combis.model().data(idx) == True:
             color = Qt.white  # = 3
         for i in range(0, self.measurements_dlg.tbl_combis.model().columnCount()):
@@ -1104,6 +1105,19 @@ class JRodos:
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
+    def set_measurements_time(self):
+        """ Set the endtime to NOW (UTC) and change starttime such
+        that the timeframe stays the same
+        """
+        # first check wat current timeframe is that user is using
+        start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
+        end_date = self.measurements_dlg.dateTime_end.dateTime()  # UTC
+        old_timeframe = end_date.toSecsSinceEpoch() - start_date.toSecsSinceEpoch()
+        end_time = QDateTime.currentDateTimeUtc()  # end is NOW
+        self.measurements_dlg.dateTime_end.setDateTime(end_time)
+        start_time = end_time.addSecs(-old_timeframe)
+        self.measurements_dlg.dateTime_start.setDateTime(start_time)
+
     def show_measurements_dialog(self):
 
         if self.measurements_settings is not None:
@@ -1119,6 +1133,10 @@ class JRodos:
             # BUT if we just received a model, INIT the measurements dialog based on this
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
+        elif Utils.get_settings_value('startdatetime', False) and Utils.get_settings_value('enddatetime', False):
+            self.start_time = Utils.get_settings_value('startdatetime', '')
+            self.end_time = Utils.get_settings_value('enddatetime', '')
+            # log.debug(f'Got start and end from settings: {self.start_time} {self.end_time}')
         elif self.start_time is None:
             hours = 1  # h
             self.end_time = QDateTime.currentDateTimeUtc()  # end NOW
@@ -1141,7 +1159,6 @@ class JRodos:
 
             # but also retrieve a fresh list in the background
             #self.get_quantities_and_substances_combis()
-
 
         self.measurements_dlg.show()
 
@@ -1169,9 +1186,9 @@ class JRodos:
                     if not data[1] in substances:
                         substances.append(data[1])
 
-            log.info(f'Length quantities: {len(quantities)}')
-            log.info(f'Length substances: {len(substances)}')
-            log.info(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
+            log.debug(f'Length quantities: {len(quantities)}')
+            log.debug(f'Length substances: {len(substances)}')
+            log.debug(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
 
             if len(quantity_substance_combis) == 0:
                 # mmm, nothing selected... show message
@@ -1183,8 +1200,10 @@ class JRodos:
                 log.debug("Dumping to disk:\n".format(quantity_substance_combis))
                 pickle.dump(quantity_substance_combis, f)
 
-            start_date = self.measurements_dlg.dateTime_start.dateTime() # UTC
-            end_date = self.measurements_dlg.dateTime_end.dateTime() # UTC
+            start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
+            Utils.set_settings_value("startdatetime", start_date)
+            end_date = self.measurements_dlg.dateTime_end.dateTime()  # UTC
+            Utils.set_settings_value("enddatetime", end_date)
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
 
@@ -1251,14 +1270,14 @@ class JRodos:
             self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
         elif result.error():
             self.msg(None, result)
-            self.iface.messageBar().pushMessage("Network problem", result.error_code, level=Qgis.Critical)
+            self.iface.messageBar().pushMessage("Network problem", f'{result.error_code} see messages', level=Qgis.Critical)
         else:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
                 self.load_measurements(result.data['output_dir'], 'measurements_rotation.qml')
             else:
-                self.msg(None, self.tr("No Measurements data? {}").format(result.data))
+                self.msg(None, self.tr("No data using this filters?\n\n{}\n{}").format(self.measurements_settings, result.data))
         self.measurements_settings = None
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 

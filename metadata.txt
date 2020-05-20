@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.4
 description=Plugin to connect to JRodos via WPS
-version=1.1.6
+version=1.1.7
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog
 changelog=
+    1.1.7   Make it possible to get Measurement above or below a certain value, remember more user settings
     1.1.6   Rename valuemicrosvh to unitvalue, Graph/style refinements, make projectid visible
     1.1.5   Remove random placement in measurement style, add project_id to gui to be able to filter on it
     1.1.4   Show the right units in graphs, warning when NO quantities/substance selected, A5 as substance, remove meetwagen

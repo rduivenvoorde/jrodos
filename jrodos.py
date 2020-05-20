@@ -1196,6 +1196,22 @@ class JRodos:
             else:
                 Utils.set_settings_value("projectid", '')
 
+
+            lower_bound = self.measurements_dlg.le_lowerbound.text()
+            if len(lower_bound) != 0:
+                log.info(f'Lower bound: {lower_bound} found! Adding to CQL in WFS request')
+                measurements_settings.lower_bound = lower_bound
+                Utils.set_settings_value("lower_bound", lower_bound)
+            else:
+                Utils.set_settings_value("lower_bound", '')
+            upper_bound = self.measurements_dlg.le_upperbound.text()
+            if len(upper_bound) != 0:
+                log.info(f'Upper bound: {upper_bound} found! Adding to CQL in WFS request')
+                measurements_settings.upper_bound = upper_bound
+                Utils.set_settings_value("upper_bound", upper_bound)
+            else:
+                Utils.set_settings_value("upper_bound", '')
+
             if self.jrodos_output_settings is None:
                 project = "'measurements'"
                 path = "'=;=wfs=;=data'"

@@ -24,6 +24,8 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.quantity = ''
         self.substance = ''
         self.projectid = ''
+        self.lower_bound = ''
+        self.upper_bound = ''
         self.endminusstart = 0
         self.bbox = '50,0,60,20'
         self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000 00:00'  # '2016-04-25T08:00:00.000+00:00'
@@ -72,6 +74,12 @@ class CalnetMeasurementsProvider(ProviderBase):
             projectid=self.config.projectid
         )
         cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
+
+        if len(self.config.lower_bound) > 0:
+            cql_filter += " and value > {}".format(self.config.lower_bound)
+        if len(self.config.upper_bound) > 0:
+            cql_filter += " and value < {}".format(self.config.upper_bound)
+
         query.addQueryItem('CQL_FILTER', cql_filter)
         self.request.setQuery(query)
 

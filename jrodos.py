@@ -26,9 +26,9 @@ from qgis.PyQt.QtGui import QIcon, QStandardItemModel, QStandardItem, \
     QDesktopServices,  QColor, QFont
 from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
     QFileDialog, QTableView, QCheckBox
-from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsMessageLog, \
+from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
-    QgsRasterLayer, QgsVectorDataProvider, QgsFeatureRequest, QgsGeometry, \
+    QgsRasterLayer, QgsFeatureRequest, QgsGeometry, \
     QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, QgsApplication
 
 from qgis.utils import qgsfunction, plugins
@@ -58,12 +58,13 @@ from .providers.utils import Utils as ProviderUtils
 
 from .style_utils import RangeCreator
 
-from . import resources # needed for button images!
+from . import resources  # needed for button images!
 
 # silly try catch around this one, because
 # IF user has timemanager installed it can be loaded here
 # IF NOT timemanager installed this raises an exception
 # the late import in the run method apparently does not work??
+# noinspection PyBroadException
 try:
     from timemanager.layers.layer_settings import LayerSettings
     from timemanager.layers.timevectorlayer import TimeVectorLayer
@@ -73,8 +74,8 @@ except Exception as e:
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
-#import pydevd
-#pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
+# import pydevd
+# pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
 
 import logging
 from . import LOGGER_NAME
@@ -84,12 +85,10 @@ log = logging.getLogger(LOGGER_NAME)
 class JRodos:
     """QGIS Plugin Implementation."""
 
-
     """ DEV modus for development
     in case of failing of needed network services, will try to load dummy or demo data
     """
     DEV = False
-
 
     def __init__(self, iface):
         """Constructor.
@@ -128,11 +127,11 @@ class JRodos:
 
         # TODO: remove these in favour of constants-versions (from constants import ... like in jrodos_filter_dialog.py)
         # 'standard' column indexes for QStandardModels to be used instead of magic numbers for data columns:
-        self.QMODEL_ID_IDX          = 0 # IF the QStandardModel has a true ID make it column 0 (else double NAME as 0)
-        self.QMODEL_NAME_IDX        = 1 # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
-        self.QMODEL_DESCRIPTION_IDX = 2 # IF the QStandardModel has a description (eg used in dropdowns)
-        self.QMODEL_DATA_IDX        = 3 # IF the QStandardModel has other data
-        self.QMODEL_SEARCH_IDX      = 4 # IF the QStandardModel has a special SEARCH/FILTER column (optional for tables)
+        self.QMODEL_ID_IDX = 0  # IF the QStandardModel has a true ID make it column 0 (else double NAME as 0)
+        self.QMODEL_NAME_IDX = 1  # IF the QStandardModel has a short name (not unique?) (else double ID as 1)
+        self.QMODEL_DESCRIPTION_IDX = 2  # IF the QStandardModel has a description (eg used in dropdowns)
+        self.QMODEL_DATA_IDX = 3  # IF the QStandardModel has other data
+        self.QMODEL_SEARCH_IDX = 4  # IF the QStandardModel has a special SEARCH/FILTER column (optional for tables)
 
         self.MAX_FLOAT = sys.float_info.max
 
@@ -160,13 +159,17 @@ class JRodos:
 
         # JRodos model dialog
         self.jrodosmodel_dlg = None
+        self.project_info_provider = None
         # dialog for measurements
         self.measurements_dlg = None
         self.measurements_progress_bar = None
         self.measurements_settings = None
         self.measurements_provider = None
+        self.measurements_layer_featuresource = None
         self.quantities_model = None
         self.substances_model = None
+        self.projects_model = None
+        self.quantities_substances_model = None
         self.task_model = None
 
         self.measurements_layer = None
@@ -184,6 +187,7 @@ class JRodos:
         self.graph_widget_checkbox = None
         # QgsVertexMarker used to highlight the measurement device shown in the GraphWidget
         self.graph_device_pointer = None
+        self.curves = {}  # a curve <-> device,feature mapping as lookup for later use
 
         # settings dialog
         self.settings_dlg = None
@@ -192,6 +196,8 @@ class JRodos:
 
         self.layer_group = None
 
+        self.oldCrsBehavior = 'useGlobal'
+        self.oldCrs = 'EPSG:4326'
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -329,7 +335,7 @@ class JRodos:
             self.measurements_progress_bar = QProgressBar()
             self.measurements_progress_bar.setToolTip(self.tr("Measurement data (WFS)"))
             self.measurements_progress_bar.setTextVisible(True)
-            self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE )
+            self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
             self.measurements_progress_bar.setMinimum(0)
             self.measurements_progress_bar.setMaximum(100)  # we will use a 'infinite progress bar' by setting max to zero when busy
             self.measurements_progress_bar.setValue(0)
@@ -372,12 +378,12 @@ class JRodos:
         self.measurements_dlg.btn_get_combis.clicked.connect(self.get_quantities_and_substances_combis)
         self.measurements_dlg.tbl_combis.clicked.connect(self.quantities_substances_toggle)
         self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time)
-        #self.quantities_substance_provider_finished(None) # development
+        # self.quantities_substance_provider_finished(None)  # development
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
         # value BEFORE the dlg is already shown...
         end_time = QDateTime.currentDateTimeUtc()  # end is NOW
-        start_time = end_time.addSecs(-60 * 60 * 30 * 24) # minus 24 hour
+        start_time = end_time.addSecs(-60 * 60 * 30 * 24)  # minus 24 hour
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
         self.measurements_dlg.cb_a1.clicked.connect(self.cb_a1_clicked)
@@ -401,11 +407,11 @@ class JRodos:
 
     # TODO: move this to a commons class/module
     def get_rivm_toolbar(self):
-        TOOLBAR_TITLE = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
-        toolbars = self.iface.mainWindow().findChildren(QToolBar, TOOLBAR_TITLE)
+        toolbar_title = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
+        toolbars = self.iface.mainWindow().findChildren(QToolBar, toolbar_title)
         if len(toolbars) == 0:
-            toolbar = self.iface.addToolBar(TOOLBAR_TITLE)
-            toolbar.setObjectName(TOOLBAR_TITLE)
+            toolbar = self.iface.addToolBar(toolbar_title)
+            toolbar.setObjectName(toolbar_title)
         else:
             toolbar = toolbars[0]
         return toolbar
@@ -431,7 +437,8 @@ class JRodos:
             with open(self.USER_DATA_ITEMS_PATH, 'wb') as f:
                 pickle.dump(data_items, f)
 
-    def show_help(self):
+    @staticmethod
+    def show_help():
         docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
         QDesktopServices.openUrl(QUrl("file:" + docs))
 
@@ -441,13 +448,14 @@ class JRodos:
         else:
             self.graph_widget.hide()
 
+    # noinspection PyBroadException
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginWebMenu(
                 self.tr(u'&JRodos'),
                 action)
-            #self.iface.removeToolBarIcon(action)
+            # self.iface.removeToolBarIcon(action)
             self.toolbar.removeAction(action)
 
         # deregister our custom QgsExpression function
@@ -473,17 +481,19 @@ class JRodos:
 
     def run(self):
 
-        if not 'RIVM_PluginConfigManager' in plugins:
+        if 'RIVM_PluginConfigManager' not in plugins:
             QMessageBox.warning(self.iface.mainWindow(),
-            self.MSG_TITLE, self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                QMessageBox.Ok, QMessageBox.Ok)
-
+                                self.MSG_TITLE,
+                                self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                QMessageBox.Ok,
+                                QMessageBox.Ok)
             return
 
-        if not 'timemanager' in plugins:
+        if 'timemanager' not in plugins:
             QMessageBox.warning(self.iface.mainWindow(),
-            self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                QMessageBox.Ok, QMessageBox.Ok)
+                                self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                QMessageBox.Ok,
+                                QMessageBox.Ok)
 
             return
         # Because we check for timemanager, not earlier then now
@@ -496,7 +506,7 @@ class JRodos:
         try:
             # we try to retrieve the quantities and substances just once, but not earlier then a user actually
             # starts using the plugin (that is call this run)...
-            #if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
+            # if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
             #    self.get_quantities_and_substances_combis()  # async call
 
             # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
@@ -506,15 +516,15 @@ class JRodos:
             if self.settings.value('jrodos_enabled'):
                 self.show_jrodos_output_dialog()
             if self.settings.value('measurements_enabled'):
-                    finished = False
-                    while not finished:
-                        finished = self.show_measurements_dialog()
+                finished = False
+                while not finished:
+                    finished = self.show_measurements_dialog()
 
         except JRodosError as jre:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % jre)
             return
-        except Exception as e:
-            self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % e)
+        except Exception as ex:
+            self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % ex)
             raise
 
     def setProjectionsBehavior(self):
@@ -538,7 +548,7 @@ class JRodos:
         self.measurements_dlg.lbl_retrieving_combis.setText("Searching possible Quantity/Substance combi's in this period ....")
         self.measurements_dlg.startProgressBar()
         config = CalnetMeasurementsUtilsConfig()
-        config.url = self.settings.value('measurements_soap_utils_url') #'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
+        config.url = self.settings.value('measurements_soap_utils_url')  # 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
 
         start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
         end_date = self.measurements_dlg.dateTime_end.dateTime()      # UTC
@@ -555,9 +565,9 @@ class JRodos:
 
         self.measurements_dlg.stopProgressBar()
 
-        if hasattr(result, "error") and result.error():
+        if hasattr(result, "error") and result.error:
             self.msg(None,
-             self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
+                     self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")
         else:
             self.combis = result.data
@@ -573,9 +583,9 @@ class JRodos:
 
             for combi in self.combis:
                 description = '{} ({}), {} ({})'.format(combi['quantity_desc'],
-                                                  combi['quantity'],
-                                                  combi['substance_desc'],
-                                                  combi['substance'])
+                                                        combi['quantity'],
+                                                        combi['substance_desc'],
+                                                        combi['substance'])
                 selected = False
                 if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
                     selected = True
@@ -620,7 +630,7 @@ class JRodos:
         row = model_index.row()
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
         selected = True
-        if self.measurements_dlg.tbl_combis.model().data(idx) == True:
+        if self.measurements_dlg.tbl_combis.model().data(idx):
             selected = False
         self.measurements_dlg.tbl_combis.model().setData(idx, selected)
         self.quantities_substance_color_model(row)
@@ -629,7 +639,7 @@ class JRodos:
         # color background based on selected (True) or not
         idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
         color = Qt.lightGray  # = 6
-        if self.measurements_dlg.tbl_combis.model().data(idx) == True:
+        if self.measurements_dlg.tbl_combis.model().data(idx):
             color = Qt.white  # = 3
         for i in range(0, self.measurements_dlg.tbl_combis.model().columnCount()):
             idx2 = self.measurements_dlg.tbl_combis.model().index(row, i)
@@ -668,8 +678,6 @@ class JRodos:
 
     def cb_unknown_clicked(self, checked):
         self.quantities_substances_toggle_selection('unknown', checked)
-
-
 
     def get_jrodos_projects(self):
         """Retrieve all JRodos projects via REST interface url like:
@@ -723,9 +731,9 @@ class JRodos:
             for project in projects:
                 # retrieve the link of this project
                 link = "NO LINK ?????"
-                for l in project['links']:
-                    if l['rel'] == 'self':
-                        link = l['href']
+                for link in project['links']:
+                    if link['rel'] == 'self':
+                        link = link['href']
                         break
                 project_id = '{}'.format(project['projectId'])
                 project_name = project['name']
@@ -771,7 +779,7 @@ class JRodos:
         self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
-        #self.msg(None, "{} {}".format(projects_model_idx, url))
+        # self.msg(None, "{} {}".format(projects_model_idx, url))
         config = JRodosProjectConfig()
         config.url = url
         datapaths_provider = JRodosProjectProvider(config)
@@ -813,10 +821,10 @@ class JRodos:
                 # "dataitem_id": 0,
                 # "id": 1251
                 self.task_model.appendRow([
-                    QStandardItem('0'),                                                  # self.QMODEL_ID_IDX
-                    QStandardItem(task['modelwrappername']),                             # self.QMODEL_NAME_IDX
-                    QStandardItem(task['modelwrappername'] + ' ' + task['description']), # self.QMODEL_DESCRIPTION_IDX
-                    QStandardItem(task['modelwrappername'])                              # self.QMODEL_DATA_IDX
+                    QStandardItem('0'),                                                   # self.QMODEL_ID_IDX
+                    QStandardItem(task['modelwrappername']),                              # self.QMODEL_NAME_IDX
+                    QStandardItem(task['modelwrappername'] + ' ' + task['description']),  # self.QMODEL_DESCRIPTION_IDX
+                    QStandardItem(task['modelwrappername'])                               # self.QMODEL_DATA_IDX
                 ])
                 # create a QStandardItemModel per task
                 data_items_model = QStandardItemModel()
@@ -869,11 +877,11 @@ class JRodos:
 
             # 201907 REST output now also contains timestep, duration and release information
             if 'extendedProjectInfo' in result.data:
-                extendedProjectInfo = result.data['extendedProjectInfo']
+                extended_project_info = result.data['extendedProjectInfo']
                 self.set_dialog_project_info(
-                    extendedProjectInfo['timestepOfPrognosis'],
-                    extendedProjectInfo['durationOfPrognosis'],
-                    extendedProjectInfo['startOfRelease'])
+                    extended_project_info['timestepOfPrognosis'],
+                    extended_project_info['durationOfPrognosis'],
+                    extended_project_info['startOfRelease'])
             else:
                 # TODO: can BE REMOVED after all WPS-instances provide extendedProjectInfo information
                 # Retrieve some metadata of the model, like
@@ -892,7 +900,7 @@ class JRodos:
                 conf.jrodos_format = 'application/json'
                 # saving handle of project_info_provider to self, as it seems that the provide is garbage collected sometimes
                 self.project_info_provider = JRodosModelProvider(conf)
-                #self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
+                # self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
                 self.project_info_provider.finished.connect(self.provide_project_info_finished)
                 self.project_info_provider.get_data()
 
@@ -905,7 +913,7 @@ class JRodos:
         current_data_items = self.jrodos_project_data[tasks_model_idx]
         proxy_model = QSortFilterProxyModel()
         proxy_model.setSourceModel(current_data_items)
-        proxy_model.setFilterKeyColumn(self.QMODEL_SEARCH_IDX) # SEARCH contains '1' and '0', show only '1'
+        proxy_model.setFilterKeyColumn(self.QMODEL_SEARCH_IDX)  # SEARCH contains '1' and '0', show only '1'
         proxy_model.setFilterFixedString('1')
         proxy_model.setDynamicSortFilter(True)
         self.jrodosmodel_dlg.combo_path.setModel(proxy_model)
@@ -988,7 +996,7 @@ class JRodos:
 
         if jrodos_output_config is not None:
             self.jrodos_output_settings = jrodos_output_config
-            #TODO: (re)start the provider?
+            # TODO: (re)start the provider?
             self.msg(None, "REstarting provider?")
             return
 
@@ -1063,17 +1071,10 @@ class JRodos:
             jrodos_output_config.jrodos_model_step = model_step_secs
             # vertical is fixed to 0 for now (we do not 3D models)
             jrodos_output_config.jrodos_verticals = 0  # z / layers
-            OLD_VERSION = False # old version received the start as seconds_since_epoch
-            if OLD_VERSION:
-                # OLD: start text was a secondssinceepoch
-                jrodos_output_config.jrodos_datetime_start = QDateTime.fromTime_t(int(self.jrodosmodel_dlg.le_start.text()) / 1000).toUTC() # FORCE UTC!!
-                # OLD: columns = number of steps in the model (integer)
-                jrodos_output_config.jrodos_columns = model_time_secs / model_step_secs
-            else:
-                # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
-                jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
-                # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
-                jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
+            # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
+            jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+            # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
+            jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
             self.jrodos_output_settings = jrodos_output_config
             self.start_jrodos_model_output_provider()
 
@@ -1085,9 +1086,9 @@ class JRodos:
 
     def finish_jrodos_model_output_provider(self, result):
         log.debug(result)
-        self.jrodos_output_progress_bar.setMaximum(100) # stop progress
+        self.jrodos_output_progress_bar.setMaximum(100)  # stop progress
         self.jrodos_output_progress_bar.setFormat(self.BAR_LOADING_TITLE)
-        QCoreApplication.processEvents() # to be sure we have the loading msg
+        QCoreApplication.processEvents()  # to be sure we have the loading msg
         if result.error():
             self.msg(None,
                      self.tr("Problem in JRodos plugin retrieving the JRodos model output. \nCheck the Log Message Panel for more info"))
@@ -1151,14 +1152,12 @@ class JRodos:
 
         if self.combis is None:
             with open(self.plugin_dir + '/measurement_start_combis.json', 'rb') as f:
-            #with open('/home/richard/git/JRodos/test/measurement_combis.json', 'rb') as f:  # development
                 self.combis = json.load(f)
                 result = lambda: None  # 'empty' object
                 result.data = self.combis
                 self.quantities_substance_provider_finished(result)
-
             # but also retrieve a fresh list in the background
-            #self.get_quantities_and_substances_combis()
+            # self.get_quantities_and_substances_combis()
 
         self.measurements_dlg.show()
 
@@ -1215,7 +1214,6 @@ class JRodos:
             else:
                 Utils.set_settings_value("projectid", '')
 
-
             lower_bound = self.measurements_dlg.le_lowerbound.text()
             if len(lower_bound) != 0:
                 log.info(f'Lower bound: {lower_bound} found! Adding to CQL in WFS request')
@@ -1262,7 +1260,7 @@ class JRodos:
         log.debug(result)
         self.measurements_progress_bar.setMaximum(100)
         self.measurements_progress_bar.setFormat(self.BAR_LOADING_TITLE)
-        QCoreApplication.processEvents() # to be sure we have the loading msg
+        QCoreApplication.processEvents()  # to be sure we have the loading msg
         # WFS response can take a long time. Time out is handled by QGIS-network settings time out
         # so IF error_code = 5 (http://doc.qt.io/qt-4.8/qnetworkreply.html#NetworkError-enum)
         # provide the user feed back to rise the timeout value
@@ -1282,15 +1280,14 @@ class JRodos:
         self.measurements_progress_bar.setFormat(self.MEASUREMENTS_BAR_TITLE)
 
     def update_measurements_bbox(self):
-            # bbox in url should be epsg:4326 !
-            crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
-            crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
-            crsTransform = QgsCoordinateTransform(crs_project, crs_4326, QgsProject.instance())
-
-            current_bbox_4326 = crsTransform.transform(self.iface.mapCanvas().extent())
-            # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
-            self.measurements_settings.bbox = "{},{},{},{}".format(
-                current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
+        # bbox in url should be epsg:4326 !
+        crs_project = self.iface.mapCanvas().mapSettings().destinationCrs()
+        crs_4326 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
+        crs_transform = QgsCoordinateTransform(crs_project, crs_4326, QgsProject.instance())
+        current_bbox_4326 = crs_transform.transform(self.iface.mapCanvas().extent())
+        # bbox for wfs get measurements request, based on current bbox of mapCanvas (OR model)
+        self.measurements_settings.bbox = "{},{},{},{}".format(
+            current_bbox_4326.yMinimum(), current_bbox_4326.xMinimum(), current_bbox_4326.yMaximum(), current_bbox_4326.xMaximum())  # S,W,N,E
 
     def measurement_selection_change(self):
         """Select changed action when a selection of features changes in the measurements layer.
@@ -1312,17 +1309,18 @@ class JRodos:
         self.graph_widget.graph.clear()
         font = QFont()
         font.setPixelSize(10)
-        self.curves={}
+        self.curves = {}
         first = True
+        selected_feature = None
         for fid in selected_features_ids:
             features = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
             for selected_feature in features:
-                #log.debug(selected_feature['device'])  # strings like: NL1212
+                # log.debug(selected_feature['device'])  # strings like: NL1212
                 # 'casting' device to a string, because from postgres we get a PyQtNullVariant in case of null device
                 device = '{}'.format(selected_feature['device'])
                 quantity = '{}'.format(selected_feature['quantity'])
                 unit = '{}'.format(selected_feature['unit'])
-                #log.debug('device: >{}< type: {}'.format(device, type(device)))
+                # log.debug('device: >{}< type: {}'.format(device, type(device)))
                 # HACKY: disable current time-filter, to be able to find all features from same device
                 if device is None or device == '' or device == 'NULL':
                     log.debug('Feature does not contain a device(id), so NOT shown in Time Graph')
@@ -1331,16 +1329,16 @@ class JRodos:
                     fr.disableFilter()
                     # we can only create graphs from ONE DEVICE if UNIT and QUANTITY are the same, hence the filter below:
                     fr.setFilterExpression(u'"device" = \'{}\' AND "quantity" = \'{}\' AND "unit" = \'{}\''.format(device, quantity, unit))
-                    #log.debug('\nDevice {}'.format(device))
+                    # log.debug('\nDevice {}'.format(device))
                     x = []
                     y = []
                     time_sorted_features = sorted(self.measurements_layer.getFeatures(fr), key=lambda f: f['time'])
-                    for feature in (time_sorted_features):
-                        #log.debug(feature['gml_id'])
+                    for feature in time_sorted_features:
+                        # log.debug(feature['gml_id'])
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
                         y.append(feature['unitvalue'])
-                        #log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['unitvalue'], feature['device'], feature['quantity'], feature['unit']))
+                        # log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['unitvalue'], feature['device'], feature['quantity'], feature['unit']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
@@ -1420,18 +1418,26 @@ class JRodos:
                 del self.jrodos_settings[layer]
                 return
 
+    # noinspection PyBroadException
     def load_jrodos_output(self, output_dir, style_file, layer_name, unit_used):
         """
-        Create a polygon memory layer, and load all shapefiles (named 0_0.zip -> x_0.zip)
+        Create a polygon memory layer, and load all shapefiles (named
+        0_0.zip -> x_0.zip)
         from given shape_dir.
-        Every zip is for a certain time-period, but because the data does not containt a time column/stamp
-        we will add it by creating an attribute 'Datetime' and fill that based on:
+        Every zip is for a certain time-period, but because the data does
+        not containt a time column/stamp
+        we will add it by creating an attribute 'Datetime' and fill that
+        based on:
         - the x in the zip file (being a model-'step')
-        - the starting time of the model (given in dialog, set in jrodos project run)
+        - the starting time of the model (given in dialog, set in jrodos
+        project run)
         - the model length time (24 hours)
 
+        :param unit_used:
+        :param layer_name:
         :param output_dir: directory containing zips with shapefiles
-        :param style_file: style (qml) to be used to style the layer in which we merged all shapefiles
+        :param style_file: style (qml) to be used to style the layer in
+        which we merged all shapefiles
         :return:
         """
 
@@ -1442,12 +1448,11 @@ class JRodos:
                 zip_ref = zipfile.ZipFile(zip_file, 'r')
                 zip_ref.extractall(output_dir)
                 zip_ref.close()
-        except Exception as e:
+        except Exception:
             self.msg(None, self.tr(
                 'Received Data. \nBut no ZIP file..\nTry other model or Check log for more information '))
             log.debug('PROBLEM unpacking ZIP from "{}"\nProbably no ZIP received?'.format(output_dir))
             return
-
 
         shps = glob(os.path.join(output_dir, "*.shp"))
         gpkgs = glob(os.path.join(output_dir, "*.gpkg"))
@@ -1458,11 +1463,9 @@ class JRodos:
         features_min_value = self.MAX_FLOAT
 
         i = 0
-        j = 0
-
         if len(gpkgs) > 0:
             (gpkgdir, gpkgfile) = os.path.split(gpkgs[0])
-            #log.debug("{}\n{}".format(gpkgdir, gpkgfile))
+            # log.debug("{}\n{}".format(gpkgdir, gpkgfile))
             if 'Empty' in gpkgfile:  # JRodos sents an 'Empty.gpkg' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
@@ -1470,7 +1473,7 @@ class JRodos:
                 jrodos_output_layer = QgsVectorLayer(uri, layer_name, 'ogr')
         elif len(shps) > 0:
             (shpdir, shpfile) = os.path.split(shps[0])
-            #log.debug("{}\n{}".format(shpdir, shpfile))
+            # log.debug("{}\n{}".format(shpdir, shpfile))
             if 'Empty' in shpfile:  # JRodos sents an 'Empty.shp' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
@@ -1494,10 +1497,9 @@ class JRodos:
                     if value < features_min_value:
                         features_min_value = value
                     # only check when still no valid times found...
-                    if not features_have_valid_time and \
-                                    time is not None and time != "" and time > 0:
+                    if not features_have_valid_time and time is not None and time != "" and time > 0:
                         features_have_valid_time = True
-                        break # we break here, as we apparently have valid features WITH valid times
+                        break  # we break here, as we apparently have valid features WITH valid times
                 # else:
                 #     # try to delete the features with Value = 0, Note that a zipped shp cannot be edited!
                 #     if (jrodos_output_layer.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures) > 0:
@@ -1513,7 +1515,7 @@ class JRodos:
                 fixed = self.fix_jrodos_style_sld(slds[0])
                 log.debug('Trying {} now'.format(fixed))
                 result = jrodos_output_layer.loadSldStyle(fixed)
-                if result[1] == False:
+                if not result[1]:
                     log.debug('Also problem loading sld: {}: {}'.format(fixed, result[0]))
                 else:
                     # problem loading the sld, BUT we can try to fix the JRodos styles...
@@ -1524,17 +1526,17 @@ class JRodos:
                 sld_loaded_ok = True
                 jrodos_output_layer.setName(jrodos_output_layer.name()+' (JRodos-styled)')
                 log.debug('Layer styled using sld from zip: {}'.format(slds[0]))
-        #sld_loaded_ok = False
+        # sld_loaded_ok = False
         if not sld_loaded_ok:
             self.style_layer(jrodos_output_layer)
         self.iface.mapCanvas().refresh()
 
-        #self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
+        # self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
         # ONLY when we received features back load it as a layer
         if features_added:
             # add layer to the map
             QgsProject.instance().addMapLayer(jrodos_output_layer,
-                                                       False)  # False, meaning not ready to add to legend
+                                              False)  # False, meaning not ready to add to legend
             self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
         # ONLY when we received features back AND the time component is valid: register the layer to the timemanager etc
         if features_have_valid_time:
@@ -1545,7 +1547,8 @@ class JRodos:
             step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # jrodos_model_step is in seconds!!!
             self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
-    def fix_jrodos_style_sld(self, jrodos_style_sld):
+    @staticmethod
+    def fix_jrodos_style_sld(jrodos_style_sld):
         """
         JRodos sld's can be old styles, that is do not
         :return: File (full path) to 'fixed' sld
@@ -1579,8 +1582,8 @@ class JRodos:
 
         return sld_file_fixed
 
-
-    def style_layer(self, layer):
+    @staticmethod
+    def style_layer(layer):
         # create a new rule-based renderer
         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
         renderer = QgsRuleBasedRenderer(symbol)
@@ -1590,7 +1593,6 @@ class JRodos:
         # create a nice 'Full Cream' color ramp ourselves
         rules = RangeCreator.create_rule_set(-5, 4, False, True)
 
-        #for label, expression, color_name, scale in rules:
         for label, expression, color in rules:
             # create a clone (i.e. a copy) of the default rule
             rule = root_rule.children()[0].clone()
@@ -1612,12 +1614,14 @@ class JRodos:
         # apply the renderer to the layer
         layer.setRenderer(renderer)
 
-    def enable_timemanager(self, enable):
+    @staticmethod
+    def enable_timemanager(enable):
         """
         Enable OR disable the timemanager
         :param enable: 
         :return: 
         """
+        timemanager = None
         if 'timemanager' in plugins:
             timemanager = plugins['timemanager']
         # enable timemanager by 'clicking' on enable button (if not enabled)
@@ -1635,7 +1639,7 @@ class JRodos:
         imgformat = settings.value("rainradar_wmst_imgformat")
         crs = settings.value("rainradar_wmst_crs")
 
-        uri = "crs=" + crs + "&layers=" + layers + "&styles=" + styles + "&format=" + imgformat + "&url=" + url;
+        uri = "crs=" + crs + "&layers=" + layers + "&styles=" + styles + "&format=" + imgformat + "&url=" + url
 
         rain_layer = QgsRasterLayer(uri, name, "wms")
         QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
@@ -1657,7 +1661,7 @@ class JRodos:
 
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
 
-        if not 'timemanager' in plugins:
+        if 'timemanager' not in plugins:
             self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
             return
 
@@ -1701,18 +1705,13 @@ class JRodos:
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
 
-
-        #layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
+        # layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
         #    self.measurements_settings.endminusstart + ", " + \
         #    start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
         #    end_time.toString(self.measurements_settings.date_time_format_short)
         layer_display_name = "Measurements " + \
             start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
             end_time.toString(self.measurements_settings.date_time_format_short)
-        #if 'T-GAMMA' in self.measurements_settings.quantity:
-        #    layer_display_name = "T-GAMMA"
-        #else:
-        #    layer_display_name = "Measurements (TODO)"
 
         log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
@@ -1756,12 +1755,11 @@ class JRodos:
                 os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
             self.measurements_layer_featuresource = self.measurements_layer.dataProvider().featureSource()
             self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
-
         else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
             # remove current features from the  layer
             self.measurements_layer.startEditing()
-            self.measurements_layer.setSubsetString('') # first remove the query otherwise only the query result is removed
+            self.measurements_layer.setSubsetString('')  # first remove the query otherwise only the query result is removed
             self.measurements_layer.beginEditCommand("Delete Selected Features")
             self.measurements_layer.selectAll()
             self.measurements_layer.deleteSelectedFeatures()
@@ -1796,7 +1794,6 @@ class JRodos:
                     if feature.geometry() is not None:
                         attributes = feature.attributes()
                         value = float(feature.attribute('value'))
-                        unitvalue = -1  # set value to '-1' not sure if NULL is better...
                         # preferred unit is microSv/h, but the data contains value+unit column
                         # set all values in column unitvalue in microSv/H
                         if feature.attribute('unit') == 'USV/H':
@@ -1808,7 +1805,6 @@ class JRodos:
                         else:
                             unitvalue = value
                             if new_unit_msg:
-                                #self.msg(None, self.tr("New unit in data: '%s', setting unitvalue to given value.\nSo this is NOT µSv/h!") % feature.attribute('unit'))
                                 new_unit_msg = False
                         attributes.append(unitvalue)
                         f.setAttributes(attributes)
@@ -1817,7 +1813,6 @@ class JRodos:
                         if len(flist) > 1000:
                             self.measurements_layer.dataProvider().addFeatures(flist)
                             flist = []
-                        #print "%s            gml_id: %s - %s" % (feature_count, f.geometry().exportToWkt(), f.attributes())
                     else:
                         self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
                         return
@@ -1832,16 +1827,13 @@ class JRodos:
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 
-            #timemanager = plugins['timemanager'].getController().getTimeLayerManager()
-            #timemanager.setTimeFrameDiscrete(timemanager.timeFrameDiscrete)
-
         if register_layers:
             # add this layer to the TimeManager
             self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
             # set the display field value
             self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
-            #self.measurements_layer.setDisplayField('Measurements')
+            # self.measurements_layer.setDisplayField('Measurements')
             # enable maptips if (apparently) not enabled (looking at the maptips action/button)
             if not self.iface.actionMapTips().isChecked():
                 self.iface.actionMapTips().trigger()  # trigger action
@@ -1893,6 +1885,8 @@ class JRodos:
         QgsProject.instance().addMapLayer(layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
+
+    # noinspection PyBroadException
     @qgsfunction(0, "RIVM")
     def measurement_values(values, feature, parent):
         """
@@ -1924,17 +1918,18 @@ class JRodos:
                 # try to do the 'info'-field which is a json object
                 try:
                     info_string = json.loads(feature['info'])
-                    if len(info_string)==0:
+                    if len(info_string) == 0:
                         info_string = json.loads(feature['Info'])
                     if 'fields' in info_string:
-                        for field in info_string['fields']:
+                        for info_field in info_string['fields']:
                             if 'mnemonic' in field:
-                                field_string += field['mnemonic'].title() + ': ' + field['value'] + '<br/>'
+                                field_string += info_field['mnemonic'].title() + ': ' + info_field['value'] + '<br/>'
                             elif 'name' in field:
-                                field_string += field['name'].title() + ': ' + field['value'] + '<br/>'
-                except Exception as e:
-                    field_string += "Failed to parse: "+feature['info']
+                                field_string += info_field['name'].title() + ': ' + info_field['value'] + '<br/>'
+                except Exception:
+                    field_string += "Failed to parse: " + feature['info']
         return field_string + '</div>'
+
 
 class JRodosError(Exception):
     """JRodos Exception for errors in the plugin.
@@ -1946,7 +1941,6 @@ class JRodosError(Exception):
     def __init__(self, expression, message):
         self.expression = expression
         self.message = message
-
 
 # this is a way to catch an exception from another (for example networking) thread.
 # https://riverbankcomputing.com/pipermail/pyqt/2009-May/022961.html

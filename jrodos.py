@@ -1251,7 +1251,7 @@ class JRodos:
             self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
         elif result.error():
             self.msg(None, result)
-            self.iface.messageBar().pushMessage("Network problem: %s" % result.error_code, self.iface.messageBar().CRITICAL, 1)
+            self.iface.messageBar().pushMessage("Network problem", result.error_code, level=Qgis.Critical)
         else:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object

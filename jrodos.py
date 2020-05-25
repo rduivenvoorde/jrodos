@@ -199,6 +199,8 @@ class JRodos:
         self.oldCrsBehavior = 'useGlobal'
         self.oldCrs = 'EPSG:4326'
 
+        self.date_time_format_short = 'yyyy/MM/dd HH:mm'  # '17/6 23:01'
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -365,7 +367,7 @@ class JRodos:
         # Create the dialog (after translation) and keep reference
         self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
         # connect the change of the project dropdown to a refresh of the data path
-        self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
+        self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
         self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_data_item_filter_dialog)
 
@@ -392,6 +394,7 @@ class JRodos:
         self.measurements_dlg.cb_a4.clicked.connect(self.cb_a4_clicked)
         self.measurements_dlg.cb_a5.clicked.connect(self.cb_a5_clicked)
         self.measurements_dlg.cb_unknown.clicked.connect(self.cb_unknown_clicked)
+        self.filter_dlg.le_item_filter.setPlaceholderText(self.tr('Filter project list'))
 
         self.measurements_dlg.btn_all_combis.clicked.connect(lambda: self.quantities_substances_set_all(True))
         self.measurements_dlg.btn_no_combis.clicked.connect(lambda: self.quantities_substances_set_all(False))
@@ -737,6 +740,13 @@ class JRodos:
                         break
                 project_id = '{}'.format(project['projectId'])
                 project_name = project['name']
+                user_name = project['username']
+                description = project['description']
+                datetime_created = project['dateTimeCreated']  # isotimestring
+                if QDateTime.fromString(datetime_created, Qt.ISODateWithMs).isValid():
+                    datetime_created = QDateTime.fromString(datetime_created, Qt.ISODateWithMs).toString(self.date_time_format_short)
+                else:
+                    'no datetime_created?'
                 # we want the dropdown te be sorted so the last models are on top
                 # using a QSortFilterProxyModel becomes too much a hassle because we need the model on some places
                 # so we do it via a temporary array sort here...
@@ -744,32 +754,40 @@ class JRodos:
                 # so we format all integer id's as zero padded 8 length numbers
                 rows.append([
                     QStandardItem(project_id),                                         # self.QMODEL_ID_IDX = 0
-                    QStandardItem(project_name),                                       # self.QMODEL_NAME_IDX = 1
-                    QStandardItem(project_id + ' - ' + project_name + ' - ' + link),   # self.QMODEL_DESCRIPTION_IDX = 2
+                    QStandardItem(project_name),                                          # self.QMODEL_NAME_IDX = 1
+                    QStandardItem(project_id + ' - ' + datetime_created + ' - ' + user_name + ' - ' + project_name + ' - ' + description),   # self.QMODEL_DESCRIPTION_IDX = 2
                     QStandardItem(link),                                               # self.QMODEL_DATA_IDX = 3
-                    QStandardItem('{0:08d}'.format(int(project_id)))                   # self.QMODEL_SEARCH_IDX = 4
+                    QStandardItem('{0:08d}'.format(int(project_id)) + f' {project_name} {user_name} {description}')            # self.QMODEL_SEARCH_IDX = 4
                 ])
             sorted_rows = sorted(rows, key=lambda x: x[self.QMODEL_SEARCH_IDX], reverse=True)
             for row in sorted_rows:
                 self.projects_model.appendRow(row)
 
             # disconnect the change of the project dropdown to be able to do a refresh
-            self.jrodosmodel_dlg.combo_project.currentIndexChanged.disconnect(self.project_selected)
-            self.jrodosmodel_dlg.combo_project.setModel(self.projects_model)
-            self.jrodosmodel_dlg.combo_project.setModelColumn(self.QMODEL_DESCRIPTION_IDX)  # we show the description
+            self.jrodosmodel_dlg.tbl_projects.clicked.disconnect(self.project_selected)
+            self.jrodosmodel_dlg.set_model(self.projects_model)
             # connect the change of the project dropdown to a refresh of the data path
-            self.jrodosmodel_dlg.combo_project.currentIndexChanged.connect(self.project_selected)
-            # get the last used project from the settings
-            last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
-            items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
-            self.jrodosmodel_dlg.combo_project.setCurrentIndex(-1)  # SET -1 item (to be sure we fire events later)
-            if len(items) > 0:
-                self.jrodosmodel_dlg.combo_project.setCurrentIndex(items[0].row())  # take first from result
-            else:
-                self.jrodosmodel_dlg.combo_project.setCurrentIndex(0)  # SET first item (to be sure we fire events)
+            self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)
+            jrodos_last_project_filter = Utils.get_settings_value('jrodos_last_project_filter', '')
+            self.jrodosmodel_dlg.le_project_filter.setText(jrodos_last_project_filter)
 
-    def project_selected(self, projects_model_idx):
-        if projects_model_idx < 0:
+            # get the last used project from the settings...
+            # not sure if we want this: I think it is better to just show the last filtered list
+            # and user can click on the right project (instead of doing this automagically)
+
+            # last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
+            # items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
+            # if len(items) > 0:
+            #     # we found a 'last_model_project', remove the search string, as it could make the selected one invisible?
+            #     self.jrodosmodel_dlg.le_project_filter.setText('')
+            #     self.jrodosmodel_dlg.tbl_projects.selectRow(items[0].row())
+            #     # the index comes from the real projects model, map to proxy model
+            #     idx = self.jrodosmodel_dlg.proxy_model.mapFromSource(items[0].index())
+            #     self.project_selected(idx)
+            #     self.jrodosmodel_dlg.tbl_projects.scrollTo(idx)
+
+    def project_selected(self, model_idx):
+        if not model_idx.isValid():
             # NO project selected, do not use the index to set the other combo's
             return
         # temporary text in the datapath combo
@@ -778,8 +796,9 @@ class JRodos:
         self.jrodos_project_data = None  # ? thorough cleanup?
         self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
-        url = self.projects_model.item(projects_model_idx, self.QMODEL_DATA_IDX).text()
-        # self.msg(None, "{} {}".format(projects_model_idx, url))
+        idx = self.jrodosmodel_dlg.proxy_model.mapToSource(model_idx)
+        url = self.projects_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
+        log.debug(f'Selected: {url}')
         config = JRodosProjectConfig()
         config.url = url
         datapaths_provider = JRodosProjectProvider(config)
@@ -1030,11 +1049,13 @@ class JRodos:
             jrodos_output_config.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
             # selected project + save the project id (model col 1) to QSettings
             # +"'&amp;model='EMERSIM'"
-            jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_NAME_IDX).text() + "'"
+            current_project_idx = self.jrodosmodel_dlg.proxy_model.mapToSource(self.jrodosmodel_dlg.tbl_projects.currentIndex())
+            jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(current_project_idx.row(), self.QMODEL_NAME_IDX).text() + "'"
             jrodos_output_config.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
 
             # for storing in settings we do not use the non unique name, but the ID of the project
-            last_used_project = self.projects_model.item(self.jrodosmodel_dlg.combo_project.currentIndex(), self.QMODEL_ID_IDX).text()
+            last_used_project = self.projects_model.item(current_project_idx.row(), self.QMODEL_ID_IDX).text()
+            log.debug(f'Storing {last_used_project} as "jrodos_last_model_project"')
             Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
             task_index = self.jrodosmodel_dlg.combo_task.currentIndex()

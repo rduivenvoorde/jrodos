@@ -23,10 +23,13 @@
 
 import os
 
-#from extended_combo import ExtendedCombo
-
-from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt.QtCore import Qt, QSortFilterProxyModel
+from qgis.PyQt.QtWidgets import QDialog, QAbstractItemView
 from qgis.PyQt import uic
+from ..utils import Utils
+
+from .. constants import QMODEL_ID_IDX, QMODEL_NAME_IDX, QMODEL_DESCRIPTION_IDX, QMODEL_DATA_IDX, QMODEL_SEARCH_IDX
+
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'jrodos_dialog_base.ui'))
@@ -42,16 +45,36 @@ class JRodosDialog(QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+        self.proxy_model = None
 
-        # Replace the default ComboBox's with our better ExtendedCombo widget
-#        self.combo_project.close()  # this apparently also removes the widget??
-#        self.combo_project = ExtendedCombo()
-#        self.gridLayout.addWidget(self.combo_project, 0, 1, 1, 5) # row, col, #rows, #cols
+        self.tbl_projects.setSelectionBehavior(self.tbl_projects.SelectRows)
+        self.le_project_filter.textChanged.connect(self.filter_projects)
 
-        # self.combo_task.close()  # this apparently also removes the widget??
-        # self.combo_task = ExtendedCombo()
-        # self.gridLayout.addWidget(self.combo_task, 1, 1, 1, 4) # row, col, #rows, #cols
 
-#        self.combo_path.close()  # this apparently also removes the widget??
-#        self.combo_path = ExtendedCombo()
-#        self.gridLayout.addWidget(self.combo_path, 2, 1, 1, 4) # row, col, #rows, #cols
+    def filter_projects(self, string):
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxy_model.setFilterFixedString(string)
+        # store the filter/search string so upon showing the dialog it will show a filtered project list again
+        Utils.set_settings_value("jrodos_last_project_filter", string)
+
+    def set_model(self, item_model=None):
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(item_model)
+
+        self.proxy_model.setFilterKeyColumn(QMODEL_SEARCH_IDX)
+        self.tbl_projects.setModel(self.proxy_model)
+        self.tbl_projects.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+        item_model.setHeaderData(QMODEL_NAME_IDX, Qt.Horizontal, "Name")
+        item_model.setHeaderData(QMODEL_DESCRIPTION_IDX, Qt.Horizontal, "Description")
+        item_model.setHeaderData(QMODEL_SEARCH_IDX, Qt.Horizontal, "Search")
+
+        self.tbl_projects.verticalHeader().setVisible(False)
+
+        self.tbl_projects.setColumnHidden(QMODEL_ID_IDX, True)
+        self.tbl_projects.setColumnHidden(QMODEL_DATA_IDX, True)
+        self.tbl_projects.setColumnHidden(QMODEL_SEARCH_IDX, True)
+
+        self.tbl_projects.setColumnWidth(QMODEL_NAME_IDX, 150)  # set name to 300px (there are some huge layernames)
+        #self.tbl_projects.setColumnWidth(QMODEL_DESCRIPTION_IDX, 600)
+        self.tbl_projects.horizontalHeader().setStretchLastSection(True)

@@ -763,13 +763,17 @@ class JRodos:
             for row in sorted_rows:
                 self.projects_model.appendRow(row)
 
-            # disconnect the change of the project dropdown to be able to do a refresh
-            self.jrodosmodel_dlg.tbl_projects.clicked.disconnect(self.project_selected)
+            # disconnect the change of the project click to be able to do a refresh
+            # it IS possible that there was nothing connected
+            # try:
+            #     self.jrodosmodel_dlg.tbl_projects.clicked.disconnect(self.project_selected)
+            # except:
+            #     pass
             self.jrodosmodel_dlg.set_model(self.projects_model)
             # connect the change of the project dropdown to a refresh of the data path
-            self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)
             jrodos_last_project_filter = Utils.get_settings_value('jrodos_last_project_filter', '')
             self.jrodosmodel_dlg.le_project_filter.setText(jrodos_last_project_filter)
+            self.jrodosmodel_dlg.filter_projects(jrodos_last_project_filter)
 
             # get the last used project from the settings...
             # not sure if we want this: I think it is better to just show the last filtered list

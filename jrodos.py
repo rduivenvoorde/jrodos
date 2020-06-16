@@ -1337,6 +1337,7 @@ class JRodos:
         self.curves = {}
         first = True
         selected_feature = None
+        handled_devices = []
         for fid in selected_features_ids:
             features = self.measurements_layer.getFeatures(QgsFeatureRequest(fid))
             for selected_feature in features:
@@ -1350,6 +1351,11 @@ class JRodos:
                 if device is None or device == '' or device == 'NULL':
                     log.debug('Feature does not contain a device(id), so NOT shown in Time Graph')
                 else:
+                    if selected_feature['device'] in handled_devices:
+                        # ok handled already, go on...
+                        continue
+                    handled_devices.append(selected_feature['device'])
+
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
                     # we can only create graphs from ONE DEVICE if UNIT and QUANTITY are the same, hence the filter below:

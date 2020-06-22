@@ -1953,12 +1953,13 @@ class JRodos:
                         info_string = json.loads(feature['Info'])
                     if 'fields' in info_string:
                         for info_field in info_string['fields']:
-                            if 'mnemonic' in field:
+                            if 'mnemonic' in info_field:
                                 field_string += info_field['mnemonic'].title() + ': ' + info_field['value'] + '<br/>'
-                            elif 'name' in field:
+                            elif 'name' in info_field:
                                 field_string += info_field['name'].title() + ': ' + info_field['value'] + '<br/>'
-                except Exception:
-                    field_string += "Failed to parse: " + feature['info']
+                except Exception as e:
+                    field_string += "Failed to parse the 'info'-json field <br/>"
+                    log.error('Tooltip function; Unable to parse this json: {}\nException: {}'.format(feature['info'], e))
         return field_string + '</div>'
 
 

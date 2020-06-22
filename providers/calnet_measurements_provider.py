@@ -1,5 +1,5 @@
 from .provider_base import ProviderConfig, ProviderBase, ProviderResult
-from qgis.PyQt.QtCore import QUrl,QUrlQuery
+from qgis.PyQt.QtCore import QUrl, QUrlQuery, QDateTime
 from qgis.PyQt.QtNetwork import QNetworkRequest
 from functools import partial
 import os
@@ -53,6 +53,11 @@ class CalnetMeasurementsProvider(ProviderBase):
         # runner number for the file numbers
         self.file_count = 1
 
+        # TOTAL time of (paging) requests
+        self.time_total = 0
+        # time of one page / getdata
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
         # create a QUrl object to use with query parameters
         self.request = QUrl(self.config.url)
         query = QUrlQuery()
@@ -62,7 +67,6 @@ class CalnetMeasurementsProvider(ProviderBase):
         query.addQueryItem('request', 'GetFeature')
         # pity, below not working :-( so we have to check ourselves by counting
         # self.request.addQueryItem('resultType', 'hits')
-        query.addQueryItem('startIndex', str(self.total_count))
         # the actual cql filter, something like:
         # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
         cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
@@ -74,17 +78,19 @@ class CalnetMeasurementsProvider(ProviderBase):
             projectid=self.config.projectid
         )
         cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
-
         if len(self.config.lower_bound) > 0:
             cql_filter += " and value > {}".format(self.config.lower_bound)
         if len(self.config.upper_bound) > 0:
             cql_filter += " and value < {}".format(self.config.upper_bound)
-
         query.addQueryItem('CQL_FILTER', cql_filter)
+
+        # putting these last so it is clearly visible in logs we are 'paging'
+        query.addQueryItem('count', f'{self.config.page_size}')
+        query.addQueryItem('startIndex', str(self.total_count))
         self.request.setQuery(query)
 
     def _data_retrieved(self, reply):
-        log.debug('CalnetMeasurementsProvider, data retrieved from: {}'.format(self.request.url()))
+        #log.debug('CalnetMeasurementsProvider, data retrieved from: {}'.format(self.request.url()))
         result = ProviderResult()
         if reply.error():
             result.set_error(reply.error(), reply.url().toString(), 'Calnet measurements provider')
@@ -95,7 +101,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             return
         else:
             filename = self.config.output_dir + '/data' + str(self.file_count) + '.gml'
-            log.debug("Planning to save to: {}".format(filename))
+            log.debug("Saving to: {}".format(filename))
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
 
                 # first read 1500 chars to check some stuff, like the 'numberReturned' attribute or an 'ExceptionText' element
@@ -120,7 +126,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                 else:
                     # if all OK we should have a page count:
                     # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
-                    log.debug('First 1500 chars in result: {}'.format(first1500chars_str))
+                    #log.debug('First 1500 chars in result: {}'.format(first1500chars_str))
                     page_count = re.findall('numberReturned="([0-9.]+)"', first1500chars_str)
                     self.page_count = int(page_count[0])
                     self.total_count += self.page_count
@@ -128,7 +134,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                 # now the rest
                 f.write(reply.readAll())
 
-            # note: if copying with shutil.copy2 or shutil.copy, QGIS only reads gml when you touch gfs file???
+            # NOTE: if copying with shutil.copy2 or shutil.copy, QGIS only reads gml when you touch gfs file (see below!!!
             shutil.copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'schemas', 'measurements.gfs'),
                             os.path.join(self.config.output_dir, 'data' + str(self.file_count) + '.gfs'))
             # IMPORTANT !!!
@@ -140,25 +146,32 @@ class CalnetMeasurementsProvider(ProviderBase):
             # print "self.page_count %s" % self.page_count
             # print "self.total_count: %s" % self.total_count
 
-            log.debug('Ready saving measurement features, page-size: {}, page-count: {}, total-count: {}, start {} / end {}'.format(self.page_size, self.page_count, self.total_count, self.config.start_datetime, self.config.end_datetime))
+            log.debug('Received {} measurements in {} secs, page-size: {}, total count: {}'.format(
+                self.page_count, (QDateTime.currentMSecsSinceEpoch()-self.time)/1000, self.page_size, self.total_count))
 
             if self.total_count % self.page_size == 0 and self.page_count > 0:
                 # silly Qt way to update one query parameter
-                self.request.removeQueryItem('startIndex')
-                self.request.addQueryItem('startIndex', str(self.total_count))
+                query = QUrlQuery(self.request.query())
+                query.removeQueryItem('startIndex')
+                query.addQueryItem('startIndex', str(self.total_count))
+                self.request.setQuery(query)
                 self.file_count += 1
                 self.get_data()
             else:
-                log.debug('Finishing {}-minute data measurements retrieval: {} measurements received...'.format(int(self.config.endminusstart)/60 ,self.total_count))
+                now = QDateTime.currentMSecsSinceEpoch()
+                log.debug('Finished All measurements. A total of {} measurements received, in {} seconds'.format(self.total_count, (now-self.time_total)/1000))
                 result.set_data({'result': 'OK', 'output_dir': self.config.output_dir, 'count': self.total_count}, reply.url().toString())
-                # we nee to wait untill all pages are there before to emit the result; so: INSIDE de loop
+                # we nee to wait until all pages are there before to emit the result; so: INSIDE de loop
                 self.ready = True
                 self.finished.emit(result)
                 reply.deleteLater()  # else timeouts on Windows
 
 
     def get_data(self):
-        log.debug('Getting measurements {}-minute data, firing WFS request: GET {}'.format(int(self.config.endminusstart)/60, self.request))
+        self.time = QDateTime.currentMSecsSinceEpoch()
+        if self.time_total == 0:
+            self.time_total = QDateTime.currentMSecsSinceEpoch()
+        log.debug('Get (more) measurements... firing WFS request: GET {}'.format(self.request.url()))
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
         with open(config_file, 'wb') as f:

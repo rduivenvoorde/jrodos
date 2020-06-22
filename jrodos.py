@@ -516,9 +516,10 @@ class JRodos:
             if self.measurements_layer is None and self.jrodos_output_settings is None:
                 self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('JRodos plugin layers'))
             # only show dialogs if the item is enabled in settings
+            dlg_Ok = True
             if self.settings.value('jrodos_enabled'):
-                self.show_jrodos_output_dialog()
-            if self.settings.value('measurements_enabled') and self.jrodosmodel_dlg.skipped:
+                dlg_Ok = self.show_jrodos_output_dialog()  # can be OK (1), Cancel (0) or Skipped
+            if (dlg_Ok or self.jrodosmodel_dlg.skipped) and self.settings.value('measurements_enabled'):
                 finished = False
                 while not finished:
                     finished = self.show_measurements_dialog()
@@ -1021,19 +1022,21 @@ class JRodos:
             self.jrodos_output_settings = jrodos_output_config
             # TODO: (re)start the provider?
             self.msg(None, "REstarting provider?")
-            return
+            return False
 
         # WPS / MODEL PART
         if self.jrodos_output_settings is not None:
             self.msg(None, self.tr("Still busy retrieving Model data via WPS, please try later..."))
-            return
+            return False
 
         self.jrodosmodel_dlg.show()
 
         # try to get fresh jrodos projects, AND put 'remembered' values in the dialog
         self.get_jrodos_projects()
 
-        if self.jrodosmodel_dlg.exec_():  # OK was pressed
+        ret = self.jrodosmodel_dlg.exec()  # OK was pressed = 1, Cancel = 0
+
+        if ret:
             # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
             # Else there was a problem retrieving the project informaton
             if not hasattr(self, 'task_model') or self.task_model is None:
@@ -1101,6 +1104,7 @@ class JRodos:
             jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
             self.jrodos_output_settings = jrodos_output_config
             self.start_jrodos_model_output_provider()
+        return ret  # OK was pressed = 1, Cancel = 0
 
     def start_jrodos_model_output_provider(self):
         self.jrodos_output_progress_bar.setMaximum(0)  # run progress
@@ -1209,9 +1213,9 @@ class JRodos:
                     if not data[1] in substances:
                         substances.append(data[1])
 
-            log.debug(f'Length quantities: {len(quantities)}')
-            log.debug(f'Length substances: {len(substances)}')
-            log.debug(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
+            #log.debug(f'Length quantities: {len(quantities)}')
+            #log.debug(f'Length substances: {len(substances)}')
+            #log.debug(f'Length quantity_substance_combis: {len(quantity_substance_combis)}')
 
             if len(quantity_substance_combis) == 0:
                 # mmm, nothing selected... show message
@@ -1220,7 +1224,7 @@ class JRodos:
 
             # dumping/pickling selected quantity/substance combi's to disk
             with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'wb') as f:
-                log.debug("Dumping to disk:\n".format(quantity_substance_combis))
+                #log.debug("Dumping to disk:\n".format(quantity_substance_combis))
                 pickle.dump(quantity_substance_combis, f)
 
             start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
@@ -1281,7 +1285,7 @@ class JRodos:
         self.measurements_provider.get_data()
 
     def finish_measurements_provider(self, result):
-        log.debug(result)
+        #log.debug(result.data)
         self.measurements_progress_bar.setMaximum(100)
         self.measurements_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents()  # to be sure we have the loading msg
@@ -1297,7 +1301,9 @@ class JRodos:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
+                now = QDateTime.currentMSecsSinceEpoch()
                 self.load_measurements(result.data['output_dir'], 'measurements_rotation.qml')
+                log.debug('Loading gml data file(s) took {} secs'.format((QDateTime.currentMSecsSinceEpoch()-now)/1000))
             else:
                 self.msg(None, self.tr("No data using this filters?\n\n{}\n{}").format(self.measurements_settings, result.data))
         self.measurements_settings = None
@@ -1719,7 +1725,7 @@ class JRodos:
             # set 'discrete checkbox' to True to be sure there is something to see...
             timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
         else:
-            log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
+            #log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
             timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
         # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
         timemanager.getController().stepForward()
@@ -1743,8 +1749,8 @@ class JRodos:
             start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
             end_time.toString(self.measurements_settings.date_time_format_short)
 
-        log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
-        log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
+        #log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
+        #log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 
         register_layers = False
         if self.measurements_layer is None:
@@ -1850,8 +1856,8 @@ class JRodos:
             if feature_count == 0:
                 self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
                 return
-            else:
-                log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
+            #else:
+            #    log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
             self.measurements_layer.dataProvider().addFeatures(flist)
             self.measurements_layer.updateFields()

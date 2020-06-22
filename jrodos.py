@@ -518,7 +518,7 @@ class JRodos:
             # only show dialogs if the item is enabled in settings
             if self.settings.value('jrodos_enabled'):
                 self.show_jrodos_output_dialog()
-            if self.settings.value('measurements_enabled'):
+            if self.settings.value('measurements_enabled') and self.jrodosmodel_dlg.skipped:
                 finished = False
                 while not finished:
                     finished = self.show_measurements_dialog()
@@ -1034,7 +1034,6 @@ class JRodos:
         self.get_jrodos_projects()
 
         if self.jrodosmodel_dlg.exec_():  # OK was pressed
-
             # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
             # Else there was a problem retrieving the project informaton
             if not hasattr(self, 'task_model') or self.task_model is None:

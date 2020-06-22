@@ -24,7 +24,7 @@
 import os
 
 from qgis.PyQt.QtCore import Qt, QSortFilterProxyModel
-from qgis.PyQt.QtWidgets import QDialog, QAbstractItemView
+from qgis.PyQt.QtWidgets import QDialog, QAbstractItemView, QPushButton, QDialogButtonBox
 from qgis.PyQt import uic
 from ..utils import Utils
 
@@ -50,6 +50,17 @@ class JRodosDialog(QDialog, FORM_CLASS):
         self.tbl_projects.setSelectionBehavior(self.tbl_projects.SelectRows)
         self.le_project_filter.textChanged.connect(self.filter_projects)
 
+        # Adding a SKIP button which sets a propertye 'self.skipped' when clicked
+        self.skipped = False
+        skip_button = QPushButton('Skip')
+        skip_button.setCheckable(False)
+        skip_button.setAutoDefault(False)
+        skip_button.clicked.connect(self.set_skipped)
+
+        self.button_box.addButton(skip_button, QDialogButtonBox.RejectRole)
+
+    def set_skipped(self):
+        self.skipped = True
 
     def filter_projects(self, string):
         self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
@@ -58,6 +69,7 @@ class JRodosDialog(QDialog, FORM_CLASS):
         Utils.set_settings_value("jrodos_last_project_filter", string)
 
     def set_model(self, item_model=None):
+        self.skipped = False  # resetting
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(item_model)
 

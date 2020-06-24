@@ -592,7 +592,7 @@ class JRodos:
 
         self.measurements_dlg.stopProgressBar()
 
-        if hasattr(result, "error") and result.error:
+        if hasattr(result, "error") and result.error():
             self.msg(None,
                      self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")

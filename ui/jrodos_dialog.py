@@ -52,12 +52,12 @@ class JRodosDialog(QDialog, FORM_CLASS):
 
         # Adding a SKIP button which sets a propertye 'self.skipped' when clicked
         self.skipped = False
-        skip_button = QPushButton('Skip')
-        skip_button.setCheckable(False)
-        skip_button.setAutoDefault(False)
-        skip_button.clicked.connect(self.set_skipped)
+        self.skip_button = QPushButton('Skip')
+        self.skip_button.setCheckable(False)
+        self.skip_button.setAutoDefault(False)
+        self.skip_button.clicked.connect(self.set_skipped)
 
-        self.button_box.addButton(skip_button, QDialogButtonBox.RejectRole)
+        self.button_box.addButton(self.skip_button, QDialogButtonBox.RejectRole)
 
     def set_skipped(self):
         self.skipped = True

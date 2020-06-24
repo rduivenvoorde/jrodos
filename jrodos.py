@@ -484,41 +484,65 @@ class JRodos:
 
     def run(self):
 
-        if 'RIVM_PluginConfigManager' not in plugins:
-            QMessageBox.warning(self.iface.mainWindow(),
-                                self.MSG_TITLE,
-                                self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                QMessageBox.Ok,
-                                QMessageBox.Ok)
-            return
-
-        if 'timemanager' not in plugins:
-            QMessageBox.warning(self.iface.mainWindow(),
-                                self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                QMessageBox.Ok,
-                                QMessageBox.Ok)
-
-            return
-        # Because we check for timemanager, not earlier then now
-        # we import timemanager modules here (else module import error)
-        from timemanager.layers.layer_settings import LayerSettings
-        from timemanager.layers.timevectorlayer import TimeVectorLayer
-        from timemanager.raster.wmstlayer import WMSTRasterLayer
-
-        self.setProjectionsBehavior()
-
         try:
+
+            if 'RIVM_PluginConfigManager' not in plugins:
+                QMessageBox.warning(self.iface.mainWindow(),
+                                    self.MSG_TITLE,
+                                    self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                    QMessageBox.Ok,
+                                    QMessageBox.Ok)
+                return
+
+            if 'timemanager' not in plugins:
+                QMessageBox.warning(self.iface.mainWindow(),
+                                    self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                    QMessageBox.Ok,
+                                    QMessageBox.Ok)
+
+                return
+            # Because we check for timemanager, not earlier then now
+            # we import timemanager modules here (else module import error)
+            from timemanager.layers.layer_settings import LayerSettings
+            from timemanager.layers.timevectorlayer import TimeVectorLayer
+            from timemanager.raster.wmstlayer import WMSTRasterLayer
+
+            self.setProjectionsBehavior()
+            
             # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
             if self.measurements_layer is None and self.jrodos_output_settings is None:
                 group_name = self.tr('JRodos plugin layers')
                 # BUT only if there isn't already such a group:
                 if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
                     self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
+                    
             # only show dialogs if the item is enabled in settings
-            dlg_Ok = True
+            # but show settings in case both are disabled
+            if not self.settings.value('jrodos_enabled') and not self.settings.value('measurements_enabled'):
+                self.msg(None, self.tr("Both dialogs are disabled in your settings.\n Either select 'JRodos Geoserver WPS' or 'Measurements WFS' in the following settings dialog."))
+                self.show_settings()
+
             if self.settings.value('jrodos_enabled'):
-                dlg_Ok = self.show_jrodos_output_dialog()  # can be OK (1), Cancel (0) or Skipped
-            if (dlg_Ok or self.jrodosmodel_dlg.skipped) and self.settings.value('measurements_enabled'):
+
+                if self.jrodos_output_settings is not None:  # flag to tell us we are busy
+                    self.msg(None, self.tr("Still busy retrieving Model data via WPS, please try later...\nOr disable/enable plugin if you want to abort that run."))
+                    return False
+
+                # try to get fresh jrodos projects, AND put 'remembered' values in the dialog
+                self.get_jrodos_projects()
+
+                # disable 'Skip' button if Measurements WFS is disabled
+                self.jrodosmodel_dlg.skip_button.setEnabled(self.settings.value('measurements_enabled'))
+                # show dialog for input, untill OK is clicked
+                while self.jrodosmodel_dlg.exec():  # OK was pressed = 1, Cancel = 0
+                    self.handle_jrodos_output_dialog()
+
+                # if we are here, we either succesfully handled jrodos model OR we skipped or cancelled
+                # if skip, go on, else Cancel: return
+                if not self.jrodosmodel_dlg.skipped:
+                    return
+
+            if self.settings.value('measurements_enabled'):
                 finished = False
                 while not finished:
                     finished = self.show_measurements_dialog()
@@ -1015,95 +1039,74 @@ class JRodos:
             parent = self.iface.mainWindow()
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
-    def show_jrodos_output_dialog(self, jrodos_output_config=None):
+    def handle_jrodos_output_dialog(self):
+        # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
+        # Else there was a problem retrieving the project informaton
+        if not hasattr(self, 'task_model') or self.task_model is None:
+            self.msg(None, self.tr(
+              "There is a problem with this project (no tasks),\nquitting retrieving this model's parameters... "))
+            # let's remove this project from the user settings
+            Utils.set_settings_value("jrodos_last_model_project", "")
+            return
 
-        if jrodos_output_config is not None:
-            self.jrodos_output_settings = jrodos_output_config
-            # TODO: (re)start the provider?
-            self.msg(None, "REstarting provider?")
-            return False
+        jrodos_output_config = JRodosModelOutputConfig()
+        jrodos_output_config.wps_id = 'gs:JRodosGeopkgWPS'  # defaulting to GeoPackage
+        if self.jrodosmodel_dlg.rb_shp_output.isChecked():
+            jrodos_output_config.wps_id = 'gs:JRodosWPS'
+        jrodos_output_config.url = self.settings.value('jrodos_wps_url')
+        # FORMAT is fixed to zip with shapes or zip with geopackage
+        jrodos_output_config.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
+        # selected project + save the project id (model col 1) to QSettings
+        # +"'&amp;model='EMERSIM'"
+        current_project_idx = self.jrodosmodel_dlg.proxy_model.mapToSource(self.jrodosmodel_dlg.tbl_projects.currentIndex())
+        jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(current_project_idx.row(), self.QMODEL_NAME_IDX).text() + "'"
+        jrodos_output_config.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
 
-        # WPS / MODEL PART
-        if self.jrodos_output_settings is not None:
-            self.msg(None, self.tr("Still busy retrieving Model data via WPS, please try later..."))
-            return False
+        # for storing in settings we do not use the non unique name, but the ID of the project
+        last_used_project = self.projects_model.item(current_project_idx.row(), self.QMODEL_ID_IDX).text()
+        log.debug(f'Storing {last_used_project} as "jrodos_last_model_project"')
+        Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
-        self.jrodosmodel_dlg.show()
+        task_index = self.jrodosmodel_dlg.combo_task.currentIndex()
+        if task_index < 0:  # on Windows I've seen that apparently there was NO selected index...
+            task_index = 0
+        datapath_model = self.jrodos_project_data[task_index]  # QStandardItemModel
+        combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
+        current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
+        if current_path_index < 0:
+            self.msg(None, self.tr("Mandatory 'Dataitem' input is missing...\nPlease select one from the dropdown.\nOr fill the dropdown via the 'See All' button.\nIf that list is empty, then this project is not ready yet or not saved...\nPlease try another project or make sure JRodos is finished."))
+            return
+        proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
+        idx = combopath_model.mapToSource(proxy_idx)
+        last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
 
-        # try to get fresh jrodos projects, AND put 'remembered' values in the dialog
-        self.get_jrodos_projects()
+        units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX)  # we did put the units in description..
+        if units is not None:
+            jrodos_output_config.units = units.text()
 
-        ret = self.jrodosmodel_dlg.exec()  # OK was pressed = 1, Cancel = 0
+        # NOTE that the jrodos_output_settings.jrodos_path has single quotes around it's value!! in the settings:
+        # like: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
+        jrodos_output_config.jrodos_path = "path='{}'".format(last_used_datapath)
+        Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
+        last_used_task = self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_NAME_IDX).text()
+        Utils.set_settings_value("jrodos_last_task", last_used_task)
 
-        if ret:
-            # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
-            # Else there was a problem retrieving the project informaton
-            if not hasattr(self, 'task_model') or self.task_model is None:
-                self.msg(None, self.tr(
-                  "There is a problem with this project (no tasks),\nquitting retrieving this model's parameters... "))
-                # let's remove this project from the user settings
-                Utils.set_settings_value("jrodos_last_model_project", "")
-                return
-
-            jrodos_output_config = JRodosModelOutputConfig()
-            jrodos_output_config.wps_id = 'gs:JRodosGeopkgWPS'  # defaulting to GeoPackage
-            if self.jrodosmodel_dlg.rb_shp_output.isChecked():
-                jrodos_output_config.wps_id = 'gs:JRodosWPS'
-            jrodos_output_config.url = self.settings.value('jrodos_wps_url')
-            # FORMAT is fixed to zip with shapes or zip with geopackage
-            jrodos_output_config.jrodos_format = "application/zip"  # format = "application/zip" "text/xml; subtype=wfs-collection/1.0"
-            # selected project + save the project id (model col 1) to QSettings
-            # +"'&amp;model='EMERSIM'"
-            current_project_idx = self.jrodosmodel_dlg.proxy_model.mapToSource(self.jrodosmodel_dlg.tbl_projects.currentIndex())
-            jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(current_project_idx.row(), self.QMODEL_NAME_IDX).text() + "'"
-            jrodos_output_config.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
-
-            # for storing in settings we do not use the non unique name, but the ID of the project
-            last_used_project = self.projects_model.item(current_project_idx.row(), self.QMODEL_ID_IDX).text()
-            log.debug(f'Storing {last_used_project} as "jrodos_last_model_project"')
-            Utils.set_settings_value("jrodos_last_model_project", last_used_project)
-
-            task_index = self.jrodosmodel_dlg.combo_task.currentIndex()
-            if task_index < 0:  # on Windows I've seen that apparently there was NO selected index...
-                task_index = 0
-            datapath_model = self.jrodos_project_data[task_index]  # QStandardItemModel
-            combopath_model = self.jrodosmodel_dlg.combo_path.model()  # QSortFilterProxyModel
-            current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
-            if current_path_index < 0:
-                self.msg(None, self.tr("Mandatory 'Dataitem' selection missing... Please select one. "))
-                return
-            proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
-            idx = combopath_model.mapToSource(proxy_idx)
-            last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
-
-            units = datapath_model.item(idx.row(), self.QMODEL_DESCRIPTION_IDX)  # we did put the units in description..
-            if units is not None:
-                jrodos_output_config.units = units.text()
-
-            # NOTE that the jrodos_output_settings.jrodos_path has single quotes around it's value!! in the settings:
-            # like: 'Model data=;=Output=;=Prognostic Results=;=Potential doses=;=Ground gamma dose=;=effective'
-            jrodos_output_config.jrodos_path = "path='{}'".format(last_used_datapath)
-            Utils.set_settings_value("jrodos_last_model_datapath", last_used_datapath)
-            last_used_task = self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_NAME_IDX).text()
-            Utils.set_settings_value("jrodos_last_task", last_used_task)
-
-            # model time / duration of prognosis is shown in hours, but retrieved in minutes, and in JRodos in hours!!
-            # modeltime (seconds!)
-            model_time_secs = int(self.jrodosmodel_dlg.le_model_length.text())
-            jrodos_output_config.jrodos_model_time = model_time_secs / 60  # jrodos_model_time is in minutes!!
-            # model Timestep in the dialog is shown in minutes, BUT retrieved in seconds, and in JRodos in minutes!!
-            # steptime (seconds!)
-            model_step_secs = int(self.jrodosmodel_dlg.le_steps.text())
-            jrodos_output_config.jrodos_model_step = model_step_secs
-            # vertical is fixed to 0 for now (we do not 3D models)
-            jrodos_output_config.jrodos_verticals = 0  # z / layers
-            # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
-            jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
-            # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
-            jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
-            self.jrodos_output_settings = jrodos_output_config
-            self.start_jrodos_model_output_provider()
-        return ret  # OK was pressed = 1, Cancel = 0
+        # model time / duration of prognosis is shown in hours, but retrieved in minutes, and in JRodos in hours!!
+        # modeltime (seconds!)
+        model_time_secs = int(self.jrodosmodel_dlg.le_model_length.text())
+        jrodos_output_config.jrodos_model_time = model_time_secs / 60  # jrodos_model_time is in minutes!!
+        # model Timestep in the dialog is shown in minutes, BUT retrieved in seconds, and in JRodos in minutes!!
+        # steptime (seconds!)
+        model_step_secs = int(self.jrodosmodel_dlg.le_steps.text())
+        jrodos_output_config.jrodos_model_step = model_step_secs
+        # vertical is fixed to 0 for now (we do not 3D models)
+        jrodos_output_config.jrodos_verticals = 0  # z / layers
+        # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
+        jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+        # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
+        jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
+        self.jrodos_output_settings = jrodos_output_config
+        self.start_jrodos_model_output_provider()
 
     def start_jrodos_model_output_provider(self):
         self.jrodos_output_progress_bar.setMaximum(0)  # run progress

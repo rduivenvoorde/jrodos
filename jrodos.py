@@ -506,15 +506,14 @@ class JRodos:
         from timemanager.raster.wmstlayer import WMSTRasterLayer
 
         self.setProjectionsBehavior()
-        try:
-            # we try to retrieve the quantities and substances just once, but not earlier then a user actually
-            # starts using the plugin (that is call this run)...
-            # if len(self.quantities) == 1 or len(self.substances) == 1:  # meaning we did not retrieve anything back yet
-            #    self.get_quantities_and_substances_combis()  # async call
 
+        try:
             # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
             if self.measurements_layer is None and self.jrodos_output_settings is None:
-                self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, self.tr('JRodos plugin layers'))
+                group_name = self.tr('JRodos plugin layers')
+                # BUT only if there isn't already such a group:
+                if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
+                    self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
             # only show dialogs if the item is enabled in settings
             dlg_Ok = True
             if self.settings.value('jrodos_enabled'):

@@ -65,8 +65,8 @@ class QgisLogHandler(logging.StreamHandler):
 log = logging.getLogger(LOGGER_NAME)
 # checking below is needed, else we add this handler every time the plugin
 # is reloaded (during development), then the msg is emitted several times
-#if not log.hasHandlers():
-log.addHandler(QgisLogHandler(LOGGER_NAME))
+if not log.hasHandlers():
+    log.addHandler(QgisLogHandler(LOGGER_NAME))
 
 # set logging level (NOTSET = no, else: DEBUG or INFO)
 log.setLevel(logging.DEBUG)

@@ -534,12 +534,15 @@ class JRodos:
                 # disable 'Skip' button if Measurements WFS is disabled
                 self.jrodosmodel_dlg.skip_button.setEnabled(self.settings.value('measurements_enabled'))
                 # show dialog for input, untill OK is clicked
+                ok = False
                 while self.jrodosmodel_dlg.exec():  # OK was pressed = 1, Cancel = 0
-                    self.handle_jrodos_output_dialog()
+                    if self.handle_jrodos_output_dialog():  # returns True IF succefully handled, else false
+                        ok = True
+                        break
 
                 # if we are here, we either succesfully handled jrodos model OR we skipped or cancelled
                 # if skip, go on, else Cancel: return
-                if not self.jrodosmodel_dlg.skipped:
+                if not self.jrodosmodel_dlg.skipped and not ok:
                     return
 
             if self.settings.value('measurements_enabled'):
@@ -1040,14 +1043,20 @@ class JRodos:
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
     def handle_jrodos_output_dialog(self):
+        if not self.jrodosmodel_dlg.tbl_projects.currentIndex().isValid():
+            self.msg(None, self.tr(
+              "Did you select one of the projects in the table?\nLooks like nothing was selected... "))
+            # let's remove this project from the user settings
+            Utils.set_settings_value("jrodos_last_model_project", "")
+            return False
         # Get data_item/path from model behind the combo_path dropdown, BUT only if we have a valid task_model.
-        # Else there was a problem retrieving the project informaton
+        # Else there was a problem retrieving the project information
         if not hasattr(self, 'task_model') or self.task_model is None:
             self.msg(None, self.tr(
               "There is a problem with this project (no tasks),\nquitting retrieving this model's parameters... "))
             # let's remove this project from the user settings
             Utils.set_settings_value("jrodos_last_model_project", "")
-            return
+            return False
 
         jrodos_output_config = JRodosModelOutputConfig()
         jrodos_output_config.wps_id = 'gs:JRodosGeopkgWPS'  # defaulting to GeoPackage
@@ -1075,7 +1084,7 @@ class JRodos:
         current_path_index = self.jrodosmodel_dlg.combo_path.currentIndex()
         if current_path_index < 0:
             self.msg(None, self.tr("Mandatory 'Dataitem' input is missing...\nPlease select one from the dropdown.\nOr fill the dropdown via the 'See All' button.\nIf that list is empty, then this project is not ready yet or not saved...\nPlease try another project or make sure JRodos is finished."))
-            return
+            return False
         proxy_idx = combopath_model.index(current_path_index, self.QMODEL_DATA_IDX)
         idx = combopath_model.mapToSource(proxy_idx)
         last_used_datapath = datapath_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
@@ -1107,6 +1116,7 @@ class JRodos:
         jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
         self.jrodos_output_settings = jrodos_output_config
         self.start_jrodos_model_output_provider()
+        return True
 
     def start_jrodos_model_output_provider(self):
         self.jrodos_output_progress_bar.setMaximum(0)  # run progress

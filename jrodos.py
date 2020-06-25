@@ -604,7 +604,7 @@ class JRodos:
             if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
                     user_quantities_substances_from_disk = pickle.load(f)
-            self.measurements_dlg.lbl_retrieving_combis.setText("Please select one or more combi's")
+            self.measurements_dlg.lbl_retrieving_combis.setText(self.tr("Please select one or more combi's"))
             self.quantities_substances_model = QStandardItemModel()
             self.measurements_dlg.tbl_combis.setModel(self.quantities_substances_model)
 
@@ -635,10 +635,10 @@ class JRodos:
             self.measurements_dlg.tbl_combis.setSelectionMode(QTableView.NoSelection)
             self.measurements_dlg.tbl_combis.setEditTriggers(QTableView.NoEditTriggers)  # disable editing of table cells
 
-            self.quantities_substances_model.setHeaderData(self.QMODEL_ID_IDX, Qt.Horizontal, "Quantity")
-            self.quantities_substances_model.setHeaderData(self.QMODEL_NAME_IDX, Qt.Horizontal, "Substance")
-            self.quantities_substances_model.setHeaderData(self.QMODEL_DESCRIPTION_IDX, Qt.Horizontal, "Description")
-            self.quantities_substances_model.setHeaderData(self.QMODEL_SEARCH_IDX, Qt.Horizontal, "Show")
+            self.quantities_substances_model.setHeaderData(self.QMODEL_ID_IDX, Qt.Horizontal, self.tr("Quantity"))
+            self.quantities_substances_model.setHeaderData(self.QMODEL_NAME_IDX, Qt.Horizontal, self.tr("Substance"))
+            self.quantities_substances_model.setHeaderData(self.QMODEL_DESCRIPTION_IDX, Qt.Horizontal, self.tr("Description"))
+            self.quantities_substances_model.setHeaderData(self.QMODEL_SEARCH_IDX, Qt.Horizontal, self.tr("Show"))
 
             self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
             self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
@@ -1298,7 +1298,7 @@ class JRodos:
             self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
         elif result.error():
             self.msg(None, result)
-            self.iface.messageBar().pushMessage("Network problem", f'{result.error_code} see messages', level=Qgis.Critical)
+            self.iface.messageBar().pushMessage(self.tr("Network problem"), self.tr(f'{result.error_code} see messages'), level=Qgis.Critical)
         else:
             # Load the received gml files
             # TODO: determine qml file based on something coming from the settings/result object
@@ -1393,7 +1393,7 @@ class JRodos:
 
                     # for T-GAMMA we always show microSv/h, for other it is quantity dependent
                     quantity = feature['quantity']
-                    if quantity.upper() == 'T-GAMMA' and feature['unit'] in ['NSV/H','USV/H']:
+                    if quantity.upper() == 'T-GAMMA' and feature['unit'] in ['NSV/H', 'USV/H']:
                         unit = 'µSv/h' # 'USV/H' we (apr2020 NOT) keep notation as eurdep data: USV/H == microSv/h
                     else:
                         unit = feature['unit']  # for other

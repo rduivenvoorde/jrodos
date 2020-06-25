@@ -20,7 +20,7 @@
    <item row="6" column="2">
     <widget class="QCheckBox" name="cb_a5">
      <property name="text">
-      <string>A5 ExtRad+</string>
+      <string>A5 External Radiation</string>
      </property>
     </widget>
    </item>
@@ -41,14 +41,14 @@
    <item row="7" column="0">
     <widget class="QCheckBox" name="cb_a2">
      <property name="text">
-      <string>A2 Water+</string>
+      <string>A2 Water Samples</string>
      </property>
     </widget>
    </item>
    <item row="6" column="0">
     <widget class="QCheckBox" name="cb_a1">
      <property name="text">
-      <string>A1 Air+</string>
+      <string>A1 Outdoor Air</string>
      </property>
     </widget>
    </item>
@@ -167,7 +167,7 @@
    <item row="6" column="1">
     <widget class="QCheckBox" name="cb_a3">
      <property name="text">
-      <string>A3 Soil+</string>
+      <string>A3 Soil</string>
      </property>
     </widget>
    </item>
@@ -214,7 +214,7 @@
    <item row="7" column="1">
     <widget class="QCheckBox" name="cb_a4">
      <property name="text">
-      <string>A4 Depo+</string>
+      <string>A4 Deposition</string>
      </property>
     </widget>
    </item>

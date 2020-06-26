@@ -1368,10 +1368,12 @@ class JRodos:
                 if device is None or device == '' or device == 'NULL':
                     log.debug('Feature does not contain a device(id), so NOT shown in Time Graph')
                 else:
-                    if selected_feature['device'] in handled_devices:
+                    # some devices have several sensors/quantities
+                    if selected_feature['device']+quantity+unit in handled_devices:
                         # ok handled already, go on...
+                        #log.debug(f'Skipping: {selected_feature["device"]+quantity+unit}')
                         continue
-                    handled_devices.append(selected_feature['device'])
+                    handled_devices.append(selected_feature['device']+quantity+unit)
 
                     fr = QgsFeatureRequest()
                     fr.disableFilter()
@@ -1385,7 +1387,8 @@ class JRodos:
                         # log.debug(feature['gml_id'])
                         t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
-                        y.append(feature['unitvalue'])
+                        #y.append(feature['unitvalue'])
+                        y.append(feature['value'])
                         # log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['unitvalue'], feature['device'], feature['quantity'], feature['unit']))
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
@@ -1787,7 +1790,7 @@ class JRodos:
                               QgsField("info", QVariant.String),
                               QgsField("device", QVariant.String),
                               QgsField("projectid", QVariant.String),
-                              QgsField("unitvalue", QVariant.Double),
+                              #QgsField("unitvalue", QVariant.Double),
                               ])
             self.measurements_layer.updateFields()
 
@@ -1828,50 +1831,52 @@ class JRodos:
                 return
             else:
                 features = gml_layer.getFeatures()
-                step_count = 0
-                new_unit_msg = True
-                for feature in features:
-                    if features.isClosed():
-                        self.msg(None, 'Iterator CLOSED !!!!')
-                        break
-                    feature_count += 1
-                    step_count += 1
-                    fields = feature.fields()
-                    fields.append(QgsField('unitvalue'))
-                    f = QgsFeature(fields)
-                    if feature.geometry() is not None:
-                        attributes = feature.attributes()
-                        value = float(feature.attribute('value'))
-                        # preferred unit is microSv/h, but the data contains value+unit column
-                        # set all values in column unitvalue in microSv/H
-                        if feature.attribute('unit') == 'USV/H':
-                            # value is in microSv/h all OK
-                            unitvalue = value
-                        elif feature.attribute('unit') == 'NSV/H':
-                            # value is in nanoSv/h, value / 1000
-                            unitvalue = value / 1000
-                        else:
-                            unitvalue = value
-                            if new_unit_msg:
-                                new_unit_msg = False
-                        attributes.append(unitvalue)
-                        f.setAttributes(attributes)
-                        f.setGeometry(feature.geometry())
-                        flist.append(f)
-                        if len(flist) > 1000:
-                            self.measurements_layer.dataProvider().addFeatures(flist)
-                            flist = []
-                    else:
-                        self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
-                        return
 
-            if feature_count == 0:
-                self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
-                return
+                # step_count = 0
+                # new_unit_msg = True
+                # for feature in features:
+                #     if features.isClosed():
+                #         self.msg(None, 'Iterator CLOSED !!!!')
+                #         break
+                #     feature_count += 1
+                #     step_count += 1
+                #     fields = feature.fields()
+                #     fields.append(QgsField('unitvalue'))
+                #     f = QgsFeature(fields)
+                #     if feature.geometry() is not None:
+                #         attributes = feature.attributes()
+                #         value = float(feature.attribute('value'))
+                #         # preferred unit is microSv/h, but the data contains value+unit column
+                #         # set all values in column unitvalue in microSv/H
+                #         if feature.attribute('unit') == 'USV/H':
+                #             # value is in microSv/h all OK
+                #             unitvalue = value
+                #         elif feature.attribute('unit') == 'NSV/H':
+                #             # value is in nanoSv/h, value / 1000
+                #             unitvalue = value / 1000
+                #         else:
+                #             unitvalue = value
+                #             if new_unit_msg:
+                #                 new_unit_msg = False
+                #         attributes.append(unitvalue)
+                #         f.setAttributes(attributes)
+                #         f.setGeometry(feature.geometry())
+                #         flist.append(f)
+                #         if len(flist) > 1000:
+                #             self.measurements_layer.dataProvider().addFeatures(flist)
+                #             flist = []
+                #     else:
+                #         self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
+                #         return
+
+            # if feature_count == 0:
+            #     self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
+            #     return
             #else:
             #    log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
-            self.measurements_layer.dataProvider().addFeatures(flist)
+            #self.measurements_layer.dataProvider().addFeatures(flist)
+            self.measurements_layer.dataProvider().addFeatures(features)
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 

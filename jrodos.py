@@ -1963,10 +1963,27 @@ class JRodos:
         Which will be decoded and also shown as name/value pairs.
         """
         field_string = '<div style="width:300px; font-family: Sans-Serif;font-size: small" >'
+        value = -99999
+        unit = ''
         for field in feature.fields():
             # skip info
             if not field.name() in ('Info', 'info'):
-                field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
+                # field we do not show
+                if field.name().upper() in ('GML_ID'):
+                    pass
+                elif field.name().upper() in ('PROJECTID') and feature[field.name()] in ['-1', -1]:
+                    # do not show projectid if -1
+                    pass
+                elif field.name().upper() in ('VALUE'):
+                    value = feature[field.name()]
+                elif field.name().upper() in ('UNIT'):
+                    unit = feature[field.name()]
+                elif feature[field.name()] == '-': # VALUE = '-' ?  skip it
+                    pass
+                elif 'TIME' in field.name().upper():
+                    field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
+                else:
+                    field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
             else:
                 # try to do the 'info'-field which is a json object
                 try:
@@ -1974,15 +1991,26 @@ class JRodos:
                     if len(info_string) == 0:
                         info_string = json.loads(feature['Info'])
                     if 'fields' in info_string:
+                        v = ''
+                        u = ''
                         for info_field in info_string['fields']:
-                            if 'mnemonic' in info_field:
+                            # if there is not value, ignore
+                            # original_value and original_unit are hanldled separated
+                            if info_field['value'] == '-' or 'original' in info_field:
+                                pass
+                            elif info_field['name'] == 'value_original':
+                                v = info_field['mnemonic'].title() + ': {:.6f}'.format(float(info_field['value']))
+                            elif info_field['name'] == 'unit_original':
+                                u = info_field['value']
+                            elif 'mnemonic' in info_field:
                                 field_string += info_field['mnemonic'].title() + ': ' + info_field['value'] + '<br/>'
                             elif 'name' in info_field:
                                 field_string += info_field['name'].title() + ': ' + info_field['value'] + '<br/>'
-                except Exception as e:
+                    field_string = '{} {}<br> {}'.format(v, u, field_string)
+                except Exception as e2:
                     field_string += "Failed to parse the 'info'-json field <br/>"
-                    log.error('Tooltip function; Unable to parse this json: {}\nException: {}'.format(feature['info'], e))
-        return field_string + '</div>'
+                    log.error('Tooltip function; Unable to parse this json: {}\nException: {}'.format(feature['info'], e2))
+        return 'VALUE: <b>{} {}</b><br/>'.format(value, unit) + field_string + '</div>'
 
 
 class JRodosError(Exception):

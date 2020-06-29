@@ -1249,7 +1249,8 @@ class JRodos:
             project_id = self.measurements_dlg.le_project_id.text()
             if len(project_id) != 0:
                 log.info(f'Project_id: {project_id} found! Adding to CQL in WFS request')
-                measurements_settings.projectid = project_id
+                # setting it in the config as a String (although it will end up as an integer in DB)
+                measurements_settings.projectid = project_id # is text anyway at this moment
                 Utils.set_settings_value("projectid", project_id)
             else:
                 Utils.set_settings_value("projectid", '')

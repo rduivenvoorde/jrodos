@@ -23,7 +23,7 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.end_datetime = ''
         self.quantity = ''
         self.substance = ''
-        self.projectid = ''
+        self.projectid = ''  # in DB projectid is an Integer, but let's keep it strings here to be able to test for len()
         self.lower_bound = ''
         self.upper_bound = ''
         self.endminusstart = 0
@@ -69,19 +69,20 @@ class CalnetMeasurementsProvider(ProviderBase):
         # self.request.addQueryItem('resultType', 'hits')
         # the actual cql filter, something like:
         # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}' and projectid='{projectid}'".format(
+        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}'".format(
             bbox=self.config.bbox,
             start_datetime=self.config.start_datetime,
             end_datetime=self.config.end_datetime,
             quantity=self.config.quantity,
-            substance=self.config.substance,
-            projectid=self.config.projectid
+            substance=self.config.substance
         )
         cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
         if len(self.config.lower_bound) > 0:
             cql_filter += " and value > {}".format(self.config.lower_bound)
         if len(self.config.upper_bound) > 0:
             cql_filter += " and value < {}".format(self.config.upper_bound)
+        if len(self.config.projectid) > 0:
+            cql_filter += " and projectid={}".format(int(self.config.projectid))
         query.addQueryItem('CQL_FILTER', cql_filter)
 
         # putting these last so it is clearly visible in logs we are 'paging'

@@ -176,6 +176,7 @@ class JRodos:
         self.start_time = None
         self.end_time = None
         self.combis = None
+        self.combi_descriptions = None
         # substances and quantitites for Measurements dialog (filled via SOAP with CalnetMeasurementsUtilsProvider)
         self.quantities = [{'code': 0, 'description': self.tr('Trying to retrieve quantities...')}]
         self.substances = [{'code': 0, 'description': self.tr('Trying to retrieve substances...')}]
@@ -601,6 +602,7 @@ class JRodos:
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")
         else:
             self.combis = result.data
+            self.combi_descriptions = {}
 
             # LOAD saved user data_items from pickled file
             user_quantities_substances_from_disk = []
@@ -615,6 +617,7 @@ class JRodos:
                                                         combi['substance_desc'],
                                                         combi['quantity'],
                                                         combi['substance'])
+                self.combi_descriptions[combi['quantity']+'_'+combi['substance']] = f"{combi['quantity_desc']} - {combi['substance_desc']}"
                 selected = False
                 if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
                     selected = True
@@ -1781,6 +1784,7 @@ class JRodos:
                               QgsField("info", QVariant.String),
                               QgsField("device", QVariant.String),
                               QgsField("projectid", QVariant.String),
+                              QgsField("quantity_substance", QVariant.String),
                               #QgsField("unitvalue", QVariant.Double),
                               ])
             self.measurements_layer.updateFields()
@@ -1823,6 +1827,33 @@ class JRodos:
             else:
                 features = gml_layer.getFeatures()
 
+                step_count = 0
+                new_unit_msg = True
+                for feature in features:
+                    if features.isClosed():
+                        self.msg(None, 'Iterator CLOSED !!!!')
+                        break
+                    feature_count += 1
+                    step_count += 1
+                    fields = feature.fields()
+                    fields.append(QgsField('quantity_substance'))
+                    f = QgsFeature(fields)
+                    if feature.geometry() is not None:
+                        attributes = feature.attributes()
+                        quantity = feature.attribute('quantity')
+                        substance = feature.attribute('substance')
+                        quantity_substance = self.get_quantity_and_substance_description(quantity, substance)
+                        attributes.append(quantity_substance)
+                        f.setAttributes(attributes)
+                        f.setGeometry(feature.geometry())
+                        flist.append(f)
+                        if len(flist) > 1000:
+                            self.measurements_layer.dataProvider().addFeatures(flist)
+                            flist = []
+                    else:
+                        self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
+                        return
+
                 # step_count = 0
                 # new_unit_msg = True
                 # for feature in features:
@@ -1860,14 +1891,14 @@ class JRodos:
                 #         self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
                 #         return
 
-            # if feature_count == 0:
-            #     self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
-            #     return
-            #else:
-            #    log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
+            if feature_count == 0:
+                self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
+                return
+            else:
+               log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
-            #self.measurements_layer.dataProvider().addFeatures(flist)
-            self.measurements_layer.dataProvider().addFeatures(features)
+            self.measurements_layer.dataProvider().addFeatures(flist)
+            #self.measurements_layer.dataProvider().addFeatures(features)
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 
@@ -1887,6 +1918,12 @@ class JRodos:
             # add rainradar and to the TimeManager IF enabled
             if self.settings.value('rainradar_enabled'):
                 self.add_rainradar_to_timemanager(self.measurements_layer)
+
+    def get_quantity_and_substance_description(self, quantity, substance):
+        #for combi in self.combis:
+        #    if combi['quantity'] == quantity and combi['substance'] == substance:
+        #        return f'{combi["quantity_desc"]} - {combi["substance_desc"]}<br/> ({quantity}, {substance})'
+        return f'{self.combi_descriptions[quantity+"_"+substance]}<br/> ({quantity}, {substance})'
 
     def set_legend_node_name(self, treenode, name):
         """
@@ -1956,11 +1993,12 @@ class JRodos:
         field_string = '<div style="width:300px; font-family: Sans-Serif;font-size: small" >'
         value = -99999
         unit = ''
+        quantity_substance = ''
         for field in feature.fields():
             # skip info
             if not field.name() in ('Info', 'info'):
                 # field we do not show
-                if field.name().upper() in ('GML_ID'):
+                if field.name().upper() in ('GML_ID', 'SUBSTANCE', 'QUANTITY'):
                     pass
                 elif field.name().upper() in ('PROJECTID') and feature[field.name()] in ['-1', -1]:
                     # do not show projectid if -1
@@ -1969,6 +2007,8 @@ class JRodos:
                     value = feature[field.name()]
                 elif field.name().upper() in ('UNIT'):
                     unit = feature[field.name()]
+                elif field.name().upper() in ('QUANTITY_SUBSTANCE'):
+                    quantity_substance = feature[field.name()]
                 elif feature[field.name()] == '-': # VALUE = '-' ?  skip it
                     pass
                 elif 'TIME' in field.name().upper():
@@ -1992,17 +2032,16 @@ class JRodos:
                             elif info_field['name'] == 'value_original':
                                 v = info_field['mnemonic'].title() + ': {:.6f}'.format(float(info_field['value']))
                             elif info_field['name'] == 'unit_original':
-                                u = info_field['value']
+                                u = info_field['value'] + '<br/>'
                             elif 'mnemonic' in info_field:
                                 field_string += info_field['mnemonic'].title() + ': ' + info_field['value'] + '<br/>'
                             elif 'name' in info_field:
                                 field_string += info_field['name'].title() + ': ' + info_field['value'] + '<br/>'
-                    field_string = '{} {}<br> {}'.format(v, u, field_string)
+                    field_string = '{} {} {}'.format(v, u, field_string)
                 except Exception as e2:
                     field_string += "Failed to parse the 'info'-json field <br/>"
                     log.error('Tooltip function; Unable to parse this json: {}\nException: {}'.format(feature['info'], e2))
-        return 'VALUE: <b>{} {}</b><br/>'.format(value, unit) + field_string + '</div>'
-
+        return '<b>VALUE: {} {}<br/>{}</b><br/>'.format(value, unit, quantity_substance) + field_string + '</div>'
 
 class JRodosError(Exception):
     """JRodos Exception for errors in the plugin.

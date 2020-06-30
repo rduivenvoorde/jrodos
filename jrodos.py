@@ -612,9 +612,9 @@ class JRodos:
             self.measurements_dlg.tbl_combis.setModel(self.quantities_substances_model)
 
             for combi in self.combis:
-                description = '{} ({}), {} ({})'.format(combi['quantity_desc'],
-                                                        combi['quantity'],
+                description = '{}, {} - ({}, {})'.format(combi['quantity_desc'],
                                                         combi['substance_desc'],
+                                                        combi['quantity'],
                                                         combi['substance'])
                 selected = False
                 if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
@@ -625,11 +625,11 @@ class JRodos:
                 selected_item = QStandardItem(True)
                 selected_item.setData(True)
                 self.quantities_substances_model.appendRow([
-                    QStandardItem(combi['quantity']),   # self.QMODEL_ID_IDX
-                    QStandardItem(combi['substance']),  # self.QMODEL_NAME_IDX
-                    QStandardItem(description),         # self.QMODEL_DESCRIPTION_IDX
-                    data_item,                          # self.QMODEL_DATA_IDX
-                    selected_item                       # self.QMODEL_SEARCH_IDX
+                    QStandardItem(description),
+                    QStandardItem(combi['quantity']),
+                    QStandardItem(combi['substance']),
+                    data_item,
+                    selected_item
                 ])
                 self.quantities_substances_model.setData(self.quantities_substances_model.indexFromItem(selected_item), selected)
 
@@ -638,14 +638,14 @@ class JRodos:
             self.measurements_dlg.tbl_combis.setSelectionMode(QTableView.NoSelection)
             self.measurements_dlg.tbl_combis.setEditTriggers(QTableView.NoEditTriggers)  # disable editing of table cells
 
-            self.quantities_substances_model.setHeaderData(self.QMODEL_ID_IDX, Qt.Horizontal, self.tr("Quantity"))
-            self.quantities_substances_model.setHeaderData(self.QMODEL_NAME_IDX, Qt.Horizontal, self.tr("Substance"))
-            self.quantities_substances_model.setHeaderData(self.QMODEL_DESCRIPTION_IDX, Qt.Horizontal, self.tr("Description"))
-            self.quantities_substances_model.setHeaderData(self.QMODEL_SEARCH_IDX, Qt.Horizontal, self.tr("Show"))
+            self.quantities_substances_model.setHeaderData(0, Qt.Horizontal, self.tr("Description"))
+            self.quantities_substances_model.setHeaderData(1, Qt.Horizontal, self.tr("Quantity"))
+            self.quantities_substances_model.setHeaderData(2, Qt.Horizontal, self.tr("Substance"))
+            self.quantities_substances_model.setHeaderData(4, Qt.Horizontal, self.tr("Show"))
 
-            self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
-            self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_NAME_IDX, 150)
-            self.measurements_dlg.tbl_combis.setColumnWidth(self.QMODEL_DESCRIPTION_IDX, 600)
+            self.measurements_dlg.tbl_combis.setColumnWidth(0, 400)
+            self.measurements_dlg.tbl_combis.setColumnWidth(1, 150)
+            self.measurements_dlg.tbl_combis.setColumnWidth(2, 150)
 
             self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_DATA_IDX, True)
             self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_SEARCH_IDX, False)

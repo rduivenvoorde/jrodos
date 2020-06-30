@@ -98,7 +98,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                     substance_description = ret.find('substance').find('description').text
                     #description = "%s (%s) , %s (%s)" % (quantity_description, quantity_code, substance_description, substance_code)
                     # '{"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION"}'
-                    data.append({'quantity': quantity_code, 'quantity_desc':quantity_description, 'substance':substance_code ,'substance_desc': substance_description})
+                    data.append({'quantity': quantity_code, 'quantity_desc': quantity_description, 'substance': substance_code, 'substance_desc': substance_description})
                 elif ret.find('code') is not None:
                     # <return>
                     #   <code>Y-90</code>

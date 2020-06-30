@@ -608,9 +608,8 @@ class JRodos:
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
                     user_quantities_substances_from_disk = pickle.load(f)
             self.measurements_dlg.lbl_retrieving_combis.setText(self.tr("Please select one or more combi's"))
-            self.quantities_substances_model = QStandardItemModel()
-            self.measurements_dlg.tbl_combis.setModel(self.quantities_substances_model)
 
+            self.quantities_substances_model = QStandardItemModel()
             for combi in self.combis:
                 description = '{}, {} - ({}, {})'.format(combi['quantity_desc'],
                                                         combi['substance_desc'],
@@ -619,7 +618,6 @@ class JRodos:
                 selected = False
                 if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
                     selected = True
-
                 data_item = QStandardItem("{}{}".format(combi['quantity'], combi['substance']))
                 data_item.setData([combi['quantity'], combi['substance']])
                 selected_item = QStandardItem(True)
@@ -633,81 +631,73 @@ class JRodos:
                 ])
                 self.quantities_substances_model.setData(self.quantities_substances_model.indexFromItem(selected_item), selected)
 
-            self.measurements_dlg.tbl_combis.setDragEnabled(False)
-            self.measurements_dlg.tbl_combis.setSelectionBehavior(QTableView.SelectRows)
-            self.measurements_dlg.tbl_combis.setSelectionMode(QTableView.NoSelection)
-            self.measurements_dlg.tbl_combis.setEditTriggers(QTableView.NoEditTriggers)  # disable editing of table cells
-
-            self.quantities_substances_model.setHeaderData(0, Qt.Horizontal, self.tr("Description"))
-            self.quantities_substances_model.setHeaderData(1, Qt.Horizontal, self.tr("Quantity"))
-            self.quantities_substances_model.setHeaderData(2, Qt.Horizontal, self.tr("Substance"))
-            self.quantities_substances_model.setHeaderData(4, Qt.Horizontal, self.tr("Show"))
-
-            self.measurements_dlg.tbl_combis.setColumnWidth(0, 400)
-            self.measurements_dlg.tbl_combis.setColumnWidth(1, 150)
-            self.measurements_dlg.tbl_combis.setColumnWidth(2, 150)
-
-            self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_DATA_IDX, True)
-            self.measurements_dlg.tbl_combis.setColumnHidden(self.QMODEL_SEARCH_IDX, False)
-
-            self.measurements_dlg.tbl_combis.horizontalHeader().setStretchLastSection(True)
-
+            self.measurements_dlg.set_model(self.quantities_substances_model)
             # pre color rows
             for row in range(0, self.quantities_substances_model.rowCount()):
                 self.quantities_substance_color_model(row)
 
     def quantities_substances_toggle(self, model_index):
         row = model_index.row()
-        idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
+        model = self.measurements_dlg.tbl_combis.model()
+        idx = model.index(row, self.QMODEL_SEARCH_IDX)
         selected = True
-        if self.measurements_dlg.tbl_combis.model().data(idx):
+        if model.data(idx):
             selected = False
-        self.measurements_dlg.tbl_combis.model().setData(idx, selected)
+        model.setData(idx, selected)
         self.quantities_substance_color_model(row)
 
     def quantities_substance_color_model(self, row):
         # color background based on selected (True) or not
-        idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
+        # incoming row is from proxy
+        model = self.measurements_dlg.tbl_combis.model()
+        idx = model.index(row, self.QMODEL_SEARCH_IDX)
         color = Qt.lightGray  # = 6
-        if self.measurements_dlg.tbl_combis.model().data(idx):
+        if model.data(idx):
             color = Qt.white  # = 3
-        for i in range(0, self.measurements_dlg.tbl_combis.model().columnCount()):
-            idx2 = self.measurements_dlg.tbl_combis.model().index(row, i)
-            self.measurements_dlg.tbl_combis.model().setData(idx2, QColor(color), Qt.BackgroundRole)
+        for i in range(0, model.columnCount()):
+            idx2 = model.index(row, i)
+            model.setData(idx2, QColor(color), Qt.BackgroundRole)
 
     def quantities_substances_set_all(self, checked):
-        for row in range(0, self.measurements_dlg.tbl_combis.model().rowCount()):
-            idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_SEARCH_IDX)
-            self.measurements_dlg.tbl_combis.model().setData(idx, checked)
+        model = self.measurements_dlg.tbl_combis.model()
+        for row in range(0, model.rowCount()):
+            idx = model.index(row, self.QMODEL_SEARCH_IDX)
+            model.setData(idx, checked)
             self.quantities_substance_color_model(row)
+        self.measurements_dlg.cb_a1.setChecked(checked)
+        self.measurements_dlg.cb_a2.setChecked(checked)
+        self.measurements_dlg.cb_a3.setChecked(checked)
+        self.measurements_dlg.cb_a4.setChecked(checked)
+        self.measurements_dlg.cb_a5.setChecked(checked)
+        self.measurements_dlg.cb_unknown.setChecked(checked)
 
-    def quantities_substances_toggle_selection(self, text, checked):
-        for row in range(0, self.measurements_dlg.tbl_combis.model().rowCount()):
-            idx = self.measurements_dlg.tbl_combis.model().index(row, self.QMODEL_NAME_IDX)
-            data = self.measurements_dlg.tbl_combis.model().data(idx)
+    def quantities_substances_toggle_selection_group(self, text, checked):
+        model = self.measurements_dlg.tbl_combis.model()
+        for row in range(0, model.rowCount()):
+            idx = model.index(row, 3)
+            data = model.data(idx)
             if text in data:
-                idx = self.measurements_dlg.tbl_combis.model().index(row,
-                                                                     self.QMODEL_SEARCH_IDX)
-                self.measurements_dlg.tbl_combis.model().setData(idx, checked)
+                idx = model.index(row, self.QMODEL_SEARCH_IDX)
+                model.setData(idx, checked)
                 self.quantities_substance_color_model(row)
 
     def cb_a1_clicked(self, checked):
-        self.quantities_substances_toggle_selection('A1', checked)
+        self.quantities_substances_toggle_selection_group('A1', checked)
 
     def cb_a2_clicked(self, checked):
-        self.quantities_substances_toggle_selection('A2', checked)
+        self.quantities_substances_toggle_selection_group('A2', checked)
 
     def cb_a3_clicked(self, checked):
-        self.quantities_substances_toggle_selection('A3', checked)
+        self.quantities_substances_toggle_selection_group('A3', checked)
 
     def cb_a4_clicked(self, checked):
-        self.quantities_substances_toggle_selection('A4', checked)
+        self.quantities_substances_toggle_selection_group('A4', checked)
 
     def cb_a5_clicked(self, checked):
-        self.quantities_substances_toggle_selection('A5', checked)
+        self.quantities_substances_toggle_selection_group('A5', checked)
 
     def cb_unknown_clicked(self, checked):
-        self.quantities_substances_toggle_selection('unknown', checked)
+        self.quantities_substances_toggle_selection_group('unknown', checked)
 
     def get_jrodos_projects(self):
         """Retrieve all JRodos projects via REST interface url like:

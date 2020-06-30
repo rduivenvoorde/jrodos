@@ -14,106 +14,10 @@
    <string>Eurdep Measurements Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="17" column="3">
-    <widget class="QLineEdit" name="le_upperbound"/>
-   </item>
-   <item row="6" column="2">
-    <widget class="QCheckBox" name="cb_a5">
-     <property name="text">
-      <string>A5 External Radiation</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="4">
-    <widget class="QLabel" name="lbl_title2">
-     <property name="text">
-      <string>First select period, then choose from available Quantity Substance combi's</string>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="2">
-    <widget class="QLabel" name="lbl_upperbound">
-     <property name="text">
-      <string>Values upper boundary</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QCheckBox" name="cb_a2">
-     <property name="text">
-      <string>A2 Water Samples</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QCheckBox" name="cb_a1">
-     <property name="text">
-      <string>A1 Outdoor Air</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="4">
-    <widget class="QPushButton" name="btn_all_combis">
-     <property name="text">
-      <string>Select All</string>
-     </property>
-    </widget>
-   </item>
-   <item row="18" column="1">
-    <widget class="QLineEdit" name="le_project_id"/>
-   </item>
-   <item row="11" column="0">
-    <widget class="QLabel" name="lbl_endminusstart">
-     <property name="text">
-      <string>Endtime - Starttime</string>
-     </property>
-    </widget>
-   </item>
-   <item row="19" column="0" colspan="5">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="1">
-    <widget class="QLineEdit" name="le_lowerbound"/>
-   </item>
-   <item row="7" column="4">
-    <widget class="QPushButton" name="btn_no_combis">
-     <property name="text">
-      <string>Clear All</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QLabel" name="lbl_end_time">
-     <property name="text">
-      <string>End time (UTC)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="0">
-    <widget class="QLabel" name="lbl_lowerbound">
-     <property name="text">
-      <string>Values lower boundary</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="lbl_start_time">
-     <property name="text">
-      <string>Start time (UTC)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="2">
-    <widget class="QCheckBox" name="cb_unknown">
-     <property name="text">
-      <string>Unknown</string>
+   <item row="12" column="1" colspan="4">
+    <widget class="QComboBox" name="combo_endminusstart">
+     <property name="editable">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -140,27 +44,27 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="5">
-    <widget class="QProgressBar" name="combis_progressbar">
-     <property name="maximum">
-      <number>0</number>
-     </property>
-     <property name="value">
-      <number>-2</number>
+   <item row="19" column="0">
+    <widget class="QLabel" name="lbl_project_id">
+     <property name="text">
+      <string>Project id</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="lbl_retrieving_combis">
+   <item row="6" column="2">
+    <widget class="QCheckBox" name="cb_a5">
      <property name="text">
-      <string>...</string>
+      <string>A5 External Radiation</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="5">
-    <widget class="QPushButton" name="btn_get_combis">
+   <item row="19" column="1">
+    <widget class="QLineEdit" name="le_project_id"/>
+   </item>
+   <item row="7" column="2">
+    <widget class="QCheckBox" name="cb_unknown">
      <property name="text">
-      <string>Refresh Available Quantity / Substances combination list for this period</string>
+      <string>Unknown</string>
      </property>
     </widget>
    </item>
@@ -170,16 +74,6 @@
       <string>A3 Soil</string>
      </property>
     </widget>
-   </item>
-   <item row="11" column="1" colspan="4">
-    <widget class="QComboBox" name="combo_endminusstart">
-     <property name="editable">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="5">
-    <widget class="QTableView" name="tbl_combis"/>
    </item>
    <item row="2" column="1">
     <widget class="QDateTimeEdit" name="dateTime_start">
@@ -204,10 +98,34 @@
      </property>
     </widget>
    </item>
+   <item row="6" column="4">
+    <widget class="QPushButton" name="btn_all_combis">
+     <property name="text">
+      <string>Select All</string>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0" colspan="4">
     <widget class="QLabel" name="lbl_title">
      <property name="text">
       <string>Fetch Measurements from Eurdep Database, AdHoc Measurement Database and CalWeb Database</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="lbl_start_time">
+     <property name="text">
+      <string>Start time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="3">
+    <widget class="QLineEdit" name="le_upperbound"/>
+   </item>
+   <item row="2" column="4">
+    <widget class="QPushButton" name="btn_now">
+     <property name="text">
+      <string>Now</string>
      </property>
     </widget>
    </item>
@@ -218,24 +136,120 @@
      </property>
     </widget>
    </item>
-   <item row="18" column="0">
-    <widget class="QLabel" name="lbl_project_id">
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="cb_a1">
      <property name="text">
-      <string>Project id</string>
+      <string>A1 Outdoor Air</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="0">
+    <widget class="QLabel" name="lbl_lowerbound">
+     <property name="text">
+      <string>Values lower boundary</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="1">
+    <widget class="QLineEdit" name="le_lowerbound"/>
+   </item>
+   <item row="18" column="2">
+    <widget class="QLabel" name="lbl_upperbound">
+     <property name="text">
+      <string>Values upper boundary</string>
      </property>
     </widget>
    </item>
    <item row="12" column="0">
+    <widget class="QLabel" name="lbl_endminusstart">
+     <property name="text">
+      <string>Endtime - Starttime</string>
+     </property>
+    </widget>
+   </item>
+   <item row="20" column="0" colspan="5">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QCheckBox" name="cb_a2">
+     <property name="text">
+      <string>A2 Water Samples</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="5">
+    <widget class="QTableView" name="tbl_combis">
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="lbl_retrieving_combis">
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0">
     <widget class="QLabel" name="lbl_bounds_optional">
      <property name="text">
       <string>Optional Filters:</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="4">
-    <widget class="QPushButton" name="btn_now">
+   <item row="1" column="0" colspan="4">
+    <widget class="QLabel" name="lbl_title2">
      <property name="text">
-      <string>Now</string>
+      <string>First select period, then choose from available Quantity Substance combi's</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QLabel" name="lbl_end_time">
+     <property name="text">
+      <string>End time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="4">
+    <widget class="QPushButton" name="btn_no_combis">
+     <property name="text">
+      <string>Clear All</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Search</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1" colspan="4">
+    <widget class="QLineEdit" name="le_combis_filter"/>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <widget class="QPushButton" name="btn_get_combis">
+     <property name="text">
+      <string>Refresh Available Quantity / Substances combination list for this period</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3" colspan="2">
+    <widget class="QProgressBar" name="combis_progressbar">
+     <property name="maximum">
+      <number>0</number>
+     </property>
+     <property name="value">
+      <number>-2</number>
      </property>
     </widget>
    </item>

@@ -1137,6 +1137,9 @@ class JRodos:
         jrodos_output_config.jrodos_verticals = 0  # z / layers
         # NEW: time is now a string like: "2016-04-25T08:00:00.000+0000"
         jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000+0000')
+        if not jrodos_output_config.jrodos_datetime_start.isValid():
+            # try UTC with the Z notation
+            jrodos_output_config.jrodos_datetime_start = QDateTime.fromString(self.jrodosmodel_dlg.le_start.text(), 'yyyy-MM-ddTHH:mm:ss.000Z')
         # NEW: columns = a range from 0 till number of steps in the model (range string like '0-23')
         jrodos_output_config.jrodos_columns = '{}-{}'.format(0, model_time_secs / model_step_secs)
         self.jrodos_output_settings = jrodos_output_config

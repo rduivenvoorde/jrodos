@@ -73,20 +73,21 @@ class JRodosDialog(QDialog, FORM_CLASS):
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(item_model)
 
-        self.proxy_model.setFilterKeyColumn(QMODEL_SEARCH_IDX)
+        self.proxy_model.setFilterKeyColumn(5)
+        self.proxy_model.setSortRole(Qt.UserRole)  # we sort on the UserRole
         self.tbl_projects.setModel(self.proxy_model)
         self.tbl_projects.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        item_model.setHeaderData(QMODEL_NAME_IDX, Qt.Horizontal, "Name")
-        item_model.setHeaderData(QMODEL_DESCRIPTION_IDX, Qt.Horizontal, "Description")
-        item_model.setHeaderData(QMODEL_SEARCH_IDX, Qt.Horizontal, "Search")
-
         self.tbl_projects.verticalHeader().setVisible(False)
 
-        self.tbl_projects.setColumnHidden(QMODEL_ID_IDX, True)
-        self.tbl_projects.setColumnHidden(QMODEL_DATA_IDX, True)
-        self.tbl_projects.setColumnHidden(QMODEL_SEARCH_IDX, True)
+        self.tbl_projects.setColumnHidden(5, True)
+        self.tbl_projects.setColumnHidden(6, True)
 
-        self.tbl_projects.setColumnWidth(QMODEL_NAME_IDX, 150)  # set name to 300px (there are some huge layernames)
-        #self.tbl_projects.setColumnWidth(QMODEL_DESCRIPTION_IDX, 600)
+        self.tbl_projects.setColumnWidth(0, 150)
+        self.tbl_projects.setColumnWidth(1, 100)
+        self.tbl_projects.setColumnWidth(2, 500)
+        self.tbl_projects.setColumnWidth(3, 150)
+
         self.tbl_projects.horizontalHeader().setStretchLastSection(True)
+
+        self.tbl_projects.sortByColumn(4, Qt.DescendingOrder)

@@ -750,7 +750,6 @@ class JRodos:
             self.projects_model = QStandardItemModel()
             # content in output is an array of projects
             projects = result.data['content']
-            rows = []
             for project in projects:
                 # retrieve the link of this project
                 link = "NO LINK ?????"
@@ -767,21 +766,39 @@ class JRodos:
                     datetime_created = QDateTime.fromString(datetime_created, Qt.ISODateWithMs).toString(self.date_time_format_short)
                 else:
                     'no datetime_created?'
-                # we want the dropdown te be sorted so the last models are on top
-                # using a QSortFilterProxyModel becomes too much a hassle because we need the model on some places
-                # so we do it via a temporary array sort here...
-                # QStandardItems keep data as string, meaning we would not be able to sort these numeric
-                # so we format all integer id's as zero padded 8 length numbers
-                rows.append([
-                    QStandardItem(project_id),                                         # self.QMODEL_ID_IDX = 0
-                    QStandardItem(project_name),                                          # self.QMODEL_NAME_IDX = 1
-                    QStandardItem(project_id + ' - ' + datetime_created + ' - ' + user_name + ' - ' + project_name + ' - ' + description),   # self.QMODEL_DESCRIPTION_IDX = 2
-                    QStandardItem(link),                                               # self.QMODEL_DATA_IDX = 3
-                    QStandardItem('{0:08d}'.format(int(project_id)) + f' {project_name} {user_name} {description}')            # self.QMODEL_SEARCH_IDX = 4
+
+                # QStandardItems keep data as string, meaning we would not be able to sort these numeric ids
+                # so we use a 'Qt.UserRole' for the sortable data: format all integer id's as zero padded 8 length numbers
+                # BUT because you define which (data)-role you use for the sorting (model.setSortRole(Qt.UserRole))
+                #   we have to setData(..., Qt.UserRole) for all columns
+                project_id_item = QStandardItem(project_id)
+                project_id_item.setData('{0:08d}'.format(int(project_id)), Qt.UserRole)
+
+                project_name_item = QStandardItem(project_name)
+                project_name_item.setData(project_name, Qt.UserRole)
+                project_name_item.setData(description, Qt.ToolTipRole)
+
+                project_description_item = QStandardItem(description)
+                project_description_item.setData(description, Qt.UserRole)
+                project_description_item.setData(description, Qt.ToolTipRole)
+
+                user_item = QStandardItem(user_name)
+                user_item.setData(user_name, Qt.UserRole)
+                user_item.setData(description, Qt.ToolTipRole)
+
+                datetime_created_item = QStandardItem(datetime_created)
+                datetime_created_item.setData(datetime_created, Qt.UserRole)
+                datetime_created_item.setData(datetime_created, Qt.ToolTipRole)
+
+                self.projects_model.appendRow([
+                    project_name_item,
+                    user_item,
+                    project_description_item,
+                    datetime_created_item,
+                    project_id_item,
+                    QStandardItem(project_id + ' - ' + datetime_created + ' - ' + user_name + ' - ' + project_name + ' - ' + description),
+                    QStandardItem(link)
                 ])
-            sorted_rows = sorted(rows, key=lambda x: x[self.QMODEL_SEARCH_IDX], reverse=True)
-            for row in sorted_rows:
-                self.projects_model.appendRow(row)
 
             # disconnect the change of the project click to be able to do a refresh
             # it IS possible that there was nothing connected
@@ -789,6 +806,15 @@ class JRodos:
             #     self.jrodosmodel_dlg.tbl_projects.clicked.disconnect(self.project_selected)
             # except:
             #     pass
+            
+            self.projects_model.setHeaderData(0, Qt.Horizontal, self.tr("Project Name"))
+            self.projects_model.setHeaderData(1, Qt.Horizontal, self.tr("User"))
+            self.projects_model.setHeaderData(2, Qt.Horizontal, self.tr("Description"))
+            self.projects_model.setHeaderData(3, Qt.Horizontal, self.tr("Time Created"))
+            self.projects_model.setHeaderData(4, Qt.Horizontal, self.tr("Project ID"))
+            # 5 = search
+            # 6 = link
+
             self.jrodosmodel_dlg.set_model(self.projects_model)
             # connect the change of the project dropdown to a refresh of the data path
             jrodos_last_project_filter = Utils.get_settings_value('jrodos_last_project_filter', '')
@@ -821,7 +847,7 @@ class JRodos:
         self.jrodos_project_data = []
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         idx = self.jrodosmodel_dlg.proxy_model.mapToSource(model_idx)
-        url = self.projects_model.item(idx.row(), self.QMODEL_DATA_IDX).text()
+        url = self.projects_model.item(idx.row(), 6).text()
         log.debug(f'Selected: {url}')
         config = JRodosProjectConfig()
         config.url = url
@@ -845,6 +871,7 @@ class JRodos:
             # and keeping this project as last project we stay in this loop of retrieving faulty datapaths
             Utils.set_settings_value("jrodos_last_model_project", "")
         else:
+            self.jrodosmodel_dlg.button_box.setEnabled(True)
             # load saved user data_items from pickled file
             data_items_from_disk = []
             if os.path.isfile(self.USER_DATA_ITEMS_PATH):
@@ -1036,6 +1063,11 @@ class JRodos:
         QMessageBox.warning(parent, self.MSG_TITLE, "%s" % msg, QMessageBox.Ok, QMessageBox.Ok)
 
     def handle_jrodos_output_dialog(self):
+        """
+        Actual retrieving of measurements after clicking OK in JRodos dialog
+
+        :return: True if successful or False if there was an issue with input or result
+        """
         if not self.jrodosmodel_dlg.tbl_projects.currentIndex().isValid():
             self.msg(None, self.tr(
               "Did you select one of the projects in the table?\nLooks like nothing was selected... "))
@@ -1061,7 +1093,7 @@ class JRodos:
         # selected project + save the project id (model col 1) to QSettings
         # +"'&amp;model='EMERSIM'"
         current_project_idx = self.jrodosmodel_dlg.proxy_model.mapToSource(self.jrodosmodel_dlg.tbl_projects.currentIndex())
-        jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(current_project_idx.row(), self.QMODEL_NAME_IDX).text() + "'"
+        jrodos_output_config.jrodos_project = "project='" + self.projects_model.item(current_project_idx.row(), 0).text() + "'"
         jrodos_output_config.jrodos_project += "&amp;model='{}'".format(self.task_model.item(self.jrodosmodel_dlg.combo_task.currentIndex(), self.QMODEL_DATA_IDX).text())
 
         # for storing in settings we do not use the non unique name, but the ID of the project

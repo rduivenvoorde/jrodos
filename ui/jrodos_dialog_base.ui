@@ -192,11 +192,17 @@
    </item>
    <item row="9" column="0" colspan="6">
     <widget class="QDialogButtonBox" name="button_box">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
      </property>
     </widget>
    </item>

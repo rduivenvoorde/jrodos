@@ -63,10 +63,12 @@ class JRodosDialog(QDialog, FORM_CLASS):
         self.skipped = True
 
     def filter_projects(self, string):
-        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
-        self.proxy_model.setFilterFixedString(string)
-        # store the filter/search string so upon showing the dialog it will show a filtered project list again
-        Utils.set_settings_value("jrodos_last_project_filter", string)
+        # do NOT filter spaces:
+        if len(string.strip()) > 0:
+            self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+            self.proxy_model.setFilterFixedString(string)
+            # store the filter/search string so upon showing the dialog it will show a filtered project list again
+            Utils.set_settings_value("jrodos_last_project_filter", string)
 
     def set_model(self, item_model=None):
         self.skipped = False  # resetting

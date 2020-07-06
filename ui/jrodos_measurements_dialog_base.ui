@@ -47,7 +47,7 @@
    <item row="19" column="0">
     <widget class="QLabel" name="lbl_project_id">
      <property name="text">
-      <string>Project id</string>
+      <string>Project number CalWeb</string>
      </property>
     </widget>
    </item>
@@ -57,9 +57,6 @@
       <string>A5 External Radiation</string>
      </property>
     </widget>
-   </item>
-   <item row="19" column="1">
-    <widget class="QLineEdit" name="le_project_id"/>
    </item>
    <item row="7" column="2">
     <widget class="QCheckBox" name="cb_unknown">
@@ -252,6 +249,9 @@
       <number>-2</number>
      </property>
     </widget>
+   </item>
+   <item row="19" column="1">
+    <widget class="QLineEdit" name="le_project_id"/>
    </item>
   </layout>
  </widget>

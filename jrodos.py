@@ -871,7 +871,6 @@ class JRodos:
             # and keeping this project as last project we stay in this loop of retrieving faulty datapaths
             Utils.set_settings_value("jrodos_last_model_project", "")
         else:
-            self.jrodosmodel_dlg.button_box.setEnabled(True)
             # load saved user data_items from pickled file
             data_items_from_disk = []
             if os.path.isfile(self.USER_DATA_ITEMS_PATH):
@@ -1274,7 +1273,11 @@ class JRodos:
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
 
-            project_id = self.measurements_dlg.le_project_id.text()
+            project_id = self.measurements_dlg.le_project_id.text().strip()
+            if not project_id.isdigit():
+                # User tries to use a string in this projectid field
+                self.msg(None, self.tr('Project number is a single CalWeb project number (or empty)'))
+                return False
             if len(project_id) != 0:
                 log.info(f'Project_id: {project_id} found! Adding to CQL in WFS request')
                 # setting it in the config as a String (although it will end up as an integer in DB)

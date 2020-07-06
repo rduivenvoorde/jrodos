@@ -193,7 +193,7 @@
    <item row="9" column="0" colspan="6">
     <widget class="QDialogButtonBox" name="button_box">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

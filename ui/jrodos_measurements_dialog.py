@@ -72,9 +72,10 @@ class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
         item_model.setHeaderData(4, Qt.Horizontal, self.tr("Select"))
 
         self.tbl_combis.setColumnWidth(0, 400)
-        self.tbl_combis.setColumnWidth(1, 150)
-        self.tbl_combis.setColumnWidth(2, 150)
+        self.tbl_combis.setColumnWidth(1, 300)
+        self.tbl_combis.setColumnWidth(2, 300)
 
+        self.tbl_combis.setColumnHidden(0, True)  # hiding Description column
         self.tbl_combis.setColumnHidden(3, True)
         self.tbl_combis.setColumnHidden(6, False)
 

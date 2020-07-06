@@ -609,7 +609,7 @@ class JRodos:
             if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
                     user_quantities_substances_from_disk = pickle.load(f)
-            self.measurements_dlg.lbl_retrieving_combis.setText(self.tr("Please select one or more combi's"))
+            self.measurements_dlg.lbl_retrieving_combis.setText(self.tr("Please select one or more combination(s)"))
 
             self.quantities_substances_model = QStandardItemModel()
             for combi in self.combis:
@@ -625,10 +625,15 @@ class JRodos:
                 data_item.setData([combi['quantity'], combi['substance']])
                 selected_item = QStandardItem(True)
                 selected_item.setData(True)
+                quantity_item = QStandardItem('{} ({})'.format(combi['quantity_desc'], combi['quantity']))
+                substance_item = QStandardItem('{} ({})'.format(combi['substance_desc'], combi['substance']))
+                # set tooltips to be able to read long description lines easier
+                quantity_item.setData('{} ({})'.format(combi['quantity_desc'], combi['quantity']), Qt.ToolTipRole)
+                substance_item.setData('{} ({})'.format(combi['substance_desc'], combi['substance']), Qt.ToolTipRole)
                 self.quantities_substances_model.appendRow([
                     QStandardItem(description),
-                    QStandardItem(combi['quantity']),
-                    QStandardItem(combi['substance']),
+                    quantity_item,
+                    substance_item,
                     data_item,
                     selected_item
                 ])

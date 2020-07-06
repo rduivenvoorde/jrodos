@@ -83,7 +83,7 @@ class CalnetMeasurementsProvider(ProviderBase):
             cql_filter += " and value < {}".format(self.config.upper_bound)
         if len(self.config.projectid) > 0:
             # IMPORTANT! while projectid in the db is an int, the measurement-WFS-store is working with a STRING in de CQL
-            cql_filter += " and projectid='{}'".format(int(self.config.projectid))
+            cql_filter += " and projectid={}".format(int(self.config.projectid))
         query.addQueryItem('CQL_FILTER', cql_filter)
 
         # putting these last so it is clearly visible in logs we are 'paging'

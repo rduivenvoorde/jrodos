@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QVariant, \
-    QCoreApplication, QDateTime, Qt, QUrl, QSortFilterProxyModel
+    QCoreApplication, QDateTime, Qt, QUrl, QSortFilterProxyModel, QLocale
 from qgis.PyQt.QtGui import QIcon, QStandardItemModel, QStandardItem, \
     QDesktopServices,  QColor, QFont
 from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
@@ -102,13 +102,13 @@ class JRodos:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        # initialize locale
-        locale = QgsApplication.instance().locale()
-        if locale and len(locale) >= 2:
+        # initialize Language
+        language = QSettings().value('locale/userLocale', QLocale().name())
+        if language and len(language) >= 2:
             locale_path = os.path.join(
                 self.plugin_dir,
                 'i18n',
-                '{}.qm'.format(locale))
+                '{}.qm'.format(language))
 
             if os.path.exists(locale_path):
                 self.translator = QTranslator()

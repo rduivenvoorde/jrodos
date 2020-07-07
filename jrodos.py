@@ -1195,7 +1195,8 @@ class JRodos:
 
         if self.measurements_settings is not None:
             self.msg(None, self.tr("Still busy retrieving Measurement data via WFS, please try later..."))
-            return False
+            # stop this session
+            return True
 
         if self.measurements_layer is not None:
             # that is we have measurements from an earlier run

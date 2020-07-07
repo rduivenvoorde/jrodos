@@ -117,6 +117,8 @@ class ProviderResult:
             return "UnknownContentError (server returned 500)"
         elif network_error == 301:
             return "ProtocolUnknownError"
+        elif network_error == 302:
+            return "Geoserver throws exception or returns error (replay URL from logs)"
         elif network_error == 401:
             return "The server encountered an unexpected condition which prevented it from fulfilling the request."
         elif network_error == 499:

@@ -1963,10 +1963,12 @@ class JRodos:
                 self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def get_quantity_and_substance_description(self, quantity, substance):
-        #for combi in self.combis:
-        #    if combi['quantity'] == quantity and combi['substance'] == substance:
-        #        return f'{combi["quantity_desc"]} - {combi["substance_desc"]}<br/> ({quantity}, {substance})'
-        return f'{self.combi_descriptions[quantity+"_"+substance]}<br/> ({quantity}, {substance})'
+        if f'{quantity}_{substance}' in self.combi_descriptions:
+            return f'{self.combi_descriptions[quantity+"_"+substance]}<br/> ({quantity}, {substance})'
+        else:
+            # mmm our lookup object does not have this combi, no description returned
+            # this can happen if user uses older combinations list for this request
+            return f'No Description (Please update combinations) <br/> ({quantity}, {substance})'
 
     def set_legend_node_name(self, treenode, name):
         """

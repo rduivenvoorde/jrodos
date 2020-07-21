@@ -1041,25 +1041,25 @@ class JRodos:
         else:
             # model Timestep in the dialog is shown in minutes (as in JRodos), but retrieved seconds!!
             self.jrodosmodel_dlg.lbl_steps2.setText('{}'.format(time_step / 60) + self.tr(" minutes"))
-            self.jrodosmodel_dlg.le_steps.setText('{}'.format(time_step))  # steptime (seconds to minutes)
+            self.jrodosmodel_dlg.le_steps.setText('{} {}'.format(time_step, self.tr('seconds')))  # steptime (seconds to minutes)
         if model_time is None:
             self.jrodosmodel_dlg.lbl_model_length2.setText('-')
             self.jrodosmodel_dlg.le_model_length.setText('')
         else:
             # model time / duration of prognosis is shown in hours (as in JRodos), but retrieved in seconds!!
             self.jrodosmodel_dlg.lbl_model_length2.setText('{}'.format(model_time / 3600) + self.tr(" hours"))  # modeltime (seconds to hours)
-            self.jrodosmodel_dlg.le_model_length.setText('{}'.format(model_time))  # modeltime (seconds to hours)
+            self.jrodosmodel_dlg.le_model_length.setText('{} {}'.format(model_time, self.tr('seconds')))  # modeltime (seconds to hours)
         if model_start is None:
             self.jrodosmodel_dlg.lbl_start2.setText('-')
             self.jrodosmodel_dlg.le_start.setText('')  # modeltime (hours)
         else:
-            self.jrodosmodel_dlg.le_start.setText('{}'.format(model_start))  # modeltime (hours)
+            #self.jrodosmodel_dlg.le_start.setText('{} (UTC)'.format(model_start))  # modeltime (hours)
             if type(model_start) == int:
                 # OLD model start / start of release is in milli(!)seconds since 1970 UTC like: "1477146000000"
                 self.jrodosmodel_dlg.lbl_start2.setText(QDateTime.fromTime_t(model_start/1000).toUTC().toString("yyyy-MM-dd HH:mm"))
             else:
                 # NEW model start / start of release is string like: "2016-04-25T08:00:00.000+0000"
-                self.jrodosmodel_dlg.lbl_start2.setText('{}'.format(model_start))
+                self.jrodosmodel_dlg.lbl_start2.setText('{} (UTC)'.format(model_start))
 
     def msg(self, parent=None, msg=""):
         if parent is None:

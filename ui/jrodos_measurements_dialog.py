@@ -24,7 +24,7 @@
 import os
 
 from qgis.PyQt.QtCore import Qt, QSortFilterProxyModel
-from qgis.PyQt.QtWidgets import QDialog, QTableView
+from qgis.PyQt.QtWidgets import QDialog, QTableView, QPushButton, QDialogButtonBox
 from qgis.PyQt import uic
 
 #from extended_combo import ExtendedCombo
@@ -53,6 +53,14 @@ class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
         # make model searchable and sortable
         self.proxy_model = None
         self.le_combis_filter.textChanged.connect(self.filter_combis)
+
+        # Adding a SKIP button which just cancels/rejects this dialog
+        self.skipped = False
+        self.skip_button = QPushButton('Skip')
+        self.skip_button.setCheckable(False)
+        self.skip_button.setAutoDefault(False)
+
+        self.buttonBox.addButton(self.skip_button, QDialogButtonBox.RejectRole)
 
     def set_model(self, item_model=None):
         self.proxy_model = QSortFilterProxyModel()

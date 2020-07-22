@@ -44,9 +44,9 @@ class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-        self.MEASUREMENTS_ENDMINUSTART = ['0', '600', '3600', '86400']
+        self.MEASUREMENTS_ENDMINUSTART = ['', '0', '600', '3600', '86400']
         self.combo_endminusstart.addItems(self.MEASUREMENTS_ENDMINUSTART)
-        self.combo_endminusstart.setCurrentIndex(1)
+        self.combo_endminusstart.setCurrentIndex(0)
 
         self.combis_progressbar.setMaximum(100)
 

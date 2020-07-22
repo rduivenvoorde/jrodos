@@ -464,13 +464,19 @@ class JRodos:
 
         # deregister our custom QgsExpression function
         QgsExpression.unregisterFunction("measurement_values")
-        QgsProject.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
+
+        # disconnecting sometimes creates havoc when changing environments
+        # silently fail on errors
+        try:
+            # IF there is a measurement layer disconnect selectionChanged signal
+            if self.measurements_layer is not None:
+                self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+            QgsProject.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
+        except:
+            pass
+
         # remove pointer
         self.remove_device_pointer()
-
-        # IF there is a measurement layer disconnect selectionChanged signal
-        if self.measurements_layer is not None:
-            self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
 
         # IF there is a JRodos group... try to remove it (sometimes deleted?)
         try:
@@ -1218,8 +1224,10 @@ class JRodos:
 
         self.measurements_dlg.dateTime_start.setDateTime(self.start_time)
         self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
-        self.measurements_dlg.combo_endminusstart.setCurrentIndex(
-            self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
+
+        #  combo_endminusstart is now an optional filter
+        #self.measurements_dlg.combo_endminusstart.setCurrentIndex(
+        #    self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
 
         self.measurements_dlg.le_project_id.setText(Utils.get_settings_value('projectid', ''))
 
@@ -1238,6 +1246,9 @@ class JRodos:
         if result:  # OK was pressed
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
+            #
+            if '' == endminusstart:
+                endminusstart = '3600'
             Utils.set_settings_value("endminusstart", endminusstart)
 
             quantities = []

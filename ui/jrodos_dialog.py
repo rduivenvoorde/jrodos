@@ -48,6 +48,7 @@ class JRodosDialog(QDialog, FORM_CLASS):
         self.proxy_model = None
 
         self.tbl_projects.setSelectionBehavior(self.tbl_projects.SelectRows)
+        self.tbl_projects.setSelectionMode(self.tbl_projects.SingleSelection)
         self.le_project_filter.textChanged.connect(self.filter_projects)
 
         # Adding a SKIP button which sets a propertye 'self.skipped' when clicked

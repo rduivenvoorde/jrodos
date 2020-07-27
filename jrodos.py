@@ -368,7 +368,8 @@ class JRodos:
         # Create the dialog (after translation) and keep reference
         self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
         # connect the change of the project dropdown to a refresh of the data path
-        self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)
+        #self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)  # RD 20200727 Better to connect to the selection change of the selection model
+        
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
         self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_data_item_filter_dialog)
 
@@ -811,13 +812,6 @@ class JRodos:
                     QStandardItem(link)
                 ])
 
-            # disconnect the change of the project click to be able to do a refresh
-            # it IS possible that there was nothing connected
-            # try:
-            #     self.jrodosmodel_dlg.tbl_projects.clicked.disconnect(self.project_selected)
-            # except:
-            #     pass
-            
             self.projects_model.setHeaderData(0, Qt.Horizontal, self.tr("Project Name"))
             self.projects_model.setHeaderData(1, Qt.Horizontal, self.tr("User"))
             self.projects_model.setHeaderData(2, Qt.Horizontal, self.tr("Description"))
@@ -831,26 +825,15 @@ class JRodos:
             jrodos_last_project_filter = Utils.get_settings_value('jrodos_last_project_filter', '')
             self.jrodosmodel_dlg.le_project_filter.setText(jrodos_last_project_filter)
             self.jrodosmodel_dlg.filter_projects(jrodos_last_project_filter)
+            # connect to selectionChanged fo the selectionModel (!)
+            self.jrodosmodel_dlg.tbl_projects.selectionModel().selectionChanged.connect(self.project_selected)
 
-            # get the last used project from the settings...
-            # not sure if we want this: I think it is better to just show the last filtered list
-            # and user can click on the right project (instead of doing this automagically)
-
-            # last_used_project = Utils.get_settings_value("jrodos_last_model_project", "")
-            # items = self.projects_model.findItems(last_used_project, Qt.MatchExactly, self.QMODEL_ID_IDX)
-            # if len(items) > 0:
-            #     # we found a 'last_model_project', remove the search string, as it could make the selected one invisible?
-            #     self.jrodosmodel_dlg.le_project_filter.setText('')
-            #     self.jrodosmodel_dlg.tbl_projects.selectRow(items[0].row())
-            #     # the index comes from the real projects model, map to proxy model
-            #     idx = self.jrodosmodel_dlg.proxy_model.mapFromSource(items[0].index())
-            #     self.project_selected(idx)
-            #     self.jrodosmodel_dlg.tbl_projects.scrollTo(idx)
-
-    def project_selected(self, model_idx):
-        if not model_idx.isValid():
-            # NO project selected, do not use the index to set the other combo's
+    def project_selected(self, selection_idx):
+        if len(selection_idx.indexes()) == 0 or not selection_idx.indexes()[0].isValid():
+            # nothing selected, do not use the index to set the other combo's
+            self.datapaths_provider_finished(None)  # called with Result=one will clean up dialog widgets
             return
+        model_idx = selection_idx.indexes()[0]
         # temporary text in the datapath combo
         self.jrodosmodel_dlg.combo_path.clear()
         self.jrodosmodel_dlg.combo_path.addItems([self.tr("Retrieving project datapaths...")])
@@ -859,29 +842,14 @@ class JRodos:
         # Now: retrieve the datapaths of this project using a JRodosProjectProvider
         idx = self.jrodosmodel_dlg.proxy_model.mapToSource(model_idx)
         url = self.projects_model.item(idx.row(), 6).text()
-        log.debug(f'Selected: {url}')
         config = JRodosProjectConfig()
         config.url = url
         datapaths_provider = JRodosProjectProvider(config)
         datapaths_provider.finished.connect(self.datapaths_provider_finished)
         datapaths_provider.get_data()
 
-    def datapaths_provider_finished(self, result):
-        if result.error():
-            self.msg(None,
-                     self.tr("Problem retrieving the JRodos datapaths for project:\n\n{}.").format(
-                         result.url) +
-                     self.tr("\n\nCheck the Log Message Panel for more info, \nor replay this url in a browser."))
-            # set (empty) paths_model/None in combo: clean up
-            self.jrodosmodel_dlg.combo_path.setModel(None)
-            self.jrodosmodel_dlg.combo_path.clear()
-            # cleanup the start time, step etc in the dialog too
-            self.set_dialog_project_info(None, None, None)
-            self.task_model = None  # is used as flag for problems
-            # let's remove this project from the user settings, as it apparently has datapath problems
-            # and keeping this project as last project we stay in this loop of retrieving faulty datapaths
-            Utils.set_settings_value("jrodos_last_model_project", "")
-        else:
+    def datapaths_provider_finished(self, result=None):
+        if result and not result.error():
             # load saved user data_items from pickled file
             data_items_from_disk = []
             if os.path.isfile(self.USER_DATA_ITEMS_PATH):
@@ -946,7 +914,6 @@ class JRodos:
                         ])
                 # add the task model to the project data
                 self.jrodos_project_data.append(data_items_model)
-
             self.jrodosmodel_dlg.combo_task.setModel(self.task_model)
             self.jrodosmodel_dlg.combo_task.setModelColumn(self.QMODEL_NAME_IDX)  # what we show in dropdown
             # check the last remembered Task
@@ -983,6 +950,27 @@ class JRodos:
                 # self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
                 self.project_info_provider.finished.connect(self.provide_project_info_finished)
                 self.project_info_provider.get_data()
+            return
+        else:
+            self.jrodosmodel_dlg.combo_path.clear()
+            # cleanup the start time, step etc in the dialog too
+            self.set_dialog_project_info(None, None, None)
+            self.task_model = None  # is used as flag for problems
+            # let's remove this project from the user settings, 
+            # as it apparently has datapath problems
+            # and keeping this project as last project we stay in this 
+            # loop of retrieving faulty datapaths
+            Utils.set_settings_value("jrodos_last_model_project", "")
+            if result is not None:
+                self.msg(None,
+                         self.tr(
+                             "Problem retrieving the JRodos datapaths "
+                             "for project:\n\n{}.").format(
+                             result.url) +
+                         self.tr(
+                             "\n\nCheck the Log Message Panel for more "
+                             "info, \nor replay this url in a browser."))
+            return
 
     def task_selected(self, tasks_model_idx):
         """

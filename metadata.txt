@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.4
 description=Plugin to connect to JRodos via WPS
-version=1.1.11
+version=1.1.10
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,7 +24,6 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog
 changelog=
-    1.1.11  Change modelparam inputs to labels
     1.1.10  Bug fixes
     1.1.9   Better (less) redrawing of graphs, Fix info-field json parse issue, add Skip button in Model dialog
     1.1.8   Show JRodos projects in a searchable table instead of a dropdown

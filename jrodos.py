@@ -605,20 +605,26 @@ class JRodos:
 
         if hasattr(result, "error") and result.error():
             self.msg(None,
-                     self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's. \nCheck the Log Message Panel for more info"))
+                     self.tr("Problem in JRodos plugin retrieving the Quantities-Substance combi's.\nNote: this can be a one-time issue... Please click the button again. \nor Check the Log Message Panel for more info."))
             self.measurements_dlg.lbl_retrieving_combis.setText("Nothing received, please try again.")
         else:
             self.combis = result.data
             self.combi_descriptions = {}
+            user_quantities_substances_from_disk = []
+
+            if self.combis is None or len(self.combis) == 0:
+                self.msg(None,
+                     self.tr("No Quantities-Substance combi's found for your time selection.\nPlease provide a bigger timeframe. \nNote that we only store 3 months of historical Eurdep data. "))
+                self.load_default_combis()
 
             # LOAD saved user data_items from pickled file
-            user_quantities_substances_from_disk = []
             if os.path.isfile(self.USER_QUANTITIES_SUBSTANCES_PATH):
                 with open(self.USER_QUANTITIES_SUBSTANCES_PATH, 'rb') as f:
                     user_quantities_substances_from_disk = pickle.load(f)
             self.measurements_dlg.lbl_retrieving_combis.setText(self.tr("Please select one or more combination(s)"))
 
             self.quantities_substances_model = QStandardItemModel()
+
             for combi in self.combis:
                 description = '{}, {} - ({}, {})'.format(combi['quantity_desc'],
                                                         combi['substance_desc'],
@@ -1220,15 +1226,7 @@ class JRodos:
 
         self.measurements_dlg.le_project_id.setText(Utils.get_settings_value('projectid', ''))
 
-        if self.combis is None:
-            with open(self.plugin_dir + '/measurement_start_combis.json', 'rb') as f:
-                self.combis = json.load(f)
-                result = lambda: None  # 'empty' object
-                result.data = self.combis
-                self.quantities_substance_provider_finished(result)
-            # but also retrieve a fresh list in the background
-            # self.get_quantities_and_substances_combis()
-
+        self.load_default_combis()
         self.measurements_dlg.show()
 
         result = self.measurements_dlg.exec_()
@@ -1327,6 +1325,13 @@ class JRodos:
         else:  # cancel pressed
             self.measurements_settings = None
             return True
+
+    def load_default_combis(self):
+        with open(self.plugin_dir + '/measurement_start_combis.json', 'rb') as f:
+            self.combis = json.load(f)
+            result = lambda: None  # 'empty' object
+            result.data = self.combis
+            self.quantities_substance_provider_finished(result)
 
     def start_measurements_provider(self):
         self.measurements_progress_bar.setMaximum(0)

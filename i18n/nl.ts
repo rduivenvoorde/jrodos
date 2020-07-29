@@ -9,11 +9,6 @@
         <translation>Dialoog</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_filter_dialog_base.ui" line="33"/>
-        <source>Search</source>
-        <translation>Zoek</translation>
-    </message>
-    <message>
         <location filename="../ui/jrodos_filter_dialog_base.ui" line="43"/>
         <source>All items checked below will appear in the dropdown. Unchecking removes them from the dropdown.</source>
         <translation>Alle aangevinkte onderdelen beneden zullen in de dropdown te zien zijn. Uitvinken verwijdert ze uit de dropdown.</translation>
@@ -230,7 +225,7 @@ p, li { white-space: pre-wrap; }
         <translation>Zoek metingen uit de Eurdep Database, AdHoc Database en de CalWeb Database</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog_base.ui" line="249"/>
+        <location filename="../ui/jrodos_measurements_dialog_base.ui" line="259"/>
         <source>Optional Filters:</source>
         <translation>Optionele filters:</translation>
     </message>
@@ -275,9 +270,14 @@ p, li { white-space: pre-wrap; }
         <translation>Projectnummer CalWeb</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog_base.ui" line="259"/>
+        <location filename="../ui/jrodos_measurements_dialog_base.ui" line="252"/>
         <source>Select combinations per Substance group:</source>
         <translation>Selecteer combinatie(s) per Compartiment-groep:</translation>
+    </message>
+    <message>
+        <location filename="../ui/jrodos_filter_dialog_base.ui" line="33"/>
+        <source>Filter</source>
+        <translation>Filter</translation>
     </message>
 </context>
 <context>
@@ -784,7 +784,7 @@ p, li { white-space: pre-wrap; }
         <translation>JRodos Plugin</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="459"/>
+        <location filename="../jrodos.py" line="460"/>
         <source>&amp;JRodos</source>
         <translation></translation>
     </message>
@@ -824,41 +824,41 @@ p, li { white-space: pre-wrap; }
         <translation>Metingen</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="377"/>
+        <location filename="../jrodos.py" line="378"/>
         <source>Search in items</source>
         <translation>Zoeken in items</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="515"/>
+        <location filename="../jrodos.py" line="522"/>
         <source>JRodos plugin layers</source>
         <translation>JRodos plugin lagen</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="726"/>
+        <location filename="../jrodos.py" line="739"/>
         <source>Problem in JRodos plugin retrieving the JRodos projects. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de JRodos projecten.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1043"/>
+        <location filename="../jrodos.py" line="1045"/>
         <source> minutes</source>
         <translation> minuten</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1050"/>
+        <location filename="../jrodos.py" line="1052"/>
         <source> hours</source>
         <translation> uren</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1165"/>
+        <location filename="../jrodos.py" line="1166"/>
         <source>Problem in JRodos plugin retrieving the JRodos model output. 
 Check the Log Message Panel for more info</source>
         <translation>Probleem in de JRodos plugin bij het ophalen van de JRodos modeluitvoer.
 Kijk in het logpaneel voor meer informatie</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1345"/>
+        <location filename="../jrodos.py" line="1351"/>
         <source>Network timeout for Measurements-WFS request. 
 Consider rising it in Settings/Options/Network. 
 Value is now: {} msec</source>
@@ -867,24 +867,24 @@ Probeer eventueel de timoutwaarde te verhogen in Extra/Opties/Netwerk.
 De waarde staat nu op: {} msec</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1571"/>
+        <location filename="../jrodos.py" line="1577"/>
         <source>Apparently no valid JRodos data received. 
 Failed to load the data!</source>
         <translation>Blijkbaar geen geldige JRodos data ontvangen. 
 Er is zijn geen gegevens te tonen!</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1810"/>
+        <location filename="../jrodos.py" line="1816"/>
         <source>Data retrieved: </source>
         <translation>Data ontvangen: </translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1858"/>
+        <location filename="../jrodos.py" line="1864"/>
         <source>Data refreshed: </source>
         <translation>Data ververst: </translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1938"/>
+        <location filename="../jrodos.py" line="1944"/>
         <source>NO measurements found in :
  %s</source>
         <translation>GEEN metingen gevonden in :
@@ -913,24 +913,24 @@ Select another project, and/or check the Log Message Panel for more info...</sou
 Kijk in het logpaneel voor meer informatie...</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1177"/>
+        <location filename="../jrodos.py" line="1178"/>
         <source>No Jrodos Model Output data? Got: {}</source>
         <translation>Geen JRodos Model Data? Ontvangen: {}</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1197"/>
+        <location filename="../jrodos.py" line="1198"/>
         <source>Still busy retrieving Measurement data via WFS, please try later...</source>
         <translation>Nog steeds bezig met het ontvangen van Metingen via WFS, even geduld a.u.b...</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1566"/>
+        <location filename="../jrodos.py" line="1572"/>
         <source>JRodos data received successfully. 
 But dataset &apos;</source>
         <translation>JRodos data succesvol ontvangen. 
 Maar dataset &apos;</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1897"/>
+        <location filename="../jrodos.py" line="1903"/>
         <source>ERROR: # %s no geometry !!! attributes: %s </source>
         <translation>FOUT: # %s Geen geometry !!! Attributen: %s </translation>
     </message>
@@ -945,12 +945,12 @@ Maar dataset &apos;</translation>
         <translation>Metingen (WFS)</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="398"/>
+        <location filename="../jrodos.py" line="399"/>
         <source>Filter project list</source>
         <translation>Filter projectenlijst</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="491"/>
+        <location filename="../jrodos.py" line="498"/>
         <source>Missing &apos;RIVM PluginConfigManager&apos; plugin,
  we REALLY need that one.
  Please install via Plugin Manager first...</source>
@@ -959,7 +959,7 @@ Maar dataset &apos;</translation>
 Installeer die a.u.b. eerst via de Plugin Manager...</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="499"/>
+        <location filename="../jrodos.py" line="506"/>
         <source>Missing &apos;TimeManager&apos; plugin,
  we REALLY need that one.
  Please install via Plugin Manager first...</source>
@@ -968,33 +968,26 @@ Installeer die a.u.b. eerst via de Plugin Manager...</translation>
 Installeer die a.u.b. eerst via de Plugin Manager...</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="523"/>
+        <location filename="../jrodos.py" line="530"/>
         <source>Both dialogs are disabled in your settings.
  Either select &apos;JRodos Geoserver WPS&apos; or &apos;Measurements WFS&apos; in the following settings dialog.</source>
         <translation>Beide dialogen zijn uitgezet in de instellingen.
  Selecteer &apos;JRodos Geoserver WPS&apos; of &apos;Measurements WFS&apos; in de volgende instellingen dialoog.</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="529"/>
+        <location filename="../jrodos.py" line="536"/>
         <source>Still busy retrieving Model data via WPS, please try later...
 Or disable/enable plugin if you want to abort that run.</source>
         <translation>Nog bezig met een eerdere run van Model data via de WPS, probeer later...
 Of deaktiveer/aktiveer de plugin om die run af te breken.</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="600"/>
-        <source>Problem in JRodos plugin retrieving the Quantities-Substance combi&apos;s. 
-Check the Log Message Panel for more info</source>
-        <translation>Er is een probleem met het ophalen van de &apos;Quantities-Substance&apos;-combinaties in de JRodos plugin.
-Bekijke met Meldingenpaneel voor meer informatie</translation>
-    </message>
-    <message>
-        <location filename="../jrodos.py" line="850"/>
+        <location filename="../jrodos.py" line="845"/>
         <source>Retrieving project datapaths...</source>
         <translation>Project-&apos;datapaden&apos; ophalen...</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="865"/>
+        <location filename="../jrodos.py" line="971"/>
         <source>Problem retrieving the JRodos datapaths for project:
 
 {}.</source>
@@ -1003,7 +996,7 @@ Bekijke met Meldingenpaneel voor meer informatie</translation>
 {}.</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="865"/>
+        <location filename="../jrodos.py" line="971"/>
         <source>
 
 Check the Log Message Panel for more info, 
@@ -1014,14 +1007,14 @@ Bekijk de meldingen in het Meldingenpaneel voor meer info,
 of probeer de url uit in een webbrowser.</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1084"/>
+        <location filename="../jrodos.py" line="1085"/>
         <source>There is a problem with this project (no tasks),
 quitting retrieving this model&apos;s parameters... </source>
         <translation>Er is een probleem met dit project, het heeft geen &apos;Tasks&apos;,
 ophalen vande model-parameters wordt afgebroken... </translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1115"/>
+        <location filename="../jrodos.py" line="1116"/>
         <source>Mandatory &apos;Dataitem&apos; input is missing...
 Please select one from the dropdown.
 Or fill the dropdown via the &apos;See All&apos; button.
@@ -1034,12 +1027,12 @@ Als die lijst ook leeg is, dan is het JRodos project nog niet klaar of opgeslage
 Probeer een ander project of verzeker u ervan dat het JRodos project klaar en opgeslagen is.</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1266"/>
+        <location filename="../jrodos.py" line="1265"/>
         <source>Please select at least ONE quantity-substance combination</source>
         <translation>Selecteer tenminste 1 van de &apos;Grootheid-Compartiment&apos;-combinaties</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1357"/>
+        <location filename="../jrodos.py" line="1363"/>
         <source>No data using this filters?
 
 {}
@@ -1050,7 +1043,7 @@ Probeer een ander project of verzeker u ervan dat het JRodos project klaar en op
 {}</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1540"/>
+        <location filename="../jrodos.py" line="1546"/>
         <source>Received Data. 
 But no ZIP file..
 Try other model or Check log for more information </source>
@@ -1059,122 +1052,135 @@ Maar geen ZIP bestand..
 Probeer een ander model of Check de log voor meer informatie </translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1984"/>
+        <location filename="../jrodos.py" line="1992"/>
         <source>Esri Shape (.shp) bestand openen...</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1984"/>
+        <location filename="../jrodos.py" line="1992"/>
         <source>JRodos Esri Shape files (*.shp)</source>
         <translation>JRodos Esri Shape bestanden (*.shp)</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="817"/>
+        <location filename="../jrodos.py" line="823"/>
         <source>Description</source>
         <translation>Omschrijving</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1348"/>
+        <location filename="../jrodos.py" line="1354"/>
         <source>Network problem</source>
         <translation>Netwerk probleem</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1348"/>
+        <location filename="../jrodos.py" line="1354"/>
         <source>{result.error_code} see messages</source>
         <translation>{result.error_code} zie in de meldingen</translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1076"/>
+        <location filename="../jrodos.py" line="1077"/>
         <source>Did you select one of the projects in the table?
 Looks like nothing was selected... </source>
         <translation>Is er wel een selectie gemaakt in de tabel?
 Het lijkt erop dat er niets was geselecteerd... </translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="612"/>
+        <location filename="../jrodos.py" line="624"/>
         <source>Please select one or more combination(s)</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="815"/>
+        <location filename="../jrodos.py" line="821"/>
         <source>Project Name</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="816"/>
+        <location filename="../jrodos.py" line="822"/>
         <source>User</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="818"/>
+        <location filename="../jrodos.py" line="824"/>
         <source>Time Created</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="819"/>
+        <location filename="../jrodos.py" line="825"/>
         <source>Project ID</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1284"/>
+        <location filename="../jrodos.py" line="1283"/>
         <source>Project number is a single CalWeb project number (or empty)</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../jrodos.py" line="1941"/>
+        <location filename="../jrodos.py" line="1947"/>
         <source>%s measurements loaded from GML file, total now: %s</source>
         <translation></translation>
+    </message>
+    <message>
+        <location filename="../jrodos.py" line="607"/>
+        <source>Problem in JRodos plugin retrieving the Quantities-Substance combi&apos;s.
+Note: this can be a one-time issue... Please click the button again. 
+or Check the Log Message Panel for more info.</source>
+        <translation>Het ophalen van de Quantities-Substance-combinaties is mislukt.
+Dit zou een eenmalige probleem kunnen zijn... Klik aub nogmaals op de knop.
+of Check het paneel met de Log Meldingen voor meer informatie.</translation>
+    </message>
+    <message>
+        <location filename="../jrodos.py" line="616"/>
+        <source>No Quantities-Substance combi&apos;s found for your time selection.
+Please provide a bigger timeframe. 
+Note that we only store 3 months of historical Eurdep data. </source>
+        <translation>Geen Quantities-Substance combinaties gevonden voor deze tijd-selectie.
+Geef een grotere tijdspanne op aub.
+Opmerking: we hebben 3 maanden historische data in de Eurdep database. </translation>
     </message>
 </context>
 <context>
     <name>JRodosDialogBase</name>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="114"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="100"/>
         <source>Timestep:</source>
         <translation>Tijdstappen:</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="189"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="245"/>
         <source>...</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="154"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="140"/>
         <source>Seconds</source>
         <translation>Seconden</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="168"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="154"/>
         <source>Duration of Prognosis:</source>
         <translation>Tijdsduur Prognose:</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="245"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="224"/>
         <source>Start of release (UTC):</source>
         <translation>Start van &apos;release&apos; (UTC):</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="39"/>
-        <source>UTC</source>
-        <translation>UTC</translation>
-    </message>
-    <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="232"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="211"/>
         <source>Project</source>
         <translation>Project</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="182"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="161"/>
         <source>Dataitem</source>
         <translation>Dataitem</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="93"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="79"/>
         <source>Task</source>
         <translation>Task</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="161"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="147"/>
         <source>See All</source>
         <translation>Alles Tonen</translation>
     </message>
@@ -1189,35 +1195,40 @@ Het lijkt erop dat er niets was geselecteerd... </translation>
         <translation>Shape-bestanden</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="121"/>
+        <location filename="../ui/jrodos_dialog_base.ui" line="107"/>
         <source>Geopackage</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_dialog_base.ui" line="225"/>
-        <source>Search</source>
-        <translation>Zoek</translation>
+        <location filename="../ui/jrodos_dialog_base.ui" line="39"/>
+        <source>(UTC)</source>
+        <translation>(UTC)</translation>
+    </message>
+    <message>
+        <location filename="../ui/jrodos_dialog_base.ui" line="204"/>
+        <source>Filter</source>
+        <translation>Filter</translation>
     </message>
 </context>
 <context>
     <name>JRodosMeasurementsDialog</name>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog.py" line="69"/>
+        <location filename="../ui/jrodos_measurements_dialog.py" line="77"/>
         <source>Description</source>
         <translation>Omschrijving</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog.py" line="70"/>
+        <location filename="../ui/jrodos_measurements_dialog.py" line="78"/>
         <source>Quantity</source>
         <translation>&quot;Grootheid (quantity)&quot;</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog.py" line="71"/>
+        <location filename="../ui/jrodos_measurements_dialog.py" line="79"/>
         <source>Substance</source>
         <translation>Compartiment</translation>
     </message>
     <message>
-        <location filename="../ui/jrodos_measurements_dialog.py" line="72"/>
+        <location filename="../ui/jrodos_measurements_dialog.py" line="80"/>
         <source>Select</source>
         <translation></translation>
     </message>

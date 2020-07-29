@@ -24,7 +24,9 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog
 changelog=
-    1.1.11
+    1.1.11  Use labels instead of inputs in JRodos dialog, Skip button in Mesaurement dialog, Search->Filter,
+            Make timeend-timestart an optional param (defaults to 6400), Fix emtpy filter issue,
+            Fix keyboard navigation in Model table, Better messages when no combi's available
     1.1.10  Bug fixes
     1.1.9   Better (less) redrawing of graphs, Fix info-field json parse issue, add Skip button in Model dialog
     1.1.8   Show JRodos projects in a searchable table instead of a dropdown

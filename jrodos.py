@@ -60,18 +60,6 @@ from .style_utils import RangeCreator
 
 from . import resources  # needed for button images!
 
-# silly try catch around this one, because
-# IF user has timemanager installed it can be loaded here
-# IF NOT timemanager installed this raises an exception
-# the late import in the run method apparently does not work??
-# noinspection PyBroadException
-try:
-    from timemanager.layers.layer_settings import LayerSettings
-    from timemanager.layers.timevectorlayer import TimeVectorLayer
-    from timemanager.raster.wmstlayer import WMSTRasterLayer
-except Exception as e:
-    pass
-
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
 # import pydevd
@@ -501,19 +489,6 @@ class JRodos:
                                     QMessageBox.Ok,
                                     QMessageBox.Ok)
                 return
-
-            if 'timemanager' not in plugins:
-                QMessageBox.warning(self.iface.mainWindow(),
-                                    self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                    QMessageBox.Ok,
-                                    QMessageBox.Ok)
-
-                return
-            # Because we check for timemanager, not earlier then now
-            # we import timemanager modules here (else module import error)
-            from timemanager.layers.layer_settings import LayerSettings
-            from timemanager.layers.timevectorlayer import TimeVectorLayer
-            from timemanager.raster.wmstlayer import WMSTRasterLayer
 
             self.setProjectionsBehavior()
             
@@ -1639,6 +1614,7 @@ class JRodos:
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
             # add this layer to the TimeManager
             step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # jrodos_model_step is in seconds!!!
+
             self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     @staticmethod
@@ -1755,39 +1731,43 @@ class JRodos:
 
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
 
-        if 'timemanager' not in plugins:
-            self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
-            return
 
-        self.enable_timemanager(True)
+        if True:
+            pass
 
-        timemanager = plugins['timemanager']
-        timelayer_settings = LayerSettings()
-        timelayer_settings.layer = layer
-        timelayer_settings.startTimeAttribute = time_column
-        timelayer = TimeVectorLayer(timelayer_settings, self.iface)
-        animation_frame_length = 2000
-        frame_size = frame_size
-        frame_type = frame_type
-        timemanager.getController().setPropagateGuiChanges(False)
-        timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
-        timemanager.getController().guiControl.setTimeFrameType(frame_type)
-        timemanager.getController().guiControl.setTimeFrameSize(frame_size)
-        timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
-        # set timeslider to zero, moving it to 1 and back, thereby calling some event?
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
-        # TODO: temporarily in if clause (until upstream has it too)
-        if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
-            timemanager.getController().refreshGuiTimeFrameProperties()
-            # set 'discrete checkbox' to True to be sure there is something to see...
-            timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
         else:
-            #log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
-            timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
-        # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
-        timemanager.getController().stepForward()
-        timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
+            # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)
+            if 'timemanager' not in plugins:
+                self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
+                return
+            self.enable_timemanager(True)
+            timemanager = plugins['timemanager']
+            timelayer_settings = LayerSettings()
+            timelayer_settings.layer = layer
+            timelayer_settings.startTimeAttribute = time_column
+            timelayer = TimeVectorLayer(timelayer_settings, self.iface)
+            animation_frame_length = 2000
+            frame_size = frame_size
+            frame_type = frame_type
+            timemanager.getController().setPropagateGuiChanges(False)
+            timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
+            timemanager.getController().guiControl.setTimeFrameType(frame_type)
+            timemanager.getController().guiControl.setTimeFrameSize(frame_size)
+            timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
+            # set timeslider to zero, moving it to 1 and back, thereby calling some event?
+            timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
+            timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
+            # TODO: temporarily in if clause (until upstream has it too)
+            if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
+                timemanager.getController().refreshGuiTimeFrameProperties()
+                # set 'discrete checkbox' to True to be sure there is something to see...
+                timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
+            else:
+                #log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
+                timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
+            # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
+            timemanager.getController().stepForward()
+            timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
 
     def load_measurements(self, output_dir, style_file):
         """

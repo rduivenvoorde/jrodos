@@ -36,7 +36,7 @@ from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
 
-from .pyqtgraph import CurvePoint, TextItem, PlotCurveItem
+from .pyqtgraph import CurvePoint, TextItem, PlotCurveItem, PlotDataItem
 
 from glob import glob
 import re
@@ -1440,13 +1440,20 @@ class JRodos:
                         y.append(feature['value'])
                         # log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['unitvalue'], feature['device'], feature['quantity'], feature['unit']))
 
-                    # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
                     # NOT using shortcut notation above, because we want to keep a reference to the PlotCurveItem for click
+
+                    # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
+                    # t=triangle, s=square, p=pentagon, h=hexagon
+                    if len(x) < 30:
+                        points = PlotDataItem(x=x, y=y, symbol='+', color='0000ff99', symbolPen='0000ff99')
+                        self.graph_widget.graph.addItem(points)
+
                     curve = PlotCurveItem(x=x, y=y, pen='ff000099', mouseWidth=0)
                     curve.setClickable(True, 6)
                     curve.sigClicked.connect(self.curve_click)
                     self.graph_widget.graph.addItem(curve)
+
                     # create a curve <-> device,feature mapping as lookup for later use
                     self.curves[curve] = (device, selected_feature)
 
@@ -1503,9 +1510,12 @@ class JRodos:
             self.graph_device_pointer = None
 
     def find_jrodos_layer(self, settings_object):
-        for layer in self.jrodos_settings:
-            if self.jrodos_settings[layer] == settings_object:
-                return layer
+        try:
+            for layer in self.jrodos_settings:
+                if self.jrodos_settings[layer] == settings_object:
+                    return layer
+        except:
+            pass
         return None
 
     def remove_jrodos_layer(self, layer2remove):

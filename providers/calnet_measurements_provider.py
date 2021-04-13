@@ -212,5 +212,5 @@ class CalnetMeasurementsProvider(ProviderBase):
             f.write(self.request.toEncoded())
             f.write(b'\n\n\n')
 
-        reply = self.network_manager.get(QNetworkRequest(self.request))
-        reply.finished.connect(partial(self._data_retrieved, reply))
+        self.reply = self.network_manager.get(QNetworkRequest(self.request))
+        self.reply.finished.connect(partial(self._data_retrieved, self.reply))

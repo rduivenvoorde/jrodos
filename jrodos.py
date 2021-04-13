@@ -326,6 +326,13 @@ class JRodos:
             action = self.toolbar.addWidget(self.jrodos_output_progress_bar)
             self.actions.append(action)
 
+        icon_abort_path = os.path.join(os.path.dirname(__file__), 'icon_abort.png')
+        self.add_action(
+            icon_abort_path,
+            text=self.tr(u'STOP Current Requests'),
+            callback=self.abort_requests,
+            parent=self.iface.mainWindow())
+
         if self.measurements_progress_bar is None:
             self.measurements_progress_bar = QProgressBar()
             self.measurements_progress_bar.setToolTip(self.tr("Measurement data (WFS)"))
@@ -401,6 +408,19 @@ class JRodos:
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
+
+    def abort_requests(self):
+        log.debug('Aborting all Requests!!!')
+        try:
+            if self.measurements_provider and self.measurements_provider.reply:
+                self.measurements_provider.reply.abort()
+        except:
+            log.debug("Silent Exception when aborting the WFS measurements request")
+        try:
+            if self.rodos_output_provider and self.jrodos_output_provider.reply:
+                self.jrodos_output_provider.reply.abort()
+        except:
+            log.debug("Silent Exception when aborting the JRodos WPS model output request")
 
     # TODO: move this to a commons class/module
     def get_rivm_toolbar(self):
@@ -709,9 +729,9 @@ class JRodos:
         """
         config = JRodosProjectConfig()
         config.url = self.settings.value('jrodos_rest_url')
-        projects_provider = JRodosProjectProvider(config)
-        projects_provider.finished.connect(self.projects_provider_finished)
-        projects_provider.get_data('/projects')
+        self.projects_provider = JRodosProjectProvider(config)
+        self.projects_provider.finished.connect(self.projects_provider_finished)
+        self.projects_provider.get_data('/projects')
 
     def projects_provider_finished(self, result):
         if result.error():
@@ -829,9 +849,9 @@ class JRodos:
         url = self.projects_model.item(idx.row(), 6).text()
         config = JRodosProjectConfig()
         config.url = url
-        datapaths_provider = JRodosProjectProvider(config)
-        datapaths_provider.finished.connect(self.datapaths_provider_finished)
-        datapaths_provider.get_data()
+        self.datapaths_provider = JRodosProjectProvider(config)
+        self.datapaths_provider.finished.connect(self.datapaths_provider_finished)
+        self.datapaths_provider.get_data()
 
     def datapaths_provider_finished(self, result=None):
         if result and not result.error():
@@ -1150,7 +1170,8 @@ class JRodos:
             if result.data is not None:
                 unit_used = self.jrodos_output_settings.units
                 s = self.jrodos_output_settings.jrodos_path[:-1]  # contains path='...' remove last quote
-                layer_name = unit_used + ' - ' + s.split('=;=')[-2]+', '+s.split('=;=')[-1]
+                s2 = self.jrodos_output_settings.jrodos_project
+                layer_name = unit_used + ' - ' + s.split('=;=')[-2]+', '+s.split('=;=')[-1]+', '+s2.split("'")[1]
                 self.load_jrodos_output(
                     result.data['output_dir'], 'totalpotentialdoseeffective.qml', layer_name, unit_used)
             else:
@@ -1331,7 +1352,7 @@ class JRodos:
         # so IF error_code = 5 (http://doc.qt.io/qt-4.8/qnetworkreply.html#NetworkError-enum)
         # provide the user feed back to rise the timeout value
         if result.error_code == 5:
-            self.msg(None, self.tr("Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
+            self.msg(None, self.tr("Request(s) Cancelled\nOR\nA Network timeout for Measurements-WFS request. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
         elif result.error():
             self.msg(None, result)
             self.iface.messageBar().pushMessage(self.tr("Network problem"), self.tr(f'{result.error_code} see messages'), level=Qgis.Critical)

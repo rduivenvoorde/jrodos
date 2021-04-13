@@ -108,6 +108,7 @@ class ProviderResult:
         elif network_error == 4:
             return "TimeoutError"
         elif network_error == 5:
+            # both Aborting this request, AND an actual network timout result in a 5 error...
             return "OperationCanceledError"
         elif network_error == 202:
             return "ContentOperationNotPermittedError"

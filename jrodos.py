@@ -29,7 +29,9 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
 from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
     QgsRasterLayer, QgsFeatureRequest, QgsGeometry, \
-    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, QgsApplication
+    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, \
+    QgsApplication, QgsVectorLayerTemporalProperties, QgsUnitTypes, \
+    QgsTemporalUtils, QgsTemporalNavigationObject, QgsInterval
 
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
@@ -59,18 +61,6 @@ from .providers.utils import Utils as ProviderUtils
 from .style_utils import RangeCreator
 
 from . import resources  # needed for button images!
-
-# silly try catch around this one, because
-# IF user has timemanager installed it can be loaded here
-# IF NOT timemanager installed this raises an exception
-# the late import in the run method apparently does not work??
-# noinspection PyBroadException
-try:
-    from timemanager.layers.layer_settings import LayerSettings
-    from timemanager.layers.timevectorlayer import TimeVectorLayer
-    from timemanager.raster.wmstlayer import WMSTRasterLayer
-except Exception as e:
-    pass
 
 # pycharm debugging
 # COMMENT OUT BEFORE PACKAGING !!!
@@ -201,6 +191,8 @@ class JRodos:
         self.oldCrs = 'EPSG:4326'
 
         self.date_time_format_short = 'yyyy/MM/dd HH:mm'  # '17/6 23:01'
+
+        self.use_temporal_controller = True
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -501,19 +493,6 @@ class JRodos:
                                     QMessageBox.Ok,
                                     QMessageBox.Ok)
                 return
-
-            if 'timemanager' not in plugins:
-                QMessageBox.warning(self.iface.mainWindow(),
-                                    self.MSG_TITLE, self.tr("Missing 'TimeManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                    QMessageBox.Ok,
-                                    QMessageBox.Ok)
-
-                return
-            # Because we check for timemanager, not earlier then now
-            # we import timemanager modules here (else module import error)
-            from timemanager.layers.layer_settings import LayerSettings
-            from timemanager.layers.timevectorlayer import TimeVectorLayer
-            from timemanager.raster.wmstlayer import WMSTRasterLayer
 
             self.setProjectionsBehavior()
             
@@ -1198,21 +1177,25 @@ class JRodos:
             self.msg(None, self.tr("Still busy retrieving Measurement data via WFS, please try later..."))
             # stop this session
             return True
-
         if self.measurements_layer is not None:
+            log.debug('### 1 self.measurements_layer is not None')
             # that is we have measurements from an earlier run
             self.measurements_settings = self.jrodos_settings[self.measurements_layer]
             self.start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
             self.end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         elif self.jrodos_output_settings is not None:
+            log.debug('### 2 show_measurements_dialog: self.jrodos_output_settings is not None')
             # BUT if we just received a model, INIT the measurements dialog based on this
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
+            log.debug(f'### 2  self.start_time={self.start_time} self.end_time={self.end_time}')
         elif Utils.get_settings_value('startdatetime', False) and Utils.get_settings_value('enddatetime', False):
+            log.debug('### 3 settings values...')
             self.start_time = Utils.get_settings_value('startdatetime', '')
             self.end_time = Utils.get_settings_value('enddatetime', '')
             # log.debug(f'Got start and end from settings: {self.start_time} {self.end_time}')
         elif self.start_time is None:
+            log.debug('### 4 self.start_time is None...')
             hours = 1  # h
             self.end_time = QDateTime.currentDateTimeUtc()  # end NOW
             self.start_time = self.end_time.addSecs(-60 * 60 * hours)  # minus h hours
@@ -1233,7 +1216,7 @@ class JRodos:
         if result:  # OK was pressed
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-            #
+            # default to ...
             if '' == endminusstart:
                 endminusstart = '3600'
             Utils.set_settings_value("endminusstart", endminusstart)
@@ -1357,7 +1340,8 @@ class JRodos:
             # TODO: determine qml file based on something coming from the settings/result object
             if result.data is not None and result.data['count'] > 0:
                 now = QDateTime.currentMSecsSinceEpoch()
-                self.load_measurements(result.data['output_dir'], 'measurements_rotation.qml')
+                #self.load_measurements(result.data['output_dir'], 'measurements_rotation.qml')
+                self.load_measurements(result.data['output_dir'], 'measurements_rotation_labeled.qml')
                 log.debug('Loading gml data file(s) took {} secs'.format((QDateTime.currentMSecsSinceEpoch()-now)/1000))
             else:
                 self.msg(None, self.tr("No data using this filters?\n\n{}\n{}").format(self.measurements_settings, result.data))
@@ -1428,7 +1412,8 @@ class JRodos:
                     time_sorted_features = sorted(self.measurements_layer.getFeatures(fr), key=lambda f: f['time'])
                     for feature in time_sorted_features:
                         # log.debug(feature['gml_id'])
-                        t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
+                        #t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
+                        t = (feature['time']).toMSecsSinceEpoch()
                         x.append(t/1000)
                         #y.append(feature['unitvalue'])
                         y.append(feature['value'])
@@ -1450,7 +1435,7 @@ class JRodos:
                     # for T-GAMMA we always show microSv/h, for other it is quantity dependent
                     quantity = feature['quantity']
                     if quantity.upper() == 'T-GAMMA' and feature['unit'] in ['NSV/H', 'USV/H']:
-                        unit = 'µSv/h' # 'USV/H' we (apr2020 NOT) keep notation as eurdep data: USV/H == microSv/h
+                        unit = 'µSv/h'  # 'USV/H' we (apr2020 NOT) keep notation as eurdep data: USV/H == microSv/h
                     else:
                         unit = feature['unit']  # for other
 
@@ -1637,9 +1622,24 @@ class JRodos:
             # put a copy of the settings into our map<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
-            # add this layer to the TimeManager
-            step_minutes = self.jrodos_output_settings.jrodos_model_step/60  # jrodos_model_step is in seconds!!!
-            self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
+
+            if self.use_temporal_controller:
+                # currently gpkg does NOT contain a QDateTime field, we add a virtual one
+                datetime_field = QgsField('utcdatetime', QVariant.DateTime)
+                # argh... datetime_from_epoch returns a LOCAL time, while we want UTC....
+                # HACK HACK HACK HACK:
+                import datetime
+                local = datetime.datetime.fromtimestamp(1617351600)
+                utc = datetime.datetime.utcfromtimestamp(1617351600)
+                timezone_diff = (local - utc).seconds
+                jrodos_output_layer.addExpressionField(f' datetime_from_epoch( ("Time" - {timezone_diff}) * 1000 ) ', datetime_field)
+                self.add_layer_to_timecontroller(jrodos_output_layer,
+                                                 time_column='utcdatetime',
+                                                 frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
+            else:
+                # add this layer to the TimeManager
+                step_minutes = self.jrodos_output_settings.jrodos_model_step / 60  # jrodos_model_step is in seconds!!!
+                self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     @staticmethod
     def fix_jrodos_style_sld(jrodos_style_sld):
@@ -1753,14 +1753,53 @@ class JRodos:
         timemanager = plugins['timemanager']
         timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
 
-    def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
+    def add_layer_to_timecontroller(self, layer, time_column=None, frame_size_seconds=3600):
+        # get the temporal properties of the time layer
+        temporal_props = layer.temporalProperties()
+        # set the temporal mode to 'DateTime comes from one attribute field'
+        temporal_props.setMode(QgsVectorLayerTemporalProperties.ModeFeatureDateTimeInstantFromField)
+        # set the 'start' of the event to be the (virtual) datetime field
+        temporal_props.setStartField(time_column)
 
+        # tell the layer props that the 'events' last about 10m
+        temporal_props.setDurationUnits(QgsUnitTypes.TemporalUnit.TemporalSeconds)
+        # get measurementlayer integration time from self.measurements_settings
+        default_integration_time = frame_size_seconds
+        timestep = QgsInterval()
+        #temporal_props.setFixedDuration(int(frame_size_seconds))  # setting the LAYERS event duration (in s)
+        temporal_props.setFixedDuration(0)  # setting the LAYERS event duration (in s) to ZERO !!!!
+        timestep.setSeconds(float(frame_size_seconds))
+
+        # NOW enable the layer as 'temporal enabled'
+        temporal_props.setIsActive(True)  # OK
+
+        # to update the legend (the temporal indicator) if not showing up:
+        # TODO  ?
+        # node = QgsProject.instance().layerTreeRoot().findLayer(layer)  # find QgsLayerTreeLayer in QgsLayerTree
+        # iface.layerTreeView().model().refreshLayerLegend(node)
+
+        # get a handle to current project and determine start and end range of ALL current temporal enabled layers
+        project = QgsProject.instance()
+        # get the current  responsible for the mapCanvas behaviour and Temporal Controller gui
+        navigator = self.iface.mapCanvas().temporalController()
+        # update the 'range' of the object (so the limits) to reflect the range of our current project
+        time_range = QgsTemporalUtils.calculateTemporalRangeForProject(project)
+        navigator.setTemporalExtents(time_range)
+        # set timestep
+        navigator.setFrameDuration(timestep)
+
+        # OK, all setup now. let's show Temporal controller, `rewind to start and play one loop
+        navigator.setNavigationMode(QgsTemporalNavigationObject.Animated)  # will show controller
+        navigator.rewindToStart()
+        # play one step
+        navigator.next()
+
+    def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
+         # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)
         if 'timemanager' not in plugins:
             self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
             return
-
         self.enable_timemanager(True)
-
         timemanager = plugins['timemanager']
         timelayer_settings = LayerSettings()
         timelayer_settings.layer = layer
@@ -1813,6 +1852,8 @@ class JRodos:
         register_layers = False
         if self.measurements_layer is None:
             register_layers = True
+
+            # TODO: fix this OR remove this
             self.set_legend_node_name(self.layer_group,
                                       self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString(
                                           'MM/dd HH:mm:ss'))
@@ -1829,7 +1870,7 @@ class JRodos:
                               QgsField("substance", QVariant.String),
                               QgsField("unit", QVariant.String),
                               QgsField("value", QVariant.Double),
-                              QgsField("time", QVariant.String),
+                              QgsField("time", QVariant.DateTime),  # QgsField("time", QVariant.String),
                               QgsField("info", QVariant.String),
                               QgsField("device", QVariant.String),
                               QgsField("projectid", QVariant.String),
@@ -1861,9 +1902,9 @@ class JRodos:
             self.measurements_layer.endEditCommand()
             self.measurements_layer.commitChanges()
             # set current timestamp in the group node of the legend
+            # TODO: fix this OR remove this
             self.set_legend_node_name(self.layer_group,
                                       self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
-            # self.measurements_layer.setName(layer_name) # only in 2.16
 
         feature_count = 0
         flist = []
@@ -1952,8 +1993,14 @@ class JRodos:
             self.measurements_layer.updateExtents()
 
         if register_layers:
-            # add this layer to the TimeManager
-            self.add_layer_to_timemanager(self.measurements_layer, 'time')
+            if self.use_temporal_controller:
+                # Temporal Controller !
+                self.add_layer_to_timecontroller(self.measurements_layer,
+                                                 time_column='time',
+                                                 frame_size_seconds=self.measurements_settings.endminusstart)
+            else:
+                # OLD add this layer to the old TimeManager
+                self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
             # set the display field value
             self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
@@ -1984,8 +2031,9 @@ class JRodos:
         :return:
         """
         model = self.iface.layerTreeView().model()
-        index = model.node2index(treenode)
-        model.setData(index, name)
+        print(model)
+        #index = model.node2index(treenode)
+        #model.setData(index, name)
 
     # TODO remove all shape file loading related code
     def load_jrodos_shape(self):
@@ -2060,10 +2108,21 @@ class JRodos:
                     unit = feature[field.name()]
                 elif field.name().upper() in ('QUANTITY_SUBSTANCE'):
                     quantity_substance = feature[field.name()]
-                elif feature[field.name()] == '-': # VALUE = '-' ?  skip it
+                elif feature[field.name()] == '-':  # VALUE = '-' ?  skip it
                     pass
-                elif 'TIME' in field.name().upper():
-                    field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
+                # TODO: het weergeven van de TIME in UTC gaat helemaal fout, lijkt een QGIS issue te zijn...
+                #elif 'TIME' in field.name().upper():
+                #    print('1 *********************************************************')
+                #    print(feature[field.name()])
+                    #print(feature[field.name()].toString('yyyy/MM/dd HH:mm (UTC)'))
+                    #dt = feature[field.name()]
+                #    dt = QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs)
+                #    print(type(dt))
+                    #print(dt.toString('yyyy MM dd HH:mm (UTC)'))
+                #    print('2 *********************************************************')
+                    #field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
+                #    field_string += field.name().title() + ': ' + feature[field.name()].toString('yyyy/MM/dd HH:mm (UTC)') + '<br/>'
+                #    field_string += field.name().title() + ': ' + '{}'.format(dt.toString('yyyy MM dd HH:mm (UTC)')) + '<br/>'
                 else:
                     field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
             else:

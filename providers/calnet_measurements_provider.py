@@ -101,6 +101,21 @@ class CalnetMeasurementsProvider(ProviderBase):
             self.finished.emit(result)
             reply.deleteLater()  # else timeouts on Windows
             return
+        elif reply.attribute(QNetworkRequest.RedirectionTargetAttribute) is not None:
+            # !! We are being redirected
+            # http://stackoverflow.com/questions/14809310/qnetworkreply-and-301-redirect
+            url = reply.attribute(QNetworkRequest.RedirectionTargetAttribute)  # returns a QUrl
+            log.debug('Redirecting !!!!!!!')
+            if not url.isEmpty():  # which IF NOT EMPTY contains the new url
+                # find it and get it
+                self.config.url = url.toString()
+                self.request.setUrl(self.config.url)  # <= IMPORTANT, we are NOT REreading the config
+                self.get_data()
+
+            # delete this reply, else timeouts on Windows
+            reply.deleteLater()
+            # return without emitting 'finished' (and setting self.ready)
+            return
         else:
             filename = self.config.output_dir + '/data' + str(self.file_count) + '.gml'
             log.debug("Saving to: {}".format(filename))
@@ -118,7 +133,7 @@ class CalnetMeasurementsProvider(ProviderBase):
                 #     </ows:Exception>
                 # </ows:ExceptionReport>
                 exception = re.findall('<ows:ExceptionText>', first1500chars_str)
-                if len(exception)>0:
+                if len(exception) > 0:
                     # oops WFS returned an exception
                     result.set_error(-1, reply.url().toString(), first1500chars_str)
                     self.ready = True
@@ -130,11 +145,20 @@ class CalnetMeasurementsProvider(ProviderBase):
                     # Note: there is also an attribute 'numberMatched' but this returns often 'unknown'
                     #log.debug('First 1500 chars in result: {}'.format(first1500chars_str))
                     page_count = re.findall('numberReturned="([0-9.]+)"', first1500chars_str)
-                    self.page_count = int(page_count[0])
-                    self.total_count += self.page_count
+                    if len(page_count) == 0:
+                        # dit trad op wanneer de server redirect, nu maar laten staan om evt probleem met de page_count op te vangen (en dus te stoppen)
+                        result.set_error(-1, reply.url().toString(), f'Something went wrong: page_count in data is emtpy: {page_count}\n')
+                        self.ready = True
+                        self.finished.emit(result)
+                        reply.deleteLater()  # else timeouts on Windows
+                        return
+                    else:
+                        self.page_count = int(page_count[0])
+                        self.total_count += self.page_count
                 f.write(first1500chars)
                 # now the rest
                 f.write(reply.readAll())
+
 
             # NOTE: if copying with shutil.copy2 or shutil.copy, QGIS only reads gml when you touch gfs file (see below!!!
             shutil.copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'schemas', 'measurements.gfs'),
@@ -176,14 +200,17 @@ class CalnetMeasurementsProvider(ProviderBase):
         log.debug('Get (more) measurements... firing WFS request: GET {}'.format(self.request.url()))
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
-        with open(config_file, 'wb') as f:
+        with open(config_file, 'ab+') as f:
             # f.write(str(self.config))
             # f.write('\n')
             # f.write(self.request.toString())
             s = self.config
             f.write(bytes(s))
-            f.write(b'\n')
+            f.write(b'\nHuman Readable:\n')
             f.write(bytes(self.request.url(), 'utf-8'))
+            f.write(b'\n\nEncoded:\n')
+            f.write(self.request.toEncoded())
+            f.write(b'\n\n\n')
 
         reply = self.network_manager.get(QNetworkRequest(self.request))
         reply.finished.connect(partial(self._data_retrieved, reply))

@@ -54,7 +54,7 @@ UI_FILES = \
     ui \
     *.ui
 
-EXTRAS = metadata.txt icon.png styles schemas measurement_start_combis.json
+EXTRAS = metadata.txt icon.png icon_abort.png styles schemas measurement_start_combis.json
 
 COMPILED_RESOURCE_FILES = resources.py
 

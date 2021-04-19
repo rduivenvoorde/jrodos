@@ -422,6 +422,11 @@ class JRodos:
         except:
             log.debug("Silent Exception when aborting the JRodos WPS model output request")
 
+    def debug(self, msg):
+        msg = msg.replace('<', '&lt;').replace('>', '&gt;')
+        from qgis.core import QgsMessageLog  # we need this... else QgsMessageLog is None after a plugin reload
+        QgsMessageLog.logMessage('{}'.format(msg), 'JRodos3 debuginfo',  Qgis.Info)
+
     # TODO: move this to a commons class/module
     def get_rivm_toolbar(self):
         toolbar_title = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
@@ -1434,7 +1439,12 @@ class JRodos:
                     for feature in time_sorted_features:
                         # log.debug(feature['gml_id'])
                         #t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
-                        t = (feature['time']).toMSecsSinceEpoch()
+                        # mmm, attribute can show up as QDateTime OR as str depending on OperatingSystem or QGIS version...
+                        time = feature['time']
+                        if isinstance(time, QDateTime):  # QDateTime
+                            t = time.toMSecsSinceEpoch()
+                        else:  # str
+                            t = QDateTime.fromString(feature['time'], 'yyyy-MM-ddTHH:mm:ssZ').toMSecsSinceEpoch()
                         x.append(t/1000)
                         #y.append(feature['unitvalue'])
                         y.append(feature['value'])
@@ -1445,7 +1455,7 @@ class JRodos:
 
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # t=triangle, s=square, p=pentagon, h=hexagon
-                    if len(x) < 30:
+                    if len(x) < 20:
                         points = PlotDataItem(x=x, y=y, symbol='+', color='0000ff99', symbolPen='0000ff99')
                         self.graph_widget.graph.addItem(points)
 
@@ -1520,13 +1530,16 @@ class JRodos:
 
     def remove_jrodos_layer(self, layer2remove):
         for layer in self.jrodos_settings.keys():
-            if layer2remove == layer.id():
+            import sip
+            if not sip.isdeleted(layer) and layer2remove == layer.id():
                 if self.measurements_layer == layer:
-                    self.graph_widget.graph.clear()
+                    if self.graph_widget and not sip.isdeleted(self.graph_widget):
+                        self.graph_widget.graph.clear()
                     self.measurements_layer = None
                     self.remove_device_pointer()
-                del self.jrodos_settings[layer]
-                return
+                    # sometimes C++ layer is already deleted...
+                    del self.jrodos_settings[layer]
+                    return
 
     # noinspection PyBroadException
     def load_jrodos_output(self, output_dir, style_file, layer_name, unit_used):
@@ -2154,6 +2167,12 @@ class JRodos:
                     #field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
                 #    field_string += field.name().title() + ': ' + feature[field.name()].toString('yyyy/MM/dd HH:mm (UTC)') + '<br/>'
                 #    field_string += field.name().title() + ': ' + '{}'.format(dt.toString('yyyy MM dd HH:mm (UTC)')) + '<br/>'
+                elif 'TIME' in field.name().upper():
+                    time = feature[field.name()]
+                    if isinstance(time, QDateTime):  # QDateTime
+                        field_string += field.name().title() + ': ' + '{}'.format(time.toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
+                    else:  # str, create a QDateTime here to format string
+                        field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
                 else:
                     field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'
             else:

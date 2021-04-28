@@ -389,12 +389,13 @@ class JRodos:
         start_time = end_time.addSecs(-60 * 60 * 30 * 24)  # minus 24 hour
         self.measurements_dlg.dateTime_start.setDateTime(start_time)
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
-        self.measurements_dlg.cb_a1.clicked.connect(self.cb_a1_clicked)
-        self.measurements_dlg.cb_a2.clicked.connect(self.cb_a2_clicked)
-        self.measurements_dlg.cb_a3.clicked.connect(self.cb_a3_clicked)
-        self.measurements_dlg.cb_a4.clicked.connect(self.cb_a4_clicked)
-        self.measurements_dlg.cb_a5.clicked.connect(self.cb_a5_clicked)
-        self.measurements_dlg.cb_unknown.clicked.connect(self.cb_unknown_clicked)
+        self.measurements_dlg.cb_a1.stateChanged.connect(self.cb_a1_clicked)
+        self.measurements_dlg.cb_a2.stateChanged.connect(self.cb_a2_clicked)
+        self.measurements_dlg.cb_a3.stateChanged.connect(self.cb_a3_clicked)
+        self.measurements_dlg.cb_a4.stateChanged.connect(self.cb_a4_clicked)
+        self.measurements_dlg.cb_a5.stateChanged.connect(self.cb_a5_clicked)
+        self.measurements_dlg.cb_unknown.stateChanged.connect(self.cb_unknown_clicked)
+        self.measurements_dlg.cb_tgamma_a5.stateChanged.connect(self.cb_tgamma_a5_clicked)
         self.filter_dlg.le_item_filter.setPlaceholderText(self.tr('Filter project list'))
 
         self.measurements_dlg.btn_all_combis.clicked.connect(lambda: self.quantities_substances_set_all(True))
@@ -695,16 +696,27 @@ class JRodos:
         self.measurements_dlg.cb_a4.setChecked(checked)
         self.measurements_dlg.cb_a5.setChecked(checked)
         self.measurements_dlg.cb_unknown.setChecked(checked)
+        self.measurements_dlg.cb_tgamma_a5.setChecked(checked)
 
-    def quantities_substances_toggle_selection_group(self, text, checked):
+    def quantities_substances_toggle_selection_group(self, text, checked, others_checked=None):
+        if checked == 0:
+            checked = False
+        else:
+            checked = True
         model = self.measurements_dlg.tbl_combis.model()
         for row in range(0, model.rowCount()):
             idx = model.index(row, 3)
-            data = model.data(idx)
+            data = model.data(idx)  # 'T-GAMMAA5' etc etc
+            idx = model.index(row, self.QMODEL_SEARCH_IDX)
             if text in data:
-                idx = model.index(row, self.QMODEL_SEARCH_IDX)
                 model.setData(idx, checked)
                 self.quantities_substance_color_model(row)
+            elif others_checked is not None:
+                model.setData(idx, others_checked)
+                self.quantities_substance_color_model(row)
+
+    def cb_tgamma_a5_clicked(self, checked):
+        self.quantities_substances_toggle_selection_group('T-GAMMAA5', checked, False)
 
     def cb_a1_clicked(self, checked):
         self.quantities_substances_toggle_selection_group('A1', checked)

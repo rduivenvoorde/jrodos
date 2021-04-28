@@ -77,7 +77,7 @@ class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
         item_model.setHeaderData(0, Qt.Horizontal, self.tr("Description"))
         item_model.setHeaderData(1, Qt.Horizontal, self.tr("Quantity"))
         item_model.setHeaderData(2, Qt.Horizontal, self.tr("Substance"))
-        item_model.setHeaderData(4, Qt.Horizontal, self.tr("Select"))
+        item_model.setHeaderData(4, Qt.Horizontal, self.tr("Selected"))
 
         self.tbl_combis.setColumnWidth(0, 400)
         self.tbl_combis.setColumnWidth(1, 300)

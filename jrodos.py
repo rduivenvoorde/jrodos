@@ -1295,6 +1295,11 @@ class JRodos:
             Utils.set_settings_value("startdatetime", start_date)
             end_date = self.measurements_dlg.dateTime_end.dateTime()  # UTC
             Utils.set_settings_value("enddatetime", end_date)
+
+            if start_date >= end_date:
+                self.msg(None, self.tr('"Start time" is later then "End time" of selected period.\nPlease fix the dates in the Measurements dialog.'))
+                return False
+
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
 

@@ -619,7 +619,7 @@ class JRodos:
 
             if self.combis is None or len(self.combis) == 0:
                 self.msg(None,
-                     self.tr("No Quantities-Substance combi's found for your time selection.\nPlease provide a bigger timeframe. \nNote that we only store 3 months of historical Eurdep data. "))
+                     self.tr("No Quantities-Substance combi's found for your time selection.\nPlease provide a bigger timeframe. \nNote that we only store 2 months of historical Eurdep data. "))
                 self.load_default_combis()
 
             # LOAD saved user data_items from pickled file

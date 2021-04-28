@@ -31,7 +31,8 @@ from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
     QgsRasterLayer, QgsFeatureRequest, QgsGeometry, \
     QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, \
     QgsApplication, QgsVectorLayerTemporalProperties, QgsUnitTypes, \
-    QgsTemporalUtils, QgsTemporalNavigationObject, QgsInterval
+    QgsTemporalUtils, QgsTemporalNavigationObject, QgsInterval, \
+    QgsDateTimeRange
 
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
@@ -1820,23 +1821,23 @@ class JRodos:
 
     def add_layer_to_timecontroller(self, layer, time_column=None, frame_size_seconds=3600):
         # get the temporal properties of the time layer
-        temporal_props = layer.temporalProperties()
+        layer_temporal_props = layer.temporalProperties()
         # set the temporal mode to 'DateTime comes from one attribute field'
-        temporal_props.setMode(QgsVectorLayerTemporalProperties.ModeFeatureDateTimeInstantFromField)
+        layer_temporal_props.setMode(QgsVectorLayerTemporalProperties.ModeFeatureDateTimeInstantFromField)
         # set the 'start' of the event to be the (virtual) datetime field
-        temporal_props.setStartField(time_column)
+        layer_temporal_props.setStartField(time_column)
 
-        # tell the layer props that the 'events' last about 10m
-        temporal_props.setDurationUnits(QgsUnitTypes.TemporalUnit.TemporalSeconds)
+        # tell the layer props that the 'events' last about frame_size_seconds seconds
+        layer_temporal_props.setDurationUnits(QgsUnitTypes.TemporalUnit.TemporalSeconds)
         # get measurementlayer integration time from self.measurements_settings
         default_integration_time = frame_size_seconds
         timestep = QgsInterval()
         #temporal_props.setFixedDuration(int(frame_size_seconds))  # setting the LAYERS event duration (in s)
-        temporal_props.setFixedDuration(0)  # setting the LAYERS event duration (in s) to ZERO !!!!
+        layer_temporal_props.setFixedDuration(0)  # setting the LAYERS event duration (in s) to ZERO !!!!
         timestep.setSeconds(float(frame_size_seconds))
 
         # NOW enable the layer as 'temporal enabled'
-        temporal_props.setIsActive(True)  # OK
+        layer_temporal_props.setIsActive(True)  # OK
 
         # to update the legend (the temporal indicator) if not showing up:
         # TODO  ?
@@ -1848,8 +1849,25 @@ class JRodos:
         # get the current  responsible for the mapCanvas behaviour and Temporal Controller gui
         navigator = self.iface.mapCanvas().temporalController()
         # update the 'range' of the object (so the limits) to reflect the range of our current project
-        time_range = QgsTemporalUtils.calculateTemporalRangeForProject(project)
-        navigator.setTemporalExtents(time_range)
+        temporal_range = QgsTemporalUtils.calculateTemporalRangeForProject(project)
+        log.debug(f'Total Temporal Range: {temporal_range}')
+        # if we are stepping in 1 hour steps (3600 secs), start the controller on a whole hour
+        #log.debug(f'{frame_size_seconds} type: {type(frame_size_seconds)}')
+        if int(frame_size_seconds) >= 3600:
+            start_time = temporal_range.begin().time()
+            # update begin to start at whole hour
+            start_time.setHMS(start_time.hour(), 0, 0, 0)
+            end_time = temporal_range.end().time()
+            # update end time to set to :00  (round to the next hour) IF not :00
+            if end_time.minute() != 0:
+                end_time.setHMS(end_time.hour()+1, 0, 0, 0)
+            temporal_range = QgsDateTimeRange(
+                QDateTime(temporal_range.begin().date(), start_time),
+                QDateTime(temporal_range.end().date(), end_time),
+                temporal_range.includeBeginning(),
+                temporal_range.includeEnd())
+
+        navigator.setTemporalExtents(temporal_range)
         # set timestep
         navigator.setFrameDuration(timestep)
 
@@ -1857,7 +1875,7 @@ class JRodos:
         navigator.setNavigationMode(QgsTemporalNavigationObject.Animated)  # will show controller
         navigator.rewindToStart()
         # play one step
-        navigator.next()
+        #navigator.next()
 
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
          # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)

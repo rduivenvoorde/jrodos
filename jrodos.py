@@ -635,27 +635,31 @@ class JRodos:
                                                         combi['substance_desc'],
                                                         combi['quantity'],
                                                         combi['substance'])
-                self.combi_descriptions[combi['quantity']+'_'+combi['substance']] = f"{combi['quantity_desc']} - {combi['substance_desc']}"
-                selected = False
-                if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
-                    selected = True
-                data_item = QStandardItem("{}{}".format(combi['quantity'], combi['substance']))
-                data_item.setData([combi['quantity'], combi['substance']])
-                selected_item = QStandardItem(True)
-                selected_item.setData(True)
-                quantity_item = QStandardItem('{} ({})'.format(combi['quantity_desc'], combi['quantity']))
-                substance_item = QStandardItem('{} ({})'.format(combi['substance_desc'], combi['substance']))
-                # set tooltips to be able to read long description lines easier
-                quantity_item.setData('{} ({})'.format(combi['quantity_desc'], combi['quantity']), Qt.ToolTipRole)
-                substance_item.setData('{} ({})'.format(combi['substance_desc'], combi['substance']), Qt.ToolTipRole)
-                self.quantities_substances_model.appendRow([
-                    QStandardItem(description),
-                    quantity_item,
-                    substance_item,
-                    data_item,
-                    selected_item
-                ])
-                self.quantities_substances_model.setData(self.quantities_substances_model.indexFromItem(selected_item), selected)
+                combi_key = combi['quantity']+'_'+combi['substance']
+                if combi_key in self.combi_descriptions:
+                    log.debug(f'{combi_key} already in combinations list: ignoring...')
+                else:
+                    self.combi_descriptions[combi_key] = f"{combi['quantity_desc']} - {combi['substance_desc']}"
+                    selected = False
+                    if [combi['quantity'], combi['substance']] in user_quantities_substances_from_disk:
+                        selected = True
+                    data_item = QStandardItem("{}{}".format(combi['quantity'], combi['substance']))
+                    data_item.setData([combi['quantity'], combi['substance']])
+                    selected_item = QStandardItem(True)
+                    selected_item.setData(True)
+                    quantity_item = QStandardItem('{} ({})'.format(combi['quantity_desc'], combi['quantity']))
+                    substance_item = QStandardItem('{} ({})'.format(combi['substance_desc'], combi['substance']))
+                    # set tooltips to be able to read long description lines easier
+                    quantity_item.setData('{} ({})'.format(combi['quantity_desc'], combi['quantity']), Qt.ToolTipRole)
+                    substance_item.setData('{} ({})'.format(combi['substance_desc'], combi['substance']), Qt.ToolTipRole)
+                    self.quantities_substances_model.appendRow([
+                        QStandardItem(description),
+                        quantity_item,
+                        substance_item,
+                        data_item,
+                        selected_item
+                    ])
+                    self.quantities_substances_model.setData(self.quantities_substances_model.indexFromItem(selected_item), selected)
 
             self.measurements_dlg.set_model(self.quantities_substances_model)
             # pre color rows

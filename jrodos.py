@@ -1790,6 +1790,40 @@ class JRodos:
         elif not enable and timemanager.getController().getTimeLayerManager().isEnabled():
             timemanager.getController().getGui().dock.pushButtonToggleTime.click()
 
+    def add_rainradar_to_timecontroller(self, layer_for_settings):
+        settings = JRodosSettings()
+        name = settings.value("rainradar_wmst_name")
+        url = settings.value("rainradar_wmst_url")
+        layers = settings.value("rainradar_wmst_layers")
+        styles = settings.value("rainradar_wmst_styles")
+        imgformat = settings.value("rainradar_wmst_imgformat")
+        #crs = settings.value("rainradar_wmst_crs")
+        # better to get the crs from current project to get best image results
+        crs = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+
+        # uri = 'type=wmst&allowTemporalUpdates=true&temporalSource=provider' \
+        #       '&timeDimensionExtent=2021-03-31T09:25:00Z/2021-05-03T12:20:00Z/PT5M' \
+        #       '&type=wmst&layers=RAD_NL25_PCP_CM&styles=precip-blue-transparent' \
+        #       '/nearest&crs=EPSG:3857&format=image/png&url=https://geoservices' \
+        #       '.knmi.nl/adagucserver?dataset%3DRADAR%26VERSION%3D1.1.1%26request%3Dgetcapabilities'
+
+        #current_temporal_extent = QgsTemporalUtils.calculateTemporalRangeForProject(QgsProject.instance())
+        # it's better to get the temporal extents from the controller, as these are already 'fixed' (to reasonable/nice begin/end)
+        current_temporal_extent = self.iface.mapCanvas().temporalController().temporalExtents()
+        tformat = 'yyyy-MM-ddTHH:mm:ssZ'
+        # TODO: create based on measurement time extent NOT timeDimensionExtent AND PT5M
+        # TODO: better to take crs from the project (if in 28992, 4326, 3857)
+        uri = f'timeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}/PT5M&' \
+            f'type=wmst&allowTemporalUpdates=true&temporalSource=provider' \
+            f'&type=wmst&layers={layers}&styles={styles}' \
+            f'&crs={crs}&format={imgformat}&url={url}'
+
+        log.debug(f'uri: {uri}')
+
+        rain_layer = QgsRasterLayer(uri, name, "wms")
+        QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
+
     def add_rainradar_to_timemanager(self, layer_for_settings):
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
@@ -1839,18 +1873,13 @@ class JRodos:
         # NOW enable the layer as 'temporal enabled'
         layer_temporal_props.setIsActive(True)  # OK
 
-        # to update the legend (the temporal indicator) if not showing up:
-        # TODO  ?
-        # node = QgsProject.instance().layerTreeRoot().findLayer(layer)  # find QgsLayerTreeLayer in QgsLayerTree
-        # iface.layerTreeView().model().refreshLayerLegend(node)
-
         # get a handle to current project and determine start and end range of ALL current temporal enabled layers
         project = QgsProject.instance()
         # get the current  responsible for the mapCanvas behaviour and Temporal Controller gui
         navigator = self.iface.mapCanvas().temporalController()
         # update the 'range' of the object (so the limits) to reflect the range of our current project
         temporal_range = QgsTemporalUtils.calculateTemporalRangeForProject(project)
-        log.debug(f'Total Temporal Range: {temporal_range}')
+        log.debug(f'Total Temporal Range: {temporal_range.begin()}')
         # if we are stepping in 1 hour steps (3600 secs), start the controller on a whole hour
         #log.debug(f'{frame_size_seconds} type: {type(frame_size_seconds)}')
         if int(frame_size_seconds) >= 3600:
@@ -2096,7 +2125,11 @@ class JRodos:
 
             # add rainradar and to the TimeManager IF enabled
             if self.settings.value('rainradar_enabled'):
-                self.add_rainradar_to_timemanager(self.measurements_layer)
+                if self.use_temporal_controller:
+                    # Temporal Controller !
+                    self.add_rainradar_to_timecontroller(self.measurements_layer)
+                else:
+                    self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def get_quantity_and_substance_description(self, quantity, substance):
         if f'{quantity}_{substance}' in self.combi_descriptions:
@@ -2114,7 +2147,7 @@ class JRodos:
         :return:
         """
         model = self.iface.layerTreeView().model()
-        print(model)
+        #print(model)
         #index = model.node2index(treenode)
         #model.setData(index, name)
 

@@ -701,7 +701,9 @@ class JRodos:
         self.measurements_dlg.cb_a4.setChecked(checked)
         self.measurements_dlg.cb_a5.setChecked(checked)
         self.measurements_dlg.cb_unknown.setChecked(checked)
-        self.measurements_dlg.cb_tgamma_a5.setChecked(checked)
+        # only DEselect the tgamma-a5 cb else it will mess up the selecting all
+        if not checked:
+            self.measurements_dlg.cb_tgamma_a5.setChecked(checked)
 
     def quantities_substances_toggle_selection_group(self, text, checked, others_checked=None):
         if checked == 0:
@@ -721,6 +723,11 @@ class JRodos:
                 self.quantities_substance_color_model(row)
 
     def cb_tgamma_a5_clicked(self, checked):
+        # First uncheck all checkboxes IF checked
+        if checked:
+            self.quantities_substances_set_all(False)
+            # check tgamma a5 again (as it was being unchecked)
+            self.measurements_dlg.cb_tgamma_a5.setChecked(checked)
         self.quantities_substances_toggle_selection_group('T-GAMMAA5', checked, False)
 
     def cb_a1_clicked(self, checked):
@@ -1811,8 +1818,6 @@ class JRodos:
         # it's better to get the temporal extents from the controller, as these are already 'fixed' (to reasonable/nice begin/end)
         current_temporal_extent = self.iface.mapCanvas().temporalController().temporalExtents()
         tformat = 'yyyy-MM-ddTHH:mm:ssZ'
-        # TODO: create based on measurement time extent NOT timeDimensionExtent AND PT5M
-        # TODO: better to take crs from the project (if in 28992, 4326, 3857)
         uri = f'timeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}/PT5M&' \
             f'type=wmst&allowTemporalUpdates=true&temporalSource=provider' \
             f'&type=wmst&layers={layers}&styles={styles}' \

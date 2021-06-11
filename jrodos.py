@@ -107,7 +107,7 @@ class JRodos:
                 if qVersion() > '4.3.3':
                     QCoreApplication.installTranslator(self.translator)
 
-        self.MSG_TITLE = self.tr("JRodos Plugin")
+        self.MSG_TITLE = self.tr("RIVM JRodos Plugin")
 
         # NOTE !!! project names surrounded by single quotes ??????
         self.JRODOS_PROJECTS = ["wps-13sept-test"]
@@ -275,7 +275,7 @@ class JRodos:
             self.toolbar.addAction(action)
 
         if add_to_menu:
-            self.iface.addPluginToWebMenu(
+            self.iface.addPluginToMenu(
                 self.menu,
                 action)
 

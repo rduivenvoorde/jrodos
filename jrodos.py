@@ -1210,7 +1210,7 @@ class JRodos:
 
     def set_measurements_time(self):
         """ Set the endtime to NOW (UTC) and change starttime such
-        that the timeframe stays the same
+        that the timeframe length stays the same,
         """
         # first check wat current timeframe is that user is using
         start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
@@ -1218,8 +1218,10 @@ class JRodos:
         old_timeframe = end_date.toSecsSinceEpoch() - start_date.toSecsSinceEpoch()
         end_time = QDateTime.currentDateTimeUtc()  # end is NOW
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
-        start_time = end_time.addSecs(-old_timeframe)
-        self.measurements_dlg.dateTime_start.setDateTime(start_time)
+        # ONLY reset starttime if it has a positive (== BEFORE NOW) valueq
+        if old_timeframe > 0:
+            start_time = end_time.addSecs(-old_timeframe)
+            self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
     def show_measurements_dialog(self):
 

@@ -24,7 +24,7 @@ repository=https://github.com/rduivenvoorde/jrodos
 
 # Uncomment the following line and add your changelog
 changelog=
-    2.0.2
+    2.0.2   Move to Plugin Menu, fix QGIS-71,
     2.0.1   Bugfixes plus working KNMI regenradar
     2.0.0   Disable/Remove TimeManager, make use of QGIS own 'Temporal Controller'
     1.1.11  Use labels instead of inputs in JRodos dialog, Skip button in Mesaurement dialog, Search->Filter,

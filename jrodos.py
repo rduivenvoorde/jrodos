@@ -529,6 +529,9 @@ class JRodos:
                 # BUT only if there isn't already such a group:
                 if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
                     self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
+                else:
+                    log.debug(f'RE-using available group {group_name}: {QgsProject.instance().layerTreeRoot().findGroup(group_name)}')
+                    self.layer_group = QgsProject.instance().layerTreeRoot().findGroup(group_name)
 
             # only show dialogs if the item is enabled in settings
             # but show settings in case both are disabled

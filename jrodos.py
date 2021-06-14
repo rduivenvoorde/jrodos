@@ -529,7 +529,7 @@ class JRodos:
                 # BUT only if there isn't already such a group:
                 if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
                     self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
-                    
+
             # only show dialogs if the item is enabled in settings
             # but show settings in case both are disabled
             if not self.settings.value('jrodos_enabled') and not self.settings.value('measurements_enabled'):
@@ -589,13 +589,19 @@ class JRodos:
 
     def get_quantities_and_substances_combis(self):
         log.debug("Getting Quantity/Substance combi's")
+
+        start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
+        end_date = self.measurements_dlg.dateTime_end.dateTime()  # UTC
+        if start_date >= end_date:
+            self.msg(None, self.tr(
+                '"Start time" is later then "End time" of selected '
+                'period.\nPlease fix the dates in the Measurements dialog.'))
+            return False
+
         self.measurements_dlg.lbl_retrieving_combis.setText("Searching possible Quantity/Substance combi's in this period ....")
         self.measurements_dlg.startProgressBar()
         config = CalnetMeasurementsUtilsConfig()
         config.url = self.settings.value('measurements_soap_utils_url')  # 'http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService'
-
-        start_date = self.measurements_dlg.dateTime_start.dateTime()  # UTC
-        end_date = self.measurements_dlg.dateTime_end.dateTime()      # UTC
 
         config.start_datetime = start_date.toString(config.date_time_format)
         config.end_datetime = end_date.toString(config.date_time_format)
@@ -1220,9 +1226,13 @@ class JRodos:
         old_timeframe = end_date.toSecsSinceEpoch() - start_date.toSecsSinceEpoch()
         end_time = QDateTime.currentDateTimeUtc()  # end is NOW
         self.measurements_dlg.dateTime_end.setDateTime(end_time)
-        # ONLY reset starttime if it has a positive (== BEFORE NOW) valueq
+        # ONLY reset starttime if it has a positive value (== BEFORE NOW)
         if old_timeframe > 0:
             start_time = end_time.addSecs(-old_timeframe)
+            self.measurements_dlg.dateTime_start.setDateTime(start_time)
+        else:
+            log.debug("Mmm, negative timeframe... setting start to -6 hours")
+            start_time = end_time.addSecs(-(60*60*6))
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
     def show_measurements_dialog(self):
@@ -1242,7 +1252,7 @@ class JRodos:
             # BUT if we just received a model, INIT the measurements dialog based on this
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
-            log.debug(f'### 2  self.start_time={self.start_time} self.end_time={self.end_time}')
+            #log.debug(f'### 2  self.start_time={self.start_time} self.end_time={self.end_time}')
         elif Utils.get_settings_value('startdatetime', False) and Utils.get_settings_value('enddatetime', False):
             #log.debug('### 3 settings values...')
             self.start_time = Utils.get_settings_value('startdatetime', '')

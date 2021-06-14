@@ -93,9 +93,13 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                     #   </substance>
                     # </return>
                     quantity_code = ret.find('quantity').find('code').text
-                    quantity_description = ret.find('quantity').find('description').text
+                    quantity_description = ''
+                    if ret.find('quantity').find('description'):
+                        quantity_description = ret.find('quantity').find('description').text
                     substance_code = ret.find('substance').find('code').text
-                    substance_description = ret.find('substance').find('description').text
+                    substance_description = ''
+                    if ret.find('substance').find('description'):
+                        substance_description = ret.find('substance').find('description').text
                     #description = "%s (%s) , %s (%s)" % (quantity_description, quantity_code, substance_description, substance_code)
                     # '{"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION"}'
                     data.append({'quantity': quantity_code, 'quantity_desc': quantity_description, 'substance': substance_code, 'substance_desc': substance_description})

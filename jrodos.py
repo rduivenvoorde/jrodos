@@ -416,13 +416,13 @@ class JRodos:
         try:
             if self.measurements_provider and self.measurements_provider.reply:
                 self.measurements_provider.reply.abort()
-        except:
-            log.debug("Silent Exception when aborting the WFS measurements request")
+        except Exception as e:
+            log.debug(f'Silent Exception when aborting the WFS measurements request: {e}')
         try:
-            if self.rodos_output_provider and self.jrodos_output_provider.reply:
+            if self.jrodos_output_provider and self.jrodos_output_provider.reply:
                 self.jrodos_output_provider.reply.abort()
-        except:
-            log.debug("Silent Exception when aborting the JRodos WPS model output request")
+        except Exception as e:
+            log.debug(f'Silent Exception when aborting the JRodos WPS model output request: {e}')
 
     def debug(self, msg):
         msg = msg.replace('<', '&lt;').replace('>', '&gt;')
@@ -1190,7 +1190,9 @@ class JRodos:
         self.jrodos_output_progress_bar.setMaximum(100)  # stop progress
         self.jrodos_output_progress_bar.setFormat(self.BAR_LOADING_TITLE)
         QCoreApplication.processEvents()  # to be sure we have the loading msg
-        if result.error():
+        if result.error_code == 5:
+            self.msg(None, self.tr("Request(s) Cancelled\nOR\nA Network timeout for JRodos model output. \nConsider rising it in Settings/Options/Network. \nValue is now: {} msec".format(QSettings().value('/qgis/networkAndProxy/networkTimeout', '??'))))
+        elif result.error():
             self.msg(None,
                      self.tr("Problem in JRodos plugin retrieving the JRodos model output. \nCheck the Log Message Panel for more info"))
         else:
@@ -1230,24 +1232,24 @@ class JRodos:
             # stop this session
             return True
         if self.measurements_layer is not None:
-            log.debug('### 1 self.measurements_layer is not None')
+            #log.debug('### 1 self.measurements_layer is not None')
             # that is we have measurements from an earlier run
             self.measurements_settings = self.jrodos_settings[self.measurements_layer]
             self.start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
             self.end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         elif self.jrodos_output_settings is not None:
-            log.debug('### 2 show_measurements_dialog: self.jrodos_output_settings is not None')
+            #log.debug('### 2 show_measurements_dialog: self.jrodos_output_settings is not None')
             # BUT if we just received a model, INIT the measurements dialog based on this
             self.start_time = self.jrodos_output_settings.jrodos_datetime_start.toUTC()  # we REALLY want UTC
             self.end_time = self.start_time.addSecs(60 * int(self.jrodos_output_settings.jrodos_model_time))  # model time
             log.debug(f'### 2  self.start_time={self.start_time} self.end_time={self.end_time}')
         elif Utils.get_settings_value('startdatetime', False) and Utils.get_settings_value('enddatetime', False):
-            log.debug('### 3 settings values...')
+            #log.debug('### 3 settings values...')
             self.start_time = Utils.get_settings_value('startdatetime', '')
             self.end_time = Utils.get_settings_value('enddatetime', '')
             # log.debug(f'Got start and end from settings: {self.start_time} {self.end_time}')
         elif self.start_time is None:
-            log.debug('### 4 self.start_time is None...')
+            #log.debug('### 4 self.start_time is None...')
             hours = 1  # h
             self.end_time = QDateTime.currentDateTimeUtc()  # end NOW
             self.start_time = self.end_time.addSecs(-60 * 60 * hours)  # minus h hours
@@ -1873,8 +1875,8 @@ class JRodos:
         # get measurementlayer integration time from self.measurements_settings
         default_integration_time = frame_size_seconds
         timestep = QgsInterval()
-        #temporal_props.setFixedDuration(int(frame_size_seconds))  # setting the LAYERS event duration (in s)
-        layer_temporal_props.setFixedDuration(0)  # setting the LAYERS event duration (in s) to ZERO !!!!
+        layer_temporal_props.setFixedDuration(int(frame_size_seconds))  # setting the LAYERS event duration (in s)
+        #layer_temporal_props.setFixedDuration(0)  # setting the LAYERS event duration (in s) to ZERO !!!!
         timestep.setSeconds(float(frame_size_seconds))
 
         # NOW enable the layer as 'temporal enabled'

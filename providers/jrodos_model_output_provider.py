@@ -465,10 +465,10 @@ class JRodosModelOutputProvider(JRodosModelProvider):
     def get_data(self):
         request = QNetworkRequest(QUrl(self.config.url))
         request.setHeader(QNetworkRequest.ContentTypeHeader, 'text/xml')  # or? "text/xml; charset=utf-8"
-        reply = self.network_manager.post(request, bytearray(self.xml(), 'utf-8'))
+        self.reply = self.network_manager.post(request, bytearray(self.xml(), 'utf-8'))
         extension = '.zip'
         if self.config.jrodos_format == 'application/json':
             extension = '.json'
         filename = self.config.output_dir + '/' + str(self.column) + '_' + str(
             self.config.jrodos_verticals) + extension
-        reply.finished.connect(partial(self._data_retrieved, reply, filename))
+        self.reply.finished.connect(partial(self._data_retrieved, self.reply, filename))

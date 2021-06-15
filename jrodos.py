@@ -141,7 +141,7 @@ class JRodos:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&JRodos')
+        self.menu = self.tr('RIVM JRodos')
         self.toolbar = self.get_rivm_toolbar()
 
         self.jrodos_output_progress_bar = None

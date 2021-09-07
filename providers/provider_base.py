@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from qgis.core import QgsNetworkAccessManager, QgsMessageLog, Qgis
 
-from qgis.PyQt.QtCore import QCoreApplication, QUrl,  QObject, pyqtSignal
+from qgis.PyQt.QtCore import QCoreApplication, QUrl,  QObject, pyqtSignal, QDateTime
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
 import logging
@@ -157,6 +157,12 @@ class ProviderBase(QObject):
 
         # data will always be a list of something, so do 'iter(data)' if you want to iterate over the items
         self.data = None
+
+        # BELOW CAN be used to time requests
+        # TOTAL time of (paging) request(s)
+        self.time_total = 0
+        # time of one page / getdata
+        self.time = QDateTime.currentMSecsSinceEpoch()
 
     def is_finished(self):
         return self.ready

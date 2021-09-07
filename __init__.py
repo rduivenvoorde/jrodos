@@ -29,9 +29,7 @@ It is created in the plugin.py and logs to the QgsMessageLog under the
 given LOGGER_NAME tab
 """
 LOGGER_NAME = 'JRodos3 Plugin'
-# Create the logger for this QgisNetworkLogger plugin
 from . import LOGGER_NAME
-
 from qgis.core import (
     Qgis
 )

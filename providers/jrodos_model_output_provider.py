@@ -247,7 +247,7 @@ class JRodosModelProvider(ProviderBase):
                                     vertical=self.config.jrodos_verticals)
 
     def _data_retrieved(self, reply, filename):
-
+        log.debug(f'JRodosModelProvider retrieving data, save to: {filename}')
         result = ProviderResult()
         if reply.error():
             log.debug('JRodosModelProvider ERROR: {}'.format(reply.error()))
@@ -264,6 +264,7 @@ class JRodosModelProvider(ProviderBase):
                 return
             try:
                 obj = json.loads(content.data().decode('utf-8'))
+                log.debug(f'JRodosModelProvider JSON retrieved ???: {obj}')
             except Exception:
                 result.set_error(-1, reply.url().toString(),
                              'JRodosModelOutputProvider json contains '
@@ -319,6 +320,8 @@ class JRodosModelProvider(ProviderBase):
                 result.set_error(-1, self.config.url, "Wrong json: " + content)
         self.finished.emit(result)
         self.ready = True
+        now = QDateTime.currentMSecsSinceEpoch()
+        log.debug(f'JRodosModelProvider, finished Retrieving model info in {(now-self.time_total)/1000} seconds')
         reply.deleteLater()  # else timeouts on Windows
 
     def get_data(self):
@@ -383,9 +386,7 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             reply.deleteLater()  # else timeouts on Windows
             return
         else:
-
-            # log.debug('JRodosModelOutputProvider Content: {}'.format(
-            # content))
+            # log.debug('JRodosModelOutputProvider Content: {}'.format(content))
             with open(filename, 'wb') as f:  # using 'with open', then file is explicitly closed
                 first1500bytes = reply.read(1500)
                 try:
@@ -443,9 +444,8 @@ class JRodosModelOutputProvider(JRodosModelProvider):
                         self.finished.emit(result)
                         reply.deleteLater()  # else timeouts on Windows
                         return
-
                 except Exception as e:
-                    log.debug('JRodosModelOutputProvider: Exception! So probably data is NOT an exception xml... {}'.format(e))
+                    log.debug('JRodosModelOutputProvider: Exception, all OK probably data is NOT an exception xml...')
 
                 f.write(first1500bytes)
                 f.write(reply.readAll())
@@ -458,6 +458,8 @@ class JRodosModelOutputProvider(JRodosModelProvider):
             #logging.debug('All model information received; stop fetching, start loading...')
             result.set_data({'result': 'OK', 'output_dir': self.config.output_dir}, reply.url().toString())
             # we need to wait untill all pages are there before to emit the result; so: INSIDE de loop
+            now = QDateTime.currentMSecsSinceEpoch()
+            log.debug(f'JRodosModelOutputProvider, finished Retrieving model info in {(now-self.time)/1000} seconds')
             self.ready = True
             self.finished.emit(result)
             reply.deleteLater()  # else timeouts on Windows

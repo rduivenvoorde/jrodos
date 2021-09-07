@@ -108,6 +108,7 @@ class JRodos:
                     QCoreApplication.installTranslator(self.translator)
 
         self.MSG_TITLE = self.tr("RIVM JRodos Plugin")
+        self.MENU_TITLE = self.tr('RIVM JRodos')
 
         # NOTE !!! project names surrounded by single quotes ??????
         self.JRODOS_PROJECTS = ["wps-13sept-test"]
@@ -141,7 +142,7 @@ class JRodos:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr('RIVM JRodos')
+        self.menu = self.MENU_TITLE
         self.toolbar = self.get_rivm_toolbar()
 
         self.jrodos_output_progress_bar = None
@@ -463,8 +464,9 @@ class JRodos:
 
     @staticmethod
     def show_help():
-        docs = os.path.join(os.path.dirname(__file__), "help/html", "index.html")
-        QDesktopServices.openUrl(QUrl("file:" + docs))
+        docs = os.path.join(os.path.dirname(__file__), "help", "html", "index.html")
+        log.debug(f'Trying to open HELP: {docs}')
+        QDesktopServices.openUrl(QUrl("file://" + docs))
 
     def show_graph_widget(self, checked):
         if checked:
@@ -476,8 +478,8 @@ class JRodos:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginWebMenu(
-                self.tr(u'&JRodos'),
+            self.iface.removePluginMenu(
+                self.MENU_TITLE,
                 action)
             # self.iface.removeToolBarIcon(action)
             self.toolbar.removeAction(action)
@@ -1140,7 +1142,7 @@ class JRodos:
 
         # for storing in settings we do not use the non unique name, but the ID of the project
         last_used_project = self.projects_model.item(current_project_idx.row(), self.QMODEL_ID_IDX).text()
-        log.debug(f'Storing {last_used_project} as "jrodos_last_model_project"')
+        log.debug(f'Store {last_used_project} as "jrodos_last_model_project"')
         Utils.set_settings_value("jrodos_last_model_project", last_used_project)
 
         task_index = self.jrodosmodel_dlg.combo_task.currentIndex()
@@ -1661,12 +1663,12 @@ class JRodos:
                 # only features with Value > 0, to speed up QGIS
                 value = feature.attribute('Value')
                 # check if we have a valid time in this features
-                time = feature.attribute('Time')
+                time = feature.attribute('Datetime')
                 if value > 0:
                     if value < features_min_value:
                         features_min_value = value
                     # only check when still no valid times found...
-                    if not features_have_valid_time and time is not None and time != "" and time > 0:
+                    if not features_have_valid_time and time is not None and time != "":# and time > 0:
                         features_have_valid_time = True
                         break  # we break here, as we apparently have valid features WITH valid times
                 # else:
@@ -1714,17 +1716,38 @@ class JRodos:
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
 
             if self.use_temporal_controller:
-                # currently gpkg does NOT contain a QDateTime field, we add a virtual one
-                datetime_field = QgsField('utcdatetime', QVariant.DateTime)
-                # argh... datetime_from_epoch returns a LOCAL time, while we want UTC....
-                # HACK HACK HACK HACK:
-                import datetime
-                local = datetime.datetime.fromtimestamp(1617351600)
-                utc = datetime.datetime.utcfromtimestamp(1617351600)
-                timezone_diff = (local - utc).seconds
-                jrodos_output_layer.addExpressionField(f' datetime_from_epoch( ("Time" - {timezone_diff}) * 1000 ) ', datetime_field)
+                # # currently gpkg does NOT contain a QDateTime field, we add a virtual one
+                # datetime_field = QgsField('utcdatetime', QVariant.DateTime)
+                # # argh... datetime_from_epoch returns a LOCAL time, while we want UTC....
+                # # HACK HACK HACK HACK:
+                # import datetime
+                # local = datetime.datetime.fromtimestamp(1617351600)
+                # utc = datetime.datetime.utcfromtimestamp(1617351600)
+                # timezone_diff = (local - utc).seconds
+                # jrodos_output_layer.addExpressionField(f' datetime_from_epoch( ("Time" - {timezone_diff}) * 1000 ) ', datetime_field)
+                # self.add_layer_to_timecontroller(jrodos_output_layer,
+                #                                  time_column='utcdatetime',
+                #                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
+
+                # vraag is nu of we de datetime/time column als text of als echte Datetime kunnen/moeten laden
+                # het lijkt erop dat geoserver niet een Datetime kan aanmaken...
+                # maar... de temporal controller lijkt ook te werken op een text kolom ???? (je ziet dan echter niks in de layer properties)
+
+                # een andere optie: VOORDAT we de boel in QGIS laden, even in sqlite zelf een paar queries draaien?
+
+                # CURRENTLY VIRTUAL COLUMNS ARE VERY SLOW!!
+                # currently gpkg does NOT contain a QDateTime field, trying to add a virtual one
+                # log.debug('Adding a DateTime type to the table...')
+                # datetime_field = QgsField('Datetime2', QVariant.DateTime)
+                # jrodos_output_layer.addExpressionField(f'  to_datetime(  "Datetime" )', datetime_field)
+                # self.add_layer_to_timecontroller(jrodos_output_layer,
+                #                                  time_column='datetime_field',
+                #                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
+
+                # SO: we use a iso datetime text (which works in the Temporal Controller)
+                log.debug('Using DateTime (iso-datetime as TEXT) from table...')
                 self.add_layer_to_timecontroller(jrodos_output_layer,
-                                                 time_column='utcdatetime',
+                                                 time_column='Datetime',
                                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
             else:
                 # add this layer to the TimeManager

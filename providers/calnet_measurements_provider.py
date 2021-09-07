@@ -53,10 +53,11 @@ class CalnetMeasurementsProvider(ProviderBase):
         # runner number for the file numbers
         self.file_count = 1
 
-        # TOTAL time of (paging) requests
-        self.time_total = 0
+        # moved to provider_base:
+        # TOTAL time of (paging) request(s)
+        #self.time_total = 0
         # time of one page / getdata
-        self.time = QDateTime.currentMSecsSinceEpoch()
+        #self.time = QDateTime.currentMSecsSinceEpoch()
 
         # create a QUrl object to use with query parameters
         self.request = QUrl(self.config.url)

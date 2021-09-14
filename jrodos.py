@@ -20,19 +20,46 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QVariant, \
-    QCoreApplication, QDateTime, Qt, QUrl, QSortFilterProxyModel, QLocale
-from qgis.PyQt.QtGui import QIcon, QStandardItemModel, QStandardItem, \
-    QDesktopServices,  QColor, QFont
-from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressBar, QToolBar, \
-    QFileDialog, QTableView, QCheckBox
+from qgis.PyQt.QtCore import (
+    qVersion,
+    QSettings,
+    QTranslator,
+    QVariant,
+    QCoreApplication,
+    QDateTime,
+    Qt,
+    QUrl,
+    QSortFilterProxyModel,
+    QLocale,
+)
+from qgis.PyQt.QtGui import (
+    QIcon,
+    QStandardItemModel,
+    QStandardItem,
+    QDesktopServices,
+    QColor,
+    QFont,
+    QIntValidator,
+)
+from qgis.PyQt.QtWidgets import (
+    QAction,
+    QMessageBox,
+    QProgressBar,
+    QToolBar,
+    QFileDialog,
+    QCheckBox,
+)
+from qgis.PyQt.QtNetwork import (
+    QNetworkRequest,
+    QNetworkReply,
+)
 from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
     QgsRasterLayer, QgsFeatureRequest, QgsGeometry, \
     QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, \
-    QgsApplication, QgsVectorLayerTemporalProperties, QgsUnitTypes, \
+    QgsVectorLayerTemporalProperties, QgsUnitTypes, \
     QgsTemporalUtils, QgsTemporalNavigationObject, QgsInterval, \
-    QgsDateTimeRange
+    QgsDateTimeRange, QgsBlockingNetworkRequest
 
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
@@ -163,6 +190,7 @@ class JRodos:
         self.projects_model = None
         self.quantities_substances_model = None
         self.task_model = None
+        self.current_calweb_project = None
 
         self.measurements_layer = None
         self.start_time = None
@@ -295,7 +323,7 @@ class JRodos:
             parent=self.iface.mainWindow())
 
         # settings
-        icon_path = ':/plugins/JRodos/icon.png'
+        icon_path = ':/images/themes/default/mActionOptions.svg'
         self.add_action(
             icon_path,
             text=self.tr(u'Show Settings'),
@@ -383,6 +411,7 @@ class JRodos:
         self.measurements_dlg.btn_get_combis.clicked.connect(self.get_quantities_and_substances_combis)
         self.measurements_dlg.tbl_combis.clicked.connect(self.quantities_substances_toggle)
         self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time)
+        self.measurements_dlg.btn_current_calweb_id.clicked.connect(self.fetch_set_current_calweb_id)
         # self.quantities_substance_provider_finished(None)  # development
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
@@ -1240,6 +1269,62 @@ class JRodos:
             start_time = end_time.addSecs(-(60*60*6))
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
+    def fetch_set_current_calweb_id(self):
+        """
+        Fetch either
+        - Current/Latest Calweb Project Id From the projects service,
+          via http://microservices.dev.cal-net.nl:8300/calweb/projects/current
+        OR
+        - using the project id in the input, fetch THAT project information
+
+        Using the project info fetched, SET:
+        - start_time
+        - end_time (or NOW if end_time in the project info is NULL/None)
+        """       
+        project_id = self.measurements_dlg.le_project_id.text().strip()
+        if not project_id == '' and not project_id.isdigit():
+            # User tries to use a string in this projectid field
+            self.msg(None, self.tr('Project number is a single CalWeb project number (or empty)'))
+            return False
+        if len(project_id) != 0:
+            calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), project_id)
+        else:
+            calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), 'current')
+
+        request = QgsBlockingNetworkRequest()
+        log.debug(f'Fetching current Calweb Project Id from {calweb_project_service_url}')
+        err = request.get(QNetworkRequest(QUrl(calweb_project_service_url)))
+        if err == QNetworkReply.NoError:
+            content = request.reply().content()
+            log.debug(content)
+            if len(content) > 2:
+                self.current_calweb_project = json.loads(content.data().decode('utf-8'))
+                log.debug(self.current_calweb_project)
+                # try to get the id from it, AND the start (and optional) end time
+                if 'id' in self.current_calweb_project:
+                    id = int(self.current_calweb_project['id'])
+                    log.debug(f'Current Calweb Project ID: {id}')
+                if 'isostarttime' in self.current_calweb_project:
+                    starttime = QDateTime.fromString(self.current_calweb_project['starttime'], Qt.ISODateWithMs)
+                    log.debug(starttime)
+                # Is there an endtime in the result? Else set end to NOW()
+                if 'isoendtime' in self.current_calweb_project and self.current_calweb_project['isoendtime'] is not None:
+                    endtime = QDateTime.fromString(self.current_calweb_project['isoendtime'], Qt.ISODateWithMs)
+                else:
+                    endtime = QDateTime.currentDateTimeUtc()
+                log.debug(endtime)
+
+                # TODO: moet ik self.start_time en self.end_time zetten, of niet?
+                self.measurements_dlg.dateTime_start.setDateTime(starttime)
+                self.measurements_dlg.dateTime_end.setDateTime(endtime)
+                self.measurements_dlg.le_project_id.setText(f'{id}')
+                return
+        else:
+            # service is returning 3 = QNetworkReply::HostNotFoundError
+            # nothing returned: id OR service not available?
+            self.msg(None, self.tr(f'Project Id {project_id} not available (or service misbehaving)?'))
+        log.debug(f'Error retrieving Current Calweb Project Id using: {calweb_project_service_url}')
+
     def show_measurements_dialog(self):
 
         if self.measurements_settings is not None:
@@ -1272,11 +1357,9 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(self.start_time)
         self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
 
-        #  combo_endminusstart is now an optional filter
-        #self.measurements_dlg.combo_endminusstart.setCurrentIndex(
-        #    self.measurements_dlg.combo_endminusstart.findText(Utils.get_settings_value('endminusstart', '3600')))
-
         self.measurements_dlg.le_project_id.setText(Utils.get_settings_value('projectid', ''))
+        # force project number input to accept only positive integers
+        self.measurements_dlg.le_project_id.setValidator(QIntValidator(0, 10000, self.measurements_dlg))
 
         self.load_default_combis()
         self.measurements_dlg.show()

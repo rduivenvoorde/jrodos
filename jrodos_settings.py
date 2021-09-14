@@ -37,7 +37,9 @@ class JRodosSettings(SettingManager):
         # measurements_soap_utils_url
         self.add_setting(String('measurements_soap_utils_url', Scope.Global,
                                 'http://geoserver.prd.cal-net.nl/calnet-measurements-ws/utilService'))
-
+        # calweb_project_service_url
+        self.add_setting(String('calweb_project_service_url', Scope.Global,
+                                'http://microservices.prd.cal-net.nl:8300/calweb/projects'))
 
         # Rainradar WMS-T service
         # rainradar_enabled

@@ -293,6 +293,13 @@
      </property>
     </widget>
    </item>
+   <item row="2" column="2" colspan="2">
+    <widget class="QPushButton" name="btn_current_calweb_id">
+     <property name="text">
+      <string>Fetch (Current or Given) Calweb Project Id</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

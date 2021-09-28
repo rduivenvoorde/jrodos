@@ -7,96 +7,52 @@
     <x>0</x>
     <y>0</y>
     <width>858</width>
-    <height>743</height>
+    <height>697</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Eurdep Measurements Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="7" column="0" colspan="3">
-    <widget class="QPushButton" name="btn_get_combis">
-     <property name="text">
-      <string>Refresh Available Quantity / Substances combination list for this period</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QDateTimeEdit" name="dateTime_start">
-     <property name="locale">
-      <locale language="Dutch" country="Netherlands"/>
-     </property>
-     <property name="dateTime">
-      <datetime>
-       <hour>1</hour>
-       <minute>0</minute>
-       <second>0</second>
-       <year>2016</year>
-       <month>1</month>
-       <day>1</day>
-      </datetime>
-     </property>
-     <property name="displayFormat">
-      <string>d MMM yyyy - HH:mm</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="1" colspan="4">
-    <widget class="QComboBox" name="combo_endminusstart">
-     <property name="editable">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="1">
-    <widget class="QCheckBox" name="cb_a4">
-     <property name="text">
-      <string>A4 Deposition</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="5">
-    <widget class="QLabel" name="lbl_title2">
-     <property name="text">
-      <string>First select period, then choose from available Quantity Substance combi's</string>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="0" colspan="5">
+   <item row="15" column="0" colspan="5">
     <widget class="QTableView" name="tbl_combis">
      <property name="sortingEnabled">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="13" column="1" colspan="4">
-    <widget class="QLineEdit" name="le_combis_filter"/>
-   </item>
-   <item row="13" column="0">
-    <widget class="QLabel" name="label">
+   <item row="12" column="1">
+    <widget class="QCheckBox" name="cb_a4">
      <property name="text">
-      <string>Filter</string>
+      <string>A4 Deposition</string>
      </property>
     </widget>
    </item>
    <item row="11" column="0">
-    <widget class="QCheckBox" name="cb_a2">
+    <widget class="QCheckBox" name="cb_a1">
      <property name="text">
-      <string>A2 Water Samples</string>
+      <string>A1 Outdoor Air</string>
      </property>
     </widget>
    </item>
-   <item row="11" column="2">
-    <widget class="QCheckBox" name="cb_unknown">
+   <item row="8" column="0" colspan="3">
+    <widget class="QPushButton" name="btn_get_combis">
      <property name="text">
-      <string>Unknown</string>
+      <string>Refresh Available Quantity / Substances  for this Time period</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="3">
+   <item row="8" column="3" colspan="2">
+    <widget class="QProgressBar" name="combis_progressbar">
+     <property name="maximum">
+      <number>0</number>
+     </property>
+     <property name="value">
+      <number>-2</number>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="3">
     <widget class="QDateTimeEdit" name="dateTime_end">
      <property name="locale">
       <locale language="Dutch" country="Netherlands"/>
@@ -119,128 +75,107 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="0">
-    <widget class="QLabel" name="lbl_retrieving_combis">
-     <property name="text">
-      <string>...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="4">
-    <widget class="QPushButton" name="btn_now">
-     <property name="text">
-      <string>Now</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLineEdit" name="le_project_id"/>
-   </item>
-   <item row="10" column="0">
-    <widget class="QCheckBox" name="cb_a1">
-     <property name="text">
-      <string>A1 Outdoor Air</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Select combinations per Substance group:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="lbl_project_id">
-     <property name="text">
-      <string>Project number CalWeb (optional filter)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="4">
-    <widget class="QLabel" name="lbl_title">
-     <property name="text">
-      <string>Fetch Measurements from Eurdep Database, AdHoc Measurement Database and CalWeb Database</string>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="0">
-    <widget class="QLabel" name="lbl_endminusstart">
-     <property name="text">
-      <string>Integration Period (seconds)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="1">
-    <widget class="QCheckBox" name="cb_a3">
-     <property name="text">
-      <string>A3 Soil</string>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="4">
-    <widget class="QPushButton" name="btn_no_combis">
-     <property name="text">
-      <string>Clear All</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="2">
-    <widget class="QLabel" name="lbl_end_time">
-     <property name="text">
-      <string>End time (UTC)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="4">
-    <widget class="QPushButton" name="btn_all_combis">
-     <property name="text">
-      <string>Select All</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="2">
-    <widget class="QCheckBox" name="cb_a5">
-     <property name="text">
-      <string>A5 External Radiation</string>
-     </property>
-    </widget>
-   </item>
-   <item row="24" column="0" colspan="5">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="15" column="0">
-    <widget class="QLabel" name="lbl_bounds_optional">
-     <property name="text">
-      <string>Optional Filters:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
+   <item row="6" column="0">
     <widget class="QLabel" name="lbl_start_time">
      <property name="text">
       <string>Start time (UTC)</string>
      </property>
     </widget>
    </item>
-   <item row="7" column="3" colspan="2">
-    <widget class="QProgressBar" name="combis_progressbar">
-     <property name="maximum">
-      <number>0</number>
-     </property>
-     <property name="value">
-      <number>-2</number>
+   <item row="12" column="4">
+    <widget class="QPushButton" name="btn_no_combis">
+     <property name="text">
+      <string>Clear All</string>
      </property>
     </widget>
    </item>
-   <item row="18" column="0" colspan="5">
+   <item row="12" column="2">
+    <widget class="QCheckBox" name="cb_unknown">
+     <property name="text">
+      <string>Unknown</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="lbl_calweb_project_id">
+     <property name="text">
+      <string>Project number CalWeb:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QDateTimeEdit" name="dateTime_start">
+     <property name="locale">
+      <locale language="Dutch" country="Netherlands"/>
+     </property>
+     <property name="dateTime">
+      <datetime>
+       <hour>1</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>2016</year>
+       <month>1</month>
+       <day>1</day>
+      </datetime>
+     </property>
+     <property name="displayFormat">
+      <string>d MMM yyyy - HH:mm</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="0">
+    <widget class="QLabel" name="lbl_bounds_optional">
+     <property name="text">
+      <string>Optional Filters:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0">
+    <widget class="QCheckBox" name="cb_a2">
+     <property name="text">
+      <string>A2 Water Samples</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="1">
+    <widget class="QCheckBox" name="cb_a3">
+     <property name="text">
+      <string>A3 Soil</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="4">
+    <widget class="QPushButton" name="btn_now">
+     <property name="text">
+      <string>Now</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QLabel" name="lbl_end_time">
+     <property name="text">
+      <string>End time (UTC)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0">
+    <widget class="QLabel" name="lbl_retrieving_combis">
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Filter</string>
+     </property>
+    </widget>
+   </item>
+   <item row="19" column="0" colspan="5">
     <widget class="QGroupBox" name="grp_tgamma_a5_only">
      <property name="enabled">
       <bool>true</bool>
@@ -286,17 +221,99 @@
      </layout>
     </widget>
    </item>
-   <item row="11" column="3">
+   <item row="14" column="1" colspan="4">
+    <widget class="QLineEdit" name="le_combis_filter"/>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="le_calweb_project_id">
+     <property name="text">
+      <string>-</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="2">
+    <widget class="QCheckBox" name="cb_a5">
+     <property name="text">
+      <string>A5 External Radiation</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="5">
+    <widget class="QLabel" name="lbl_title2">
+     <property name="text">
+      <string>Seelect Time period, then choose from available Quantity Substance combi's</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="1" colspan="4">
+    <widget class="QComboBox" name="combo_endminusstart">
+     <property name="editable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="3">
     <widget class="QCheckBox" name="cb_tgamma_a5">
      <property name="text">
       <string>TGAMMA A5 only</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="2" colspan="2">
+   <item row="11" column="4">
+    <widget class="QPushButton" name="btn_all_combis">
+     <property name="text">
+      <string>Select All</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4">
     <widget class="QPushButton" name="btn_current_calweb_id">
      <property name="text">
-      <string>Fetch (Current or Given) Calweb Project Id</string>
+      <string>Current</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="0">
+    <widget class="QLabel" name="lbl_endminusstart">
+     <property name="text">
+      <string>Integration Period (seconds)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="2">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Select combinations per Substance group:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="25" column="0" colspan="5">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Search Calweb Project</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1" colspan="3">
+    <widget class="QLineEdit" name="le_calweb_name_search">
+     <property name="text">
+      <string/>
+     </property>
+     <property name="placeholderText">
+      <string>(Optional Filter) Start to type calweb project id or calweb project description</string>
+     </property>
+     <property name="clearButtonEnabled">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -311,8 +328,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>257</x>
+     <y>733</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -327,8 +344,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>325</x>
+     <y>733</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

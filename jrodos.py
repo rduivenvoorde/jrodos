@@ -30,6 +30,7 @@ from qgis.PyQt.QtCore import (
     Qt,
     QUrl,
     QSortFilterProxyModel,
+    QModelIndex,
     QLocale,
 )
 from qgis.PyQt.QtGui import (
@@ -48,6 +49,7 @@ from qgis.PyQt.QtWidgets import (
     QToolBar,
     QFileDialog,
     QCheckBox,
+    QCompleter,
 )
 from qgis.PyQt.QtNetwork import (
     QNetworkRequest,
@@ -190,7 +192,11 @@ class JRodos:
         self.projects_model = None
         self.quantities_substances_model = None
         self.task_model = None
-        self.current_calweb_project = None
+        self.completer = None
+
+        self.calweb_project_id = None  # the actual Calweb project ID (integer)
+        self.calweb_project = None  # this is an Object holding current project variables
+
 
         self.measurements_layer = None
         self.start_time = None
@@ -410,8 +416,9 @@ class JRodos:
         self.measurements_dlg = JRodosMeasurementsDialog(self.iface.mainWindow())
         self.measurements_dlg.btn_get_combis.clicked.connect(self.get_quantities_and_substances_combis)
         self.measurements_dlg.tbl_combis.clicked.connect(self.quantities_substances_toggle)
-        self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time)
-        self.measurements_dlg.btn_current_calweb_id.clicked.connect(self.fetch_set_current_calweb_id)
+        self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time_to_now)
+        self.measurements_dlg.btn_current_calweb_id.clicked.connect(self.fetch_current_calweb_id)
+        self.measurements_dlg.le_calweb_name_search.textChanged.connect(self.calweb_project_search_changed)
         # self.quantities_substance_provider_finished(None)  # development
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
@@ -431,6 +438,8 @@ class JRodos:
 
         self.measurements_dlg.btn_all_combis.clicked.connect(lambda: self.quantities_substances_set_all(True))
         self.measurements_dlg.btn_no_combis.clicked.connect(lambda: self.quantities_substances_set_all(False))
+        # on first start always start without calweb_project_id
+        self.measurements_dlg.le_calweb_project_id.setText('-')
 
         # Create the settings dialog
         self.settings_dlg = JRodosSettingsDialog(self.iface.mainWindow())
@@ -1250,7 +1259,7 @@ class JRodos:
         self.jrodos_output_settings = None
         self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
-    def set_measurements_time(self):
+    def set_measurements_time_to_now(self):
         """ Set the endtime to NOW (UTC) and change starttime such
         that the timeframe length stays the same,
         """
@@ -1269,27 +1278,21 @@ class JRodos:
             start_time = end_time.addSecs(-(60*60*6))
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
-    def fetch_set_current_calweb_id(self):
+    def fetch_current_calweb_id(self):
         """
-        Fetch either
+        Fetch
         - Current/Latest Calweb Project Id From the projects service,
           via http://microservices.dev.cal-net.nl:8300/calweb/projects/current
-        OR
-        - using the project id in the input, fetch THAT project information
 
         Using the project info fetched, SET:
         - start_time
         - end_time (or NOW if end_time in the project info is NULL/None)
-        """       
-        project_id = self.measurements_dlg.le_project_id.text().strip()
-        if not project_id == '' and not project_id.isdigit():
-            # User tries to use a string in this projectid field
-            self.msg(None, self.tr('Project number is a single CalWeb project number (or empty)'))
-            return False
-        if len(project_id) != 0:
-            calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), project_id)
-        else:
-            calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), 'current')
+        """
+        # remove all text from the (search) input
+        self.measurements_dlg.le_calweb_name_search.clear()
+
+        # fetch project information from service
+        calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), 'current')
 
         request = QgsBlockingNetworkRequest()
         log.debug(f'Fetching current Calweb Project Id from {calweb_project_service_url}')
@@ -1298,32 +1301,115 @@ class JRodos:
             content = request.reply().content()
             log.debug(content)
             if len(content) > 2:
-                self.current_calweb_project = json.loads(content.data().decode('utf-8'))
-                log.debug(self.current_calweb_project)
-                # try to get the id from it, AND the start (and optional) end time
-                if 'id' in self.current_calweb_project:
-                    id = int(self.current_calweb_project['id'])
-                    log.debug(f'Current Calweb Project ID: {id}')
-                if 'isostarttime' in self.current_calweb_project:
-                    starttime = QDateTime.fromString(self.current_calweb_project['starttime'], Qt.ISODateWithMs)
-                    log.debug(starttime)
-                # Is there an endtime in the result? Else set end to NOW()
-                if 'isoendtime' in self.current_calweb_project and self.current_calweb_project['isoendtime'] is not None:
-                    endtime = QDateTime.fromString(self.current_calweb_project['isoendtime'], Qt.ISODateWithMs)
-                else:
-                    endtime = QDateTime.currentDateTimeUtc()
-                log.debug(endtime)
-
-                # TODO: moet ik self.start_time en self.end_time zetten, of niet?
-                self.measurements_dlg.dateTime_start.setDateTime(starttime)
-                self.measurements_dlg.dateTime_end.setDateTime(endtime)
-                self.measurements_dlg.le_project_id.setText(f'{id}')
+                current_calweb_project = json.loads(content.data().decode('utf-8'))
+                log.debug(current_calweb_project)
+                # try to get the id from it
+                if 'id' in current_calweb_project:
+                    self.set_calweb_project(current_calweb_project['id'])
                 return
         else:
             # service is returning 3 = QNetworkReply::HostNotFoundError
             # nothing returned: id OR service not available?
-            self.msg(None, self.tr(f'Project Id {project_id} not available (or service misbehaving)?'))
+            self.msg(None, self.tr(f'Project Id not available (or service misbehaving)?'))
         log.debug(f'Error retrieving Current Calweb Project Id using: {calweb_project_service_url}')
+
+    def create_calweb_projects_model(self):
+        request = QgsBlockingNetworkRequest()
+        calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), '')
+        log.debug(f'Fetching Calweb Projects from {calweb_project_service_url}')
+        err = request.get(QNetworkRequest(QUrl(calweb_project_service_url)))
+
+        if err == QNetworkReply.NoError:
+            content = request.reply().content()
+            #log.debug(content)
+            if len(content) > 2:
+                calweb_projects = json.loads(content.data().decode('utf-8'))
+                calweb_projects_model = QStandardItemModel()
+                for p in calweb_projects:
+                    search = QStandardItem(f'{p["id"]} - {p["name"]} - {p["description"]}  ( {p["starttime"]} )')
+                    search.setData(p["id"], Qt.UserRole)  #  using data of the search string for the actual id
+                    project = QStandardItem(f'{p["id"]}')
+                    project.setData(p, Qt.UserRole)
+                    #calweb_projects_model.insertRow(0, [QStandardItem(search), QStandardItem(f'{p["id"]}')])  # reverse sort
+                    calweb_projects_model.insertRow(0, [search, project])  # reverse sort
+                log.debug(f'Successfully created Calweb Project Model by fetching from {calweb_project_service_url}')
+                return calweb_projects_model
+        log.debug(f'ERROR: Something went wrong fetching the Calweb Projects from {calweb_project_service_url}')
+
+    def calweb_search_activated(self, idx):
+        """
+        This method is called when the user 'selects/activates' an item from
+        the calweb_project_id dropdown
+
+        You get only(!) the index of the item from that current shown (filtered) list
+        So: using the found item index you have to go over the FULL model to find
+        the rest of the data
+
+        :param idx: this is the index of the completionModel(!) so the model shown to the user,
+        NOT the full model given to the completer
+        """
+        #log.debug(f'**** {idx} {idx.row()} {idx.column()}')
+        selection = self.measurements_dlg.le_calweb_name_search.completer().completionModel().index(idx.row(), 0).data()
+        log.debug(f'Selected: {selection}')
+        self.set_calweb_project(selection)
+
+    def calweb_project_search_changed(self, text):
+        """
+        Slot called when the user changes the text in the Calweb Project search
+        NOTE: ALSO called when the user clicks the 'clear' button in it
+        :param text: current text
+        """
+        #log.debug(f'Calweb search text changed to: {text}')
+        if len(text) == 0:
+            log.debug('Clearing Calweb project id and model')
+            self.calweb_project_id = None
+            self.calweb_project = None
+            # clear dialog info
+            self.measurements_dlg.le_calweb_project_id.setText('-')
+            self.set_measurements_time_to_now()
+
+    def set_calweb_project(self, id_or_completer_result):
+        """
+        :param id_or_completer_result: the (DisplayRole string) from the
+        completer user choice
+        """
+        # log.debug(f'Search a Calweb project using: {id_or_completer_result} (type: {type(id_or_completer_result)})')
+        # completion_model = self.measurements_dlg.le_calweb_name_search.completer().completionModel()
+        # log.debug(f'Completion model has {completion_model.rowCount()} rows and {completion_model.columnCount()} columns')
+        calweb_projects_model = self.measurements_dlg.le_calweb_name_search.completer().model()
+        #log.debug(f'Calweb Projects model has {calweb_projects_model.rowCount()} rows and {calweb_projects_model.columnCount()} columns')
+
+        if '-' in f'{id_or_completer_result}':
+            # this is a display string like: "198 - Wim Maas - Kwartaaloefening ( 2008-09-22T09:09:24.000 Europe/Amsterdam )"
+            # match() returns a QModelIndexList
+            match = calweb_projects_model.match(calweb_projects_model.index(0, 0), Qt.DisplayRole, id_or_completer_result, hits=1)
+            #log.debug(f'found: {match}')
+            self.calweb_project_id = calweb_projects_model.index(match[0].row(), 1).data()
+        else:
+            # this is a proper calweb id (integer)
+            match = calweb_projects_model.match(calweb_projects_model.index(0, 0), Qt.UserRole, id_or_completer_result, hits=1)
+            #log.debug(f'found: {match} found[0].data(Qt.UserRole) = {match[0].data(Qt.UserRole)}')
+            self.measurements_dlg.le_calweb_name_search.setText(match[0].data(Qt.DisplayRole))
+            self.calweb_project_id = f'{match[0].data(Qt.UserRole)}'
+
+        log.debug(f'Set Calweb Project Id to: {self.calweb_project_id}')
+        self.calweb_project = calweb_projects_model.index(match[0].row(), 1).data(Qt.UserRole)
+        log.debug(f'Set Calweb Project to: {self.calweb_project}')
+        self.measurements_dlg.le_calweb_project_id.setText(self.calweb_project_id)
+
+        # try to get the start (and optional) end time from the project
+        # note: "2021-09-28T12:42:52.000+02:00" return a local time, so you need toUTC() !!
+        if 'isostarttime' in self.calweb_project:
+            starttime = QDateTime.fromString(self.calweb_project['isostarttime'], Qt.ISODateWithMs).toUTC()
+            log.debug(starttime)
+            self.measurements_dlg.dateTime_start.setDateTime(starttime)
+        # Is there an endtime in the result? Else set end to NOW()
+        if 'isoendtime' in self.calweb_project:
+            if self.calweb_project['isoendtime'] is not None:
+                endtime = QDateTime.fromString(self.calweb_project['isoendtime'], Qt.ISODateWithMs).toUTC()
+            else:
+                endtime = QDateTime.currentDateTimeUtc()
+            self.measurements_dlg.dateTime_end.setDateTime(endtime)
 
     def show_measurements_dialog(self):
 
@@ -1357,9 +1443,20 @@ class JRodos:
         self.measurements_dlg.dateTime_start.setDateTime(self.start_time)
         self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
 
-        self.measurements_dlg.le_project_id.setText(Utils.get_settings_value('projectid', ''))
-        # force project number input to accept only positive integers
-        self.measurements_dlg.le_project_id.setValidator(QIntValidator(0, 10000, self.measurements_dlg))
+        # create a model to hold ALL calnet projects (for the dropdown), fetched from server!!
+        # and a 'Search Completer' on it so the user can select one project
+        calnet_projects = self.create_calweb_projects_model()
+        self.completer = QCompleter(calnet_projects, self.measurements_dlg)
+        # activated is an overloaded function, using the notation below you
+        # indicate to use the activated(QModelIndex) instead of activated(Qstring)
+        self.completer.activated[QModelIndex].connect(self.calweb_search_activated)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+        # UnfilteredPopupCompletion you get a full list; default completion is a small sub resultset
+        #self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.measurements_dlg.le_calweb_name_search.setCompleter(self.completer)
+
+        #self.measurements_dlg.le_calweb_project_id.setText(Utils.get_settings_value('projectid', '-'))
 
         self.load_default_combis()
         self.measurements_dlg.show()
@@ -1416,8 +1513,8 @@ class JRodos:
 
             measurements_settings = CalnetMeasurementsConfig()
             measurements_settings.url = self.settings.value('measurements_wfs_url')
-
-            project_id = self.measurements_dlg.le_project_id.text().strip()
+            # replacing the '-' because when NO projectid is given we show '-'
+            project_id = self.measurements_dlg.le_calweb_project_id.text().replace('-', '').strip()
             if not project_id == '' and not project_id.isdigit():
                 # User tries to use a string in this projectid field
                 self.msg(None, self.tr('Project number is a single CalWeb project number (or empty)'))
@@ -1425,7 +1522,7 @@ class JRodos:
             if len(project_id) != 0:
                 log.info(f'Project_id: {project_id} found! Adding to CQL in WFS request')
                 # setting it in the config as a String (although it will end up as an integer in DB)
-                measurements_settings.projectid = project_id # is text anyway at this moment
+                measurements_settings.projectid = project_id  # is text anyway at this moment
                 Utils.set_settings_value("projectid", project_id)
             else:
                 Utils.set_settings_value("projectid", '')

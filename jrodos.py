@@ -1291,7 +1291,7 @@ class JRodos:
         self.measurements_dlg.le_calweb_name_search.clear()
 
         # fetch project information from service
-        calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), 'current')
+        calweb_project_service_url = self.settings.value("calweb_project_service_url") + '/current'
 
         request = QgsBlockingNetworkRequest()
         log.debug(f'Fetching current Calweb Project Id from {calweb_project_service_url}')
@@ -1314,7 +1314,7 @@ class JRodos:
 
     def create_calweb_projects_model(self):
         request = QgsBlockingNetworkRequest()
-        calweb_project_service_url = os.path.join(self.settings.value("calweb_project_service_url"), '')
+        calweb_project_service_url = self.settings.value("calweb_project_service_url")
         log.debug(f'Fetching Calweb Projects from {calweb_project_service_url}')
         err = request.get(QNetworkRequest(QUrl(calweb_project_service_url)))
 

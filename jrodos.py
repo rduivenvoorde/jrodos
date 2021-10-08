@@ -40,7 +40,6 @@ from qgis.PyQt.QtGui import (
     QDesktopServices,
     QColor,
     QFont,
-    QIntValidator,
 )
 from qgis.PyQt.QtWidgets import (
     QAction,

@@ -2469,8 +2469,10 @@ class JRodos:
                 elif 'TIME' in field.name().upper():
                     time = feature[field.name()]
                     if isinstance(time, QDateTime):  # QDateTime
+                        field_string += field.name().title() + ': ' + '{}'.format(time.toTimeSpec(Qt.LocalTime).toString('yyyy/MM/dd HH:mm')) + '<br/>'
                         field_string += field.name().title() + ': ' + '{}'.format(time.toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
                     else:  # str, create a QDateTime here to format string
+                        field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toTimeSpec(Qt.LocalTime).toString('yyyy/MM/dd HH:mm')) + '<br/>'
                         field_string += field.name().title() + ': ' + '{}'.format(QDateTime.fromString(feature[field.name()], Qt.ISODateWithMs).toString('yyyy/MM/dd HH:mm (UTC)')) + '<br/>'
                 else:
                     field_string += field.name().title() + ': ' + '{}'.format(feature[field.name()]) + '<br/>'

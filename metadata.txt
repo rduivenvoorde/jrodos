@@ -21,7 +21,7 @@ repository=https://git.svc.cal-net.nl/qgis/jrodos
 # End of mandatory metadata
 
 changelog=
-    2.0.5   Fix issue when endminusstart == 0
+    2.0.5   Fix issue when endminusstart == 0, remove 'UTC' from graph label, also show local time in labels
     2.0.4   Use Calweb Project service to search for Calweb Id
     2.0.3   Setting icon, Fetch Current Calweb Id button + Input validator
     2.0.3   Speedup! Instead of virtual DateTime column use a ISO-datetime TEXT column, add some timing information

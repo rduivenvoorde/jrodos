@@ -1466,7 +1466,10 @@ class JRodos:
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
             # default to ...
             if '' == endminusstart:
-                endminusstart = '3600'
+                endminusstart = '3600'  # sec
+            # BUT also when the user set the endminusstart to 0 set the stepsize to 10 minutes
+            elif endminusstart in [0, '0']:
+                endminusstart = '600'  # sec
             Utils.set_settings_value("endminusstart", endminusstart)
 
             quantities = []

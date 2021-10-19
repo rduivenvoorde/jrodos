@@ -1372,11 +1372,20 @@ class JRodos:
         :param id_or_completer_result: the (DisplayRole string) from the
         completer user choice
         """
-        # log.debug(f'Search a Calweb project using: {id_or_completer_result} (type: {type(id_or_completer_result)})')
+        log.debug(f'Search a Calweb project using: {id_or_completer_result} (type: {type(id_or_completer_result)})')
         # completion_model = self.measurements_dlg.le_calweb_name_search.completer().completionModel()
         # log.debug(f'Completion model has {completion_model.rowCount()} rows and {completion_model.columnCount()} columns')
         calweb_projects_model = self.measurements_dlg.le_calweb_name_search.completer().model()
         #log.debug(f'Calweb Projects model has {calweb_projects_model.rowCount()} rows and {calweb_projects_model.columnCount()} columns')
+
+        # if calweb_project_id is still 0 notice to user that there is no active calweb project yet
+        if self.calweb_project_id in [0, '0'] or id_or_completer_result in [0, '0']:
+            QMessageBox.warning(self.iface.mainWindow(),
+                    self.MSG_TITLE,
+                    self.tr(f'Calweb Project id is {self.calweb_project_id} (Regulier), \nZet calweb eerst in "Oefening" of "Calamiteit"\n op https://calweb.cal-net.nl/'),
+                    QMessageBox.Ok,
+                    QMessageBox.Ok)
+            return
 
         if '-' in f'{id_or_completer_result}':
             # this is a display string like: "198 - Wim Maas - Kwartaaloefening ( 2008-09-22T09:09:24.000 Europe/Amsterdam )"

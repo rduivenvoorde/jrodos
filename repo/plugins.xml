@@ -11,8 +11,8 @@
      <author_name>RIVM, Marnix de Ridder</author_name>
    </pyqgis_plugin>
 
-   <pyqgis_plugin name="RIVM JRodos" version="2.0.5">
-     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.2.0.5.zip</download_url>
+   <pyqgis_plugin name="RIVM JRodos" version="2.0.6">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.2.0.6.zip</download_url>
      <description>This plugin shows JRodos model output, measurements and weather data</description>
      <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
      <qgis_minimum_version>3.16</qgis_minimum_version>

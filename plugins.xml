@@ -1,0 +1,50 @@
+<?xml version = "1.0"?>
+<?xml-stylesheet type="text/xsl" href="plugins.xsl"?>
+ <plugins>
+
+   <pyqgis_plugin name="RIVM SectorPlot" version="1.1.4">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/SectorPlot.1.1.4.zip</download_url>
+     <description>Plots sector areas on risk management map</description>
+     <homepage>https://github.com/rduivenvoorde/sectorplot</homepage>
+     <qgis_minimum_version>3.4</qgis_minimum_version>
+     <!--<file_name>SectorPlot.zip</file_name>-->
+     <author_name>RIVM, Marnix de Ridder</author_name>
+   </pyqgis_plugin>
+
+   <pyqgis_plugin name="RIVM JRodos" version="2.0.5">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/JRodos.2.0.5.zip</download_url>
+     <description>This plugin shows JRodos model output, measurements and weather data</description>
+     <homepage>https://github.com/rduivenvoorde/jrodos</homepage>
+     <qgis_minimum_version>3.16</qgis_minimum_version>
+     <!--<file_name>JRodos.zip</file_name>-->
+     <author_name>RIVM, Marnix de Ridder</author_name>
+   </pyqgis_plugin>
+
+   <pyqgis_plugin name="RegenRadar" version="0.2">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/RegenRadar.zip</download_url>
+     <description>This plugin tests if you have TimeManager plugin installed and active. Then creates a WMS-T layer of current precipitation in The Netherlands, loads this layer into QGIS, and registres it as a TimeLayer in the TimeManager. Then it tries to 'Play' WMS-T from last hour.</description>
+     <homepage>https://github.com/rduivenvoorde/regenradar</homepage>
+     <qgis_minimum_version>2.12</qgis_minimum_version>
+     <!--<file_name>RegenRadar.zip</file_name>-->
+     <author_name>RIVM, Marnix de Ridder</author_name>
+   </pyqgis_plugin>
+
+   <pyqgis_plugin name="RIVM Meetwagen Plugin" version="0.3.2">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/meetwagen.0.3.2.zip</download_url>
+     <description>This plugin shows the active vehicles and the WVI layers</description>
+     <homepage>https://git.svc.cal-net.nl/qgis/meetwagenplugin</homepage>
+     <qgis_minimum_version>3.16</qgis_minimum_version>
+     <!--<file_name>JRodos.zip</file_name>-->
+     <author_name>RIVM, Marnix de Ridder</author_name>
+   </pyqgis_plugin>
+
+     <pyqgis_plugin name="RIVM PluginConfigManager" version="1.0.5">
+       <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/RIVM_PluginConfigManager.1.0.5.zip</download_url>
+     <description>This plugin is used to configure RIVM plugins</description>
+     <homepage>https://github.com/rduivenvoorde/rivm_plugin_config_manager</homepage>
+     <qgis_minimum_version>3.16</qgis_minimum_version>
+     <!--<file_name>RIVM_PluginConfigManager.zip</file_name>-->
+     <author_name>RIVM, Marnix de Ridder</author_name>
+   </pyqgis_plugin>
+
+ </plugins>

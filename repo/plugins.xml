@@ -29,8 +29,8 @@
      <author_name>RIVM, Marnix de Ridder</author_name>
    </pyqgis_plugin>
 
-   <pyqgis_plugin name="RIVM Meetwagen Plugin" version="0.3.1">
-     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/meetwagen.0.3.1.zip</download_url>
+   <pyqgis_plugin name="RIVM Meetwagen Plugin" version="0.3.2">
+     <download_url>http://repo.svc.cal-net.nl/repo/rivm/qgis/meetwagen.0.3.2.zip</download_url>
      <description>This plugin shows the active vehicles and the WVI layers</description>
      <homepage>https://git.svc.cal-net.nl/qgis/meetwagenplugin</homepage>
      <qgis_minimum_version>3.16</qgis_minimum_version>

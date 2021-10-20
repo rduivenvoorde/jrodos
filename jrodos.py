@@ -1473,12 +1473,9 @@ class JRodos:
         if result:  # OK was pressed
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-            # default to ...
+            # default to 1 hour in case of NO integration period = None / not set
             if '' == endminusstart:
                 endminusstart = '3600'  # sec
-            # BUT also when the user set the endminusstart to 0 set the stepsize to 10 minutes
-            elif endminusstart in [0, '0']:
-                endminusstart = '600'  # sec
             Utils.set_settings_value("endminusstart", endminusstart)
 
             quantities = []
@@ -2343,9 +2340,15 @@ class JRodos:
         if register_layers:
             if self.use_temporal_controller:
                 # Temporal Controller !
+                # endminusstart can be zero for meetwagen metingen
+                # but we cannot set the stepsize to zero (as is NO step...)
+                # so IF endminusstart==0, we set the stepsize to 600
+                framesize = self.measurements_settings.endminusstart
+                if framesize in [0, '0']:
+                    framesize = 600
                 self.add_layer_to_timecontroller(self.measurements_layer,
                                                  time_column='time',
-                                                 frame_size_seconds=self.measurements_settings.endminusstart)
+                                                 frame_size_seconds=framesize)
             else:
                 # OLD add this layer to the old TimeManager
                 self.add_layer_to_timemanager(self.measurements_layer, 'time')

@@ -214,6 +214,7 @@ class JRodos:
         # QgsVertexMarker used to highlight the measurement device shown in the GraphWidget
         self.graph_device_pointer = None
         self.curves = {}  # a curve <-> device,feature mapping as lookup for later use
+        self.points = {}  # a points <-> device,feature mapping as lookup for later use
 
         # settings dialog
         self.settings_dlg = None
@@ -1692,12 +1693,14 @@ class JRodos:
                     # plot curve item symbols: x, o, +, d, t, t1, t2, t3, s, p, h, star
                     # t=triangle, s=square, p=pentagon, h=hexagon
                     if len(x) < 20:
-                        points = PlotDataItem(x=x, y=y, symbol='+', color='0000ff99', symbolPen='0000ff99')
-                        self.graph_widget.graph.addItem(points)
+                        point = PlotDataItem(x=x, y=y, symbol='+', color='0000ff99', symbolPen='0000ff99')
+                        point.sigPointsClicked.connect(self.curve_or_point_click)
+                        self.points[point] = (device, selected_feature)
+                        self.graph_widget.graph.addItem(point)
 
                     curve = PlotCurveItem(x=x, y=y, pen='ff000099', mouseWidth=0)
                     curve.setClickable(True, 6)
-                    curve.sigClicked.connect(self.curve_click)
+                    curve.sigClicked.connect(self.curve_or_point_click)
                     self.graph_widget.graph.addItem(curve)
 
                     # create a curve <-> device,feature mapping as lookup for later use
@@ -1730,8 +1733,11 @@ class JRodos:
         # and connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
-    def curve_click(self, item):
-        device, feature = self.curves[item]
+    def curve_or_point_click(self, item):
+        if item in self.curves:
+            device, feature = self.curves[item]
+        elif item in self.points:
+            device, feature = self.points[item]
         self.set_device_pointer(feature.geometry())
 
     def set_device_pointer(self, geom):

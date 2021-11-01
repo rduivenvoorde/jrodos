@@ -908,7 +908,7 @@ class JRodos:
             jrodos_last_project_filter = Utils.get_settings_value('jrodos_last_project_filter', '')
             self.jrodosmodel_dlg.le_project_filter.setText(jrodos_last_project_filter)
             self.jrodosmodel_dlg.filter_projects(jrodos_last_project_filter)
-            # connect to selectionChanged fo the selectionModel (!)
+            # connect to selectionChanged of the selectionModel (!)
             self.jrodosmodel_dlg.tbl_projects.selectionModel().selectionChanged.connect(self.project_selected)
 
     def project_selected(self, selection_idx):
@@ -1629,9 +1629,11 @@ class JRodos:
 
         """
         self.remove_device_pointer()
-        # we do not use these selected_ids etc because selectedFeaturesIds is easier to use with CTRL-selects
         selected_features_ids = self.measurements_layer.selectedFeatureIds()
+        log.debug(f'Measurements selection change!: {selected_features_ids}')
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
+        # TODO: can we get rid of the subsetstring handling of the old timemanager?
+        # TODO: can we get rid of the disconneting to the selectionCHanged signal too?
         # With a connected signal measurement_selection_change function would have been called again because
         # timemanager set's the subsetstring again
         self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
@@ -1721,16 +1723,19 @@ class JRodos:
                     label_point.setPos(0)
                     label.setParentItem(label_point)
             if first:
-                self.set_device_pointer(selected_feature.geometry())
+                if selected_feature is not None:
+                    self.set_device_pointer(selected_feature.geometry())
                 first = False
             else:
                 self.remove_device_pointer()
 
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
+        log.debug(f'XXX TImemanager subsetstring: {subset_string}')
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
+         # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
         self.measurements_layer.selectByIds(selected_features_ids)
-        # and connect measurement_selection_change  again
+        # connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
     def curve_or_point_click(self, item):
@@ -2188,11 +2193,7 @@ class JRodos:
         """
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
-
-        # layer_display_name = self.measurements_settings.quantity + ", " + self.measurements_settings.substance + ", " + \
-        #    self.measurements_settings.endminusstart + ", " + \
-        #    start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-        #    end_time.toString(self.measurements_settings.date_time_format_short)
+        selected_features_ids = []
         layer_display_name = "Measurements " + \
             start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
             end_time.toString(self.measurements_settings.date_time_format_short)
@@ -2244,12 +2245,14 @@ class JRodos:
             self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
         else:
             # there is already a layer for this measurements_settings object, so apparently we got new data for it:
-            # remove current features from the  layer
+            # remove ALL features from the  layer
+            selected_features_ids = self.measurements_layer.selectedFeatureIds()  # remember selected features (for graph)
             self.measurements_layer.startEditing()
             self.measurements_layer.setSubsetString('')  # first remove the query otherwise only the query result is removed
-            self.measurements_layer.beginEditCommand("Delete Selected Features")
+            self.measurements_layer.beginEditCommand("Delete All Features")
             self.measurements_layer.selectAll()
             self.measurements_layer.deleteSelectedFeatures()
+            self.measurements_layer.removeSelection()  # to be sure the 'selectionChanged' is called again to update the graph
             self.measurements_layer.endEditCommand()
             self.measurements_layer.commitChanges()
             # set current timestamp in the group node of the legend
@@ -2340,6 +2343,7 @@ class JRodos:
 
             self.measurements_layer.dataProvider().addFeatures(flist)
             #self.measurements_layer.dataProvider().addFeatures(features)
+            self.measurements_layer.selectByIds(selected_features_ids)
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
 

@@ -20,42 +20,42 @@ class CalnetMeasurementsUtilsConfig(ProviderConfig):
 class CalnetMeasurementsUtilsProvider(ProviderBase):
     """
     curl -v -XPOST -H "Content-Type: application/soap+xml" -d '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:ws="http://service.ws.calnet.rivm.nl/">
-    <soap:Header/>
-    <soap:Header/>
-    <soap:Body>
-    <ws:getQuantities/>
-    </soap:Body>
-    </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:ws="http://service.ws.calnet.rivm.nl/">
+            <soap:Header/>
+            <soap:Header/>
+            <soap:Body>
+            <ws:getQuantities/>
+            </soap:Body>
+            </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
 
     curl -v -XPOST -H "Content-Type: application/soap+xml" -d '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:ws="http://service.ws.calnet.rivm.nl/">
-      <soap:Header/>
-      <soap:Body>
-        <ws:getMeasuredCombinations>
-           <arg0>2019-04-22T00:00:00.000Z</arg0>
-           <arg1>2019-04-25T12:00:00.000Z</arg1>
-        </ws:getMeasuredCombinations>
-      </soap:Body>
-    </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:ws="http://service.ws.calnet.rivm.nl/">
+              <soap:Header/>
+              <soap:Body>
+                <ws:getMeasuredCombinations>
+                   <arg0>2019-04-22T00:00:00.000Z</arg0>
+                   <arg1>2019-04-25T12:00:00.000Z</arg1>
+                </ws:getMeasuredCombinations>
+              </soap:Body>
+            </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
 
 
     curl -v -XPOST -H "Content-Type: application/soap+xml" -d '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-                xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-                xmlns:ws="http://service.ws.calnet.rivm.nl/">
-                  <soap:Header/>
-                  <soap:Body>
-                    <ws:getMeasuredCombinations>
-                    <arg0>2019-03-01T16:46:58.000Z</arg0>
-                    <arg1>2019-04-30T16:46:58.000Z</arg1>
-                    </ws:getMeasuredCombinations>
-                  </soap:Body>
-                </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:ws="http://service.ws.calnet.rivm.nl/">
+              <soap:Header/>
+              <soap:Body>
+                <ws:getMeasuredCombinations>
+                <arg0>2019-03-01T16:46:58.000Z</arg0>
+                <arg1>2019-04-30T16:46:58.000Z</arg1>
+                </ws:getMeasuredCombinations>
+              </soap:Body>
+            </soap:Envelope>' "http://geoserver.dev.cal-net.nl/calnet-measurements-ws/utilService"
 
     """
 
@@ -94,11 +94,11 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
                     # </return>
                     quantity_code = ret.find('quantity').find('code').text
                     quantity_description = ''
-                    if ret.find('quantity').find('description'):
+                    if ret.find('quantity').find('description') is not None:
                         quantity_description = ret.find('quantity').find('description').text
                     substance_code = ret.find('substance').find('code').text
                     substance_description = ''
-                    if ret.find('substance').find('description'):
+                    if ret.find('substance').find('description') is not None:
                         substance_description = ret.find('substance').find('description').text
                     #description = "%s (%s) , %s (%s)" % (quantity_description, quantity_code, substance_description, substance_code)
                     # '{"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION"}'

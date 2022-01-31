@@ -1031,7 +1031,7 @@ class JRodos:
                 # saving handle of project_info_provider to self, as it seems that the provide is garbage collected sometimes
                 self.project_info_provider = JRodosModelProvider(conf)
                 # self.msg(None, "{}\n{}\n{}\n{}".format(conf.wps_id, conf.output_dir, conf.jrodos_path, conf.jrodos_project))
-                self.project_info_provider.finished.connect(self.provide_project_info_finished)
+                self.project_info_provider.finished.connect(self.provider_project_info_finished)
                 self.project_info_provider.get_data()
             return
         else:
@@ -1081,7 +1081,7 @@ class JRodos:
             # show it
             self.jrodosmodel_dlg.combo_path.setCurrentIndex(idx.row())
 
-    def provide_project_info_finished(self, result):
+    def provider_project_info_finished(self, result):
         """
         Called when the WPS service returns the JRodos project information about the used timeStep,
         durationOfPrognosis and releaseStart times (ALL in seconds)
@@ -1631,6 +1631,7 @@ class JRodos:
         self.remove_device_pointer()
         selected_features_ids = self.measurements_layer.selectedFeatureIds()
         log.debug(f'Measurements selection change!: {selected_features_ids}')
+
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
         # TODO: can we get rid of the subsetstring handling of the old timemanager?
         # TODO: can we get rid of the disconneting to the selectionCHanged signal too?
@@ -1640,6 +1641,7 @@ class JRodos:
         # remember current (timemanager-based) subset string to be able to add it later
         subset_string = self.measurements_layer.dataProvider().subsetString()
         self.measurements_layer.setSubsetString('')
+
         self.graph_widget.graph.clear()
         font = QFont()
         font.setPixelSize(10)
@@ -1733,7 +1735,7 @@ class JRodos:
         log.debug(f'XXX TImemanager subsetstring: {subset_string}')
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
-         # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
+        # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
         self.measurements_layer.selectByIds(selected_features_ids)
         # connect measurement_selection_change  again
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
@@ -1791,26 +1793,15 @@ class JRodos:
     # noinspection PyBroadException
     def load_jrodos_output(self, output_dir, style_file, layer_name, unit_used):
         """
-        Create a polygon memory layer, and load all shapefiles (named
-        0_0.zip -> x_0.zip)
-        from given shape_dir.
-        Every zip is for a certain time-period, but because the data does
-        not containt a time column/stamp
-        we will add it by creating an attribute 'Datetime' and fill that
-        based on:
-        - the x in the zip file (being a model-'step')
-        - the starting time of the model (given in dialog, set in jrodos
-        project run)
-        - the model length time (24 hours)
+        Load the data (and optional style) from the (from the WPS retrieved) zip file.
 
-        :param unit_used:
-        :param layer_name:
         :param output_dir: directory containing zips with shapefiles
         :param style_file: style (qml) to be used to style the layer in
+        :param layer_name:
+        :param unit_used:
         which we merged all shapefiles
         :return:
         """
-
         try:
             import zipfile
             zips = glob(os.path.join(output_dir, "*.zip"))
@@ -1948,15 +1939,16 @@ class JRodos:
                 self.add_layer_to_timecontroller(jrodos_output_layer,
                                                  time_column='Datetime',
                                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
-            else:
-                # add this layer to the TimeManager
-                step_minutes = self.jrodos_output_settings.jrodos_model_step / 60  # jrodos_model_step is in seconds!!!
-                self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
+            # TODO: DEPRICATED
+            # else:
+            #     # add this layer to the TimeManager
+            #     step_minutes = self.jrodos_output_settings.jrodos_model_step / 60  # jrodos_model_step is in seconds!!!
+            #     self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     @staticmethod
     def fix_jrodos_style_sld(jrodos_style_sld):
         """
-        JRodos sld's can be old styles, that is do not
+        JRodos sld's can be old styles, that is do not have the StyledLayerDescriptor part
         :return: File (full path) to 'fixed' sld
         """
         with open(jrodos_style_sld, 'r') as f:

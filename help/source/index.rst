@@ -5,6 +5,10 @@ Documentation
 .. contents::
    :local:
 
+.. toctree::
+
+   Technical and Developer Documentation <techdoc>
+
 
 What does it do
 ---------------
@@ -13,13 +17,12 @@ The JRodos plugin is a plugin to:
 
 - view JRodos model outputs in QGIS (requested via Geoserver-JRodos WPS + REST interface for project information)
 - view Measurements (requested via Measurements-WFS + SOAP interface for parameters) in QGIS
-- load Rain/Weatherinformation from KNMI (WMS-Time service) at time of measurements
-- check if TimeManager plugin is installed
-- registers the 3 layers mentioned above in TimeManager plugin to be able to (re)'play' a time/model frame
+- load Rain/Weatherinformation from KNMI (WMS-Time service) at time of measurements (only when measurements are loaded)
+- registers the 3 layers mentioned above in (default available) 'Temporal Controller' to be able to (re)'play' a time/model frame
 
-QGIS showing JRodos model output
+QGIS showing JRodos model output (1) JRodos Toolbar (2) Temporal Controller Panel
 
-.. image:: img/jrodos_output.png
+.. image:: img/jrodos_output.svg
    :width: 100 %
 
 QGIS showing measurements with tooltip
@@ -67,19 +70,16 @@ model input from projects (timestep, modeltime etc), use for example::
 
   http://geoserver.dev.cal-net.nl/geoserver/wps
 
-
 JRodos Model REST service url, which a REST service to retrieve all saved projects
 and the detail information of every project::
 
   http://geoserver.dev.cal-net.nl/rest/jrodos/
-
 
 To retrieve Eurdep measurements (Measurements WFS tab):
 
 Measurements WFS url (the actual url to retrieve all measurement data)::
 
   http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?
-
 
 Measurements Utils url (soap) needed to retrieve Calnet quantities, substances and units used
 (for dropdowns and filters)::

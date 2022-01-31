@@ -1,0 +1,27 @@
+
+- opruimen van alle verwijzingen naar TimeManager
+- opruimen van alles wat shape files ophaalde (en 'Shape file'-radio button in dialoog)
+
+- de model data lokaal ergens opslaan (en niet in de temp dir laten), om het zo mogelijk te maken projecten later te kunnen openen (of delen)
+
+- voordat je een JRodos model of metingen request doet, MOET het project in een map zijn opgeslagen
+  omdat je dan ipv in de tmp dir in de project dir de boel zou kunnen opslaan
+
+- verwijder de 'JRodos Plugin Layers'-groep, om het eenvoudiger te maken om meerdere Model outputs in QGIS tegelijk te zien
+  - je zou dat bv goed kunnen vinden als de lagen allemaal binnen hetzelfde project vallen...
+
+- we zouden ipv gml ook een (zipped)shapefile op kunnen laten sturen door Geoserver???
+&outputFormat=shape-zip
+zie: https://docs.geoserver.org/master/en/user/services/wfs/outputformats.html
+http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?typeName=radiation.measurements:MEASUREMENT&version=2.0.0&service=WFS&request=GetFeature&CQL_FILTER=bbox(location,51.416327935417776,3.636688349135701,51.463095227893035,3.823105664338676) and time %3E '2021-12-06T12:31:55.000 00:00' and time %3C '2021-12-06T13:42:52.000 00:00' and quantity%3D'T-GAMMA,T-ALFA,T-ALFA-ART,T-ALFA-NAT,T-BETA,T-BETA-ART' and substance%3D'A5,A11,A112F,A211,A411' and endTime-startTime%3D3600&count=25000&startIndex=0
+wordt dan:
+http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?typeName=radiation.measurements:MEASUREMENT&version=2.0.0&service=WFS&request=GetFeature&CQL_FILTER=bbox(location,51.416327935417776,3.636688349135701,51.463095227893035,3.823105664338676) and time %3E '2021-12-06T12:31:55.000 00:00' and time %3C '2021-12-06T13:42:52.000 00:00' and quantity%3D'T-GAMMA,T-ALFA,T-ALFA-ART,T-ALFA-NAT,T-BETA,T-BETA-ART' and substance%3D'A5,A11,A112F,A211,A411' and endTime-startTime%3D3600&count=25000&startIndex=0&outputFormat=shape-zip
+MAAR DAN GEEN DATETIME VOOR Temporal Controller!!
+
+Werkt niet:
+https://docs.geoserver.org/latest/en/user/community/geopkg/output.html#geopackage-wfs-output-format
+http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?typeName=radiation.measurements:MEASUREMENT&version=2.0.0&service=WFS&request=GetFeature&CQL_FILTER=bbox(location,51.416327935417776,3.636688349135701,51.463095227893035,3.823105664338676) and time %3E '2021-12-06T12:31:55.000 00:00' and time %3C '2021-12-06T13:42:52.000 00:00' and quantity%3D'T-GAMMA,T-ALFA,T-ALFA-ART,T-ALFA-NAT,T-BETA,T-BETA-ART' and substance%3D'A5,A11,A112F,A211,A411' and endTime-startTime%3D3600&count=25000&startIndex=0&outputFormat=geopackage
+
+- help button in dialogen ?
+
+

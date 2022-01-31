@@ -681,11 +681,12 @@ class JRodos:
             self.quantities_substances_model = QStandardItemModel()
 
             for combi in self.combis:
-                description = '{}, {} - ({}, {})'.format(combi['quantity_desc'],
-                                                        combi['substance_desc'],
-                                                        combi['quantity'],
-                                                        combi['substance'])
-                combi_key = combi['quantity']+'_'+combi['substance']
+                if combi['quantity'] is None:
+                    combi_key = combi['substance']
+                elif combi['substance'] is None:
+                    combi_key = combi['quantity']
+                else:
+                    combi_key = combi['quantity']+'_'+combi['substance']
                 if combi_key in self.combi_descriptions:
                     log.debug(f'{combi_key} already in combinations list: ignoring...')
                 else:
@@ -697,6 +698,15 @@ class JRodos:
                     data_item.setData([combi['quantity'], combi['substance']])
                     selected_item = QStandardItem(True)
                     selected_item.setData(True)
+                    # sometimes descriptions are missing, then use code as description too:
+                    if combi['quantity_desc'] in ('', None):
+                        combi['quantity_desc'] = combi['quantity']
+                    if combi['substance_desc'] in ('', None):
+                        combi['substance_desc'] = combi['substance']
+                    description = '{}, {} - ({}, {})'.format(combi['quantity_desc'],
+                                                            combi['substance_desc'],
+                                                            combi['quantity'],
+                                                            combi['substance'])
                     quantity_item = QStandardItem('{} ({})'.format(combi['quantity_desc'], combi['quantity']))
                     substance_item = QStandardItem('{} ({})'.format(combi['substance_desc'], combi['substance']))
                     # set tooltips to be able to read long description lines easier
@@ -1732,7 +1742,7 @@ class JRodos:
                 self.remove_device_pointer()
 
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
-        log.debug(f'XXX TImemanager subsetstring: {subset_string}')
+        log.debug(f'XXX Timemanager subsetstring: {subset_string}')
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
         # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...

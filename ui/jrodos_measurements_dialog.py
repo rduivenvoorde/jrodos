@@ -75,8 +75,8 @@ class JRodosMeasurementsDialog(QDialog, FORM_CLASS):
         self.tbl_combis.setEditTriggers(QTableView.NoEditTriggers)  # disable editing of table cells
 
         item_model.setHeaderData(0, Qt.Horizontal, self.tr("Description"))
-        item_model.setHeaderData(1, Qt.Horizontal, self.tr("Quantity"))
-        item_model.setHeaderData(2, Qt.Horizontal, self.tr("Substance"))
+        item_model.setHeaderData(1, Qt.Horizontal, self.tr("Quantity: description (code)"))
+        item_model.setHeaderData(2, Qt.Horizontal, self.tr("Substance: description (code)"))
         item_model.setHeaderData(4, Qt.Horizontal, self.tr("Selected"))
 
         self.tbl_combis.setColumnWidth(0, 400)

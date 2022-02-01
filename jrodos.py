@@ -49,6 +49,7 @@ from qgis.PyQt.QtWidgets import (
     QFileDialog,
     QCheckBox,
     QCompleter,
+    QComboBox,
 )
 from qgis.PyQt.QtNetwork import (
     QNetworkRequest,
@@ -232,6 +233,9 @@ class JRodos:
         self.curves = {}  # a curve <-> device,feature mapping as lookup for later use
         self.points = {}  # a points <-> device,feature mapping as lookup for later use
 
+        # favorite measurements
+        self.favorite_measurements_combo = None
+
         # settings dialog
         self.settings_dlg = None
         # creating a dict for a layer <-> settings mapping
@@ -406,6 +410,21 @@ class JRodos:
             action = self.toolbar.addWidget(self.graph_widget_checkbox)
             self.actions.append(action)
             self.graph_widget_checkbox.clicked.connect(self.show_graph_widget)
+
+        if self.favorite_measurements_combo is None:
+            self.favorite_measurements_combo = QComboBox()
+            self.favorite_measurements_combo.insertItem(0, self.tr('Most recent (1 hr) H*10/TGamma-A5 in The Netherlands'))
+            self.favorite_measurements_combo.insertItem(0, self.tr('Most recent (1 hr) H*10/TGamma-A5 in current view'))
+            # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
+            action = self.toolbar.addWidget(self.favorite_measurements_combo)
+            self.actions.append(action)
+        # reload chosen favorite
+        self.add_action(
+            icon_path=os.path.join(self.plugin_dir, 'images/reload.svg'),
+            text=self.tr(u'Load favourite data (in new layer)'),
+            callback=self.load_measurements_favourite,
+            add_to_toolbar=True,
+            parent=self.iface.mainWindow())
 
         # loading a JRodos Shapefile + sld
         # icon_path = ':/plugins/JRodos/icon.png'
@@ -2226,6 +2245,9 @@ class JRodos:
         # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
         timemanager.getController().stepForward()
         timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
+
+    def load_measurements_favourite(self):
+        log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.currentText()}')
 
     def load_measurements(self, output_dir, style_file):
         """

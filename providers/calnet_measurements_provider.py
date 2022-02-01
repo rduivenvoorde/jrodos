@@ -7,7 +7,6 @@ import shutil
 import re
 
 import logging
-#from .. import LOGGER_NAME
 log = logging.getLogger('JRodos3 Plugin')
 
 

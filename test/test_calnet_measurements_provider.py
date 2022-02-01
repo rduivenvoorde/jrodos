@@ -1,7 +1,7 @@
 import unittest
 from providers.calnet_measurements_provider import CalnetMeasurementsConfig, CalnetMeasurementsProvider
 from providers.utils import Utils
-from .test_provider_base import TestProviderBase
+from test_provider_base import TestProviderBase
 
 from qgis.PyQt.QtCore import QCoreApplication, QDateTime
 from datetime import datetime
@@ -49,8 +49,8 @@ class TestCalnetMeasurementsProvider(TestProviderBase):
             self.assertIsNot(result.data['count'], 0, "ZERO 3600minute measurements in Zeeland, last 12 hours")
         prov.finished.connect(prov_finished)
         prov.get_data()
-        while not prov.is_finished():
-            QCoreApplication.processEvents()
+        # while not prov.is_finished():
+        #     QCoreApplication.processEvents()
 
 
 

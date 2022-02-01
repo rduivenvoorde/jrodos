@@ -1,6 +1,6 @@
 import unittest
 from providers.calnet_measurements_utils_provider import CalnetMeasurementsUtilsConfig, CalnetMeasurementsUtilsProvider
-from .test_provider_base import TestProviderBase
+from test_provider_base import TestProviderBase
 from qgis.PyQt.QtCore import QCoreApplication
 
 class TestCalnetMeasurementsUtilsProvider(TestProviderBase):

@@ -172,7 +172,7 @@ class RangeCreator:
             s = s+step
         if max_inf:
             #r += (pow(10, end_exponent), float('inf')),
-            r += (math.ceil(end), 1000000000000),
+            r += (math.ceil(end), float('inf')),
             #print r
         return r
 

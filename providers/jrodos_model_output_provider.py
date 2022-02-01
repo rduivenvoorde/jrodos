@@ -8,8 +8,7 @@ from .provider_base import ProviderConfig, ProviderBase, ProviderResult
 from .utils import Utils
 
 import logging
-from .. import LOGGER_NAME
-log = logging.getLogger(LOGGER_NAME)
+log = logging.getLogger('JRodos3 Plugin')
 
 """
 To test the WPS:

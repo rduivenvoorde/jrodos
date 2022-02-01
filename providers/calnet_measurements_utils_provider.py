@@ -1,11 +1,15 @@
 from qgis.PyQt.QtCore import QUrl
-from qgis.PyQt.QtNetwork import QNetworkRequest, QNetworkAccessManager
+from qgis.PyQt.QtNetwork import (
+    QNetworkRequest,
+)
 from functools import partial
 from .provider_base import ProviderConfig, ProviderBase, ProviderResult
 import xml.etree.ElementTree as ET
+from qgis.PyQt.QtCore import (
+    QCoreApplication,
+)
 
 import logging
-#from .. import LOGGER_NAME
 log = logging.getLogger('JRodos3 Plugin')
 
 class CalnetMeasurementsUtilsConfig(ProviderConfig):
@@ -14,7 +18,7 @@ class CalnetMeasurementsUtilsConfig(ProviderConfig):
         self.url = None
         self.start_datetime = ''
         self.end_datetime = ''
-        self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000Z' # 2019-03-06T00:00:00.000Z
+        self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000Z'  # 2019-03-06T00:00:00.000Z
 
 
 class CalnetMeasurementsUtilsProvider(ProviderBase):
@@ -161,7 +165,6 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
         reply = self.network_manager.post(request, data)
         reply.finished.connect(partial(self._data_retrieved, reply))
         # this part is needed to be sure we do not return immidiatly
+        # BUT can also be done in the calling code (pytest or plugin)
         # while not reply.isFinished():
-        #     #QCoreApplication.processEvents()
-        #     from PyQt4.QtCore import QEventLoop
-        #     QCoreApplication.processEvents(QEventLoop.AllEvents, 100 )
+        #     QCoreApplication.processEvents()

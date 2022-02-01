@@ -1,12 +1,17 @@
-import logging
 from functools import partial
-from qgis.core import QgsNetworkAccessManager, QgsMessageLog, Qgis
+from qgis.core import QgsNetworkAccessManager
 
-from qgis.PyQt.QtCore import QCoreApplication, QUrl,  QObject, pyqtSignal, QDateTime
-from qgis.PyQt.QtNetwork import QNetworkRequest
-
+from qgis.PyQt.QtCore import (
+    QCoreApplication,
+    QUrl,
+    QObject,
+    pyqtSignal,
+    QDateTime,
+)
+from qgis.PyQt.QtNetwork import (
+    QNetworkRequest,
+)
 import logging
-#from .. import LOGGER_NAME
 log = logging.getLogger('JRodos3 Plugin')
 
 """

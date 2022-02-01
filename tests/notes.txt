@@ -1,0 +1,28 @@
+
+# to run all tests:
+cd tests
+pytest
+# OR just from root dir
+pytest tests
+
+# to run 1 test file
+cd tests
+pytest test_provider_base.py
+
+# to run 1 test from 1 test file
+cd tests
+pytest --log-cli-level DEBUG test_provider_base.py::test_qgs_OK
+
+# to run tests AND seeing DEBUG logging
+cd tests
+pytest --log-cli-level DEBUG
+
+# to run 1 test file AND seeing DEBUG logging
+cd tests
+pytest --log-cli-level DEBUG test_provider_base.py
+
+# to run 1 test from 1 test file AND seeing DEBUG logging
+cd tests
+pytest --log-cli-level DEBUG test_provider_base.py::test_qgs_OK
+
+

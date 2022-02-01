@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtCore import QUrl, QCoreApplication
 from qgis.PyQt.QtNetwork import QNetworkRequest
 from functools import partial
 from .provider_base import ProviderConfig, ProviderBase, ProviderResult
@@ -62,5 +62,5 @@ class JRodosProjectProvider(ProviderBase):
         reply = self.network_manager.get(QNetworkRequest(request))
         reply.finished.connect(partial(self._data_retrieved, reply))
         # this part is needed to be sure we do not return immidiatly (NOT to be used when used as plugin)
-        #while not reply.isFinished():
-        #    QCoreApplication.processEvents()
+        while not reply.isFinished():
+            QCoreApplication.processEvents()

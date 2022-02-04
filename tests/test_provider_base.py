@@ -66,3 +66,24 @@ def test_simple_file(qgis):
     prov.get_data()
     # while not prov.is_finished():
     #     QCoreApplication.processEvents()
+
+
+# OK, for now: NOT serializing to xml, as it needs modules (lxml and etree)
+# https://lxml.de/objectify.html
+# which are by default not packaged in QGIS...
+# SO: going the json route for now...
+# def test_simple_provider_to_xml():
+#     conf = SimpleConfig()
+#     conf.url = 'htps://duif.net/'
+#     print(conf.to_xml())
+
+
+def test_simple_provider_config_to_from_json():
+    conf = SimpleConfig()
+    conf.url = 'https://duif.net/'
+    # dump config to json
+    json_string = conf.to_json()
+    #print(json_string)
+    # create a Config from it
+    conf_from_json = SimpleConfig.from_json(json_string)
+    assert conf_from_json.url == 'https://duif.net/'

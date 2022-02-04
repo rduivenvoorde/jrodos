@@ -31,12 +31,13 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 
     def __str__(self):
-        return """CalnetMeasurementsConfig:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n projectid: {}\n lower_bound: {}\n upper_bound: {}\n bbox: \n {}
-            """.format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime,
-                       self.endminusstart, self.quantity, self.substance, self.projectid, self.lower_bound, self.upper_bound, self.bbox)
+        return """CalnetMeasurementsConfig:\n WFS url: {}\n outputdir: {}\n page_size: {}\n starttime: {}\n endtime: {}\n endminusstart: {}\n quantity: {}\n substance: {}\n projectid: {}\n lower_bound: {}\n upper_bound: {}\n bbox: {}\n""" \
+            .format(self.url, self.output_dir, self.page_size, self.start_datetime, self.end_datetime,
+                    self.endminusstart, self.quantity, self.substance, self.projectid, self.lower_bound, self.upper_bound, self.bbox)
 
     def __bytes__(self):
         return str(self).encode('utf-8')
+
 
 class CalnetMeasurementsProvider(ProviderBase):
 
@@ -51,12 +52,6 @@ class CalnetMeasurementsProvider(ProviderBase):
         self.total_count = 0
         # runner number for the file numbers
         self.file_count = 1
-
-        # moved to provider_base:
-        # TOTAL time of (paging) request(s)
-        #self.time_total = 0
-        # time of one page / getdata
-        #self.time = QDateTime.currentMSecsSinceEpoch()
 
         # create a QUrl object to use with query parameters
         self.request = QUrl(self.config.url)
@@ -201,16 +196,14 @@ class CalnetMeasurementsProvider(ProviderBase):
         # write config for debug/checks
         config_file = self.config.output_dir + '/wfs_settings.txt'
         with open(config_file, 'ab+') as f:
-            # f.write(str(self.config))
-            # f.write('\n')
-            # f.write(self.request.toString())
             s = self.config
             f.write(bytes(s))
             f.write(b'\nHuman Readable:\n')
             f.write(bytes(self.request.url(), 'utf-8'))
             f.write(b'\n\nEncoded:\n')
             f.write(self.request.toEncoded())
-            f.write(b'\n\n\n')
-
+            f.write(b'\n\nJSON:\n')
+            f.write(bytes(self.config.to_json(), 'utf-8'))
+            f.write(b'\n\n')
         self.reply = self.network_manager.get(QNetworkRequest(self.request))
         self.reply.finished.connect(partial(self._data_retrieved, self.reply))

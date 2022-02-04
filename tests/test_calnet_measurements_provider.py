@@ -97,3 +97,17 @@ def test_calnet_86400_measurements_eu_last36hours(qgis, calnet_measurements_conf
         QCoreApplication.processEvents()
 
 # TODO: create tests for 600 NL, 3600 NL, 600 EU, 3600 EU
+
+def test_measurements_provider_config_to_from_json(calnet_measurements_config):
+    # dump config to json
+    json_string = calnet_measurements_config.to_json()
+    print(json_string)
+    # create a Config from it
+    conf_from_json = CalnetMeasurementsConfig.from_json(json_string)
+    assert calnet_measurements_config != conf_from_json  # should NOT be the same instance..
+    assert conf_from_json.url == calnet_measurements_config.url
+    # we have always an jrodos_output_settings.output_dir here:
+    assert conf_from_json.output_dir == calnet_measurements_config.output_dir
+    assert conf_from_json.page_size == calnet_measurements_config.page_size
+    assert conf_from_json.quantity == calnet_measurements_config.quantity
+    assert conf_from_json.substance == calnet_measurements_config.substance

@@ -11,6 +11,7 @@ from qgis.PyQt.QtCore import (
 from qgis.PyQt.QtNetwork import (
     QNetworkRequest,
 )
+import json
 import logging
 log = logging.getLogger('JRodos3 Plugin')
 
@@ -48,6 +49,30 @@ class ProviderConfig:
     @debug.setter
     def debug(self, debug_bool):
         self._debug = debug_bool
+
+    # OK, for now: NOT serializing to xml, as it needs modules (lxml and etree)
+    # https://lxml.de/objectify.html
+    # which are by default not packaged in QGIS...
+    # SO: going the json route for now...
+    # def to_xml(self):
+    #     root = objectify.Element('root')
+    #     for field, value in self.__dict__.items():
+    #         objectify.SubElement(root, field)
+    #     print(objectify.dump(root))
+
+    def to_json(self) -> str:
+        # TODO maybe remove the private fields from the __dict__ (like _debug ?) AND/OR the once which have a value or None or Null ?
+        return json.dumps(self.__dict__, indent=2)
+
+    def from_json(config_as_json):
+        prov = ProviderConfig()
+        if isinstance(config_as_json, str):
+            obj = json.loads(config_as_json)
+        # elif isinstance(config_as_json, json):
+        #     obj = json.load(config_as_json)
+        for key, value in obj.items():
+            prov.__dict__[key] = value
+        return prov
 
 
 class ProviderResult:
@@ -162,6 +187,9 @@ class ProviderBase(QObject):
 
         # data will always be a list of something, so do 'iter(data)' if you want to iterate over the items
         self.data = None
+
+        # reply of the providers
+        self.reply = None
 
         # BELOW CAN be used to time requests
         # TOTAL time of (paging) request(s)

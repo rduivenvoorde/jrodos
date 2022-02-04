@@ -1,1 +1,0 @@
-from qgis.core import QgsApplication  # fake import to force sip version 2

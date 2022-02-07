@@ -1,3 +1,4 @@
+import copy
 from functools import partial
 from qgis.core import QgsNetworkAccessManager
 
@@ -60,9 +61,20 @@ class ProviderConfig:
     #         objectify.SubElement(root, field)
     #     print(objectify.dump(root))
 
-    def to_json(self) -> str:
-        # TODO maybe remove the private fields from the __dict__ (like _debug ?) AND/OR the once which have a value or None or Null ?
-        return json.dumps(self.__dict__, indent=2)
+    def to_json(self, ignore_empty_values=True) -> str:
+        # NOTE: you cannot pop keys during an iteration! So below is NOT working
+        # fields = copy.deepcopy(self.__dict__)
+        # for key, value in fields.items():
+        keys = copy.deepcopy(self.__dict__).keys()
+        fields = copy.deepcopy(self.__dict__)
+        for key in keys:
+            if isinstance(key, str) and key[0] == '_':
+                # this is a 'private field' don't copy it into json
+                fields.pop(key)
+            elif ignore_empty_values and (fields[key] is None or fields[key] in ('',)):
+                # leave out the keys without value IF the value is empty or None
+                fields.pop(key)
+        return json.dumps(fields, indent=2)
 
     def from_json(config_as_json):
         prov = ProviderConfig()

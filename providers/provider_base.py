@@ -68,8 +68,9 @@ class ProviderConfig:
         keys = copy.deepcopy(self.__dict__).keys()
         fields = copy.deepcopy(self.__dict__)
         for key in keys:
-            if isinstance(key, str) and key[0] == '_':
+            if isinstance(key, str) and (key[0] == '_' or key in ('output_dir', 'date_time_format', 'date_time_format_short')):
                 # this is a 'private field' don't copy it into json
+                # OR it is one of the keys that we do not want to have in the json/presets
                 fields.pop(key)
             elif ignore_empty_values and (fields[key] is None or fields[key] in ('',)):
                 # leave out the keys without value IF the value is empty or None
@@ -89,7 +90,7 @@ class ProviderConfig:
 
 class ProviderResult:
     def __init__(self):
-        # errors, see: http://doc.qt.io/qt-4.8/qnetworkreply.html#NetworkError-enum
+        # errors, see: https://doc.qt.io/qt-5/qnetworkreply.html
         self.error_code = 0
         self.error_msg = ''
         self.url = ''

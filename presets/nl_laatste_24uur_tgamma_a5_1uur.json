@@ -1,0 +1,10 @@
+{
+  "title": "Nederland, afgelopen 24 uur H*10 / TGAMMA-A5 (1 uur-metingen)",
+  "url": "http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "page_size": 25000,
+  "start_datetime": "now-86400",
+  "quantity": "T-GAMMA",
+  "substance": "A5",
+  "endminusstart": "3600",
+  "bbox": "NL"
+}

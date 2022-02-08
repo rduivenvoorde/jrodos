@@ -5,6 +5,7 @@ from functools import partial
 import os
 import shutil
 import re
+import json
 
 import logging
 log = logging.getLogger('JRodos3 Plugin')
@@ -13,11 +14,12 @@ log = logging.getLogger('JRodos3 Plugin')
 class CalnetMeasurementsConfig(ProviderConfig):
     def __init__(self):
         ProviderConfig.__init__(self)
+        self.title = 'No title set (yet) for this config/preset'
         self.url = ''
         self.output_dir = None
         # check and set defaults
         self.page_size = 5000
-        # start en endtime are strings in self.date_time_format (UTC)
+        # start- and end- time are strings in self.date_time_format (UTC)
         self.start_datetime = ''
         self.end_datetime = ''
         self.quantity = ''
@@ -27,7 +29,7 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.upper_bound = ''
         self.endminusstart = 0
         self.bbox = '50,0,60,20'
-        self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000 00:00'  # '2016-04-25T08:00:00.000+00:00'
+        self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000+00:00'  # '2016-04-25T08:00:00.000+00:00'
         self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 
     def __str__(self):
@@ -39,7 +41,29 @@ class CalnetMeasurementsConfig(ProviderConfig):
         return str(self).encode('utf-8')
 
 
+    def from_json(config_as_json):
+        """
+        Overriding the from_json of the Baseclasse to have all fields
+        :return: CalnetMeasurementsConfig
+        """
+        prov = CalnetMeasurementsConfig()
+        if isinstance(config_as_json, str):
+            obj = json.loads(config_as_json)
+        elif isinstance(config_as_json, dict):
+            obj = config_as_json
+        else:
+            raise ValueError
+        for key, value in obj.items():
+            prov.__dict__[key] = value
+        return prov
+
 class CalnetMeasurementsProvider(ProviderBase):
+
+    BOXES = {
+        'ZEELAND': '51.170,3.349,51.778,4.289',
+        'NL': '50.652,3.309,53.657,7.275',
+        'EU': '38,-8,61,30'
+    }
 
     def __init__(self, config):
         ProviderBase.__init__(self, config)
@@ -62,23 +86,37 @@ class CalnetMeasurementsProvider(ProviderBase):
         query.addQueryItem('request', 'GetFeature')
         # pity, below not working :-( so we have to check ourselves by counting
         # self.request.addQueryItem('resultType', 'hits')
+
+        # it is possible to define self.config.start_datetime
+        # is defined with something like: 'now-600' (meaning: now minus 600 seconds)
+        # in THAT case we will use 'now().addSecs(-600)' as starttime and 'now' as end time
+        start_datetime = self.config.start_datetime
+        end_datetime = self.config.end_datetime
+        if 'now-' in self.config.start_datetime.lower():
+            end_datetime = QDateTime.currentDateTimeUtc()
+            # removing 'now' from a string like 'now-600') to end up with a negative int -600 (note MINUS)
+            start_datetime = QDateTime(end_datetime).addSecs(int(start_datetime.replace('now', '')))
+            self.config.start_datetime = start_datetime.toString(self.config.date_time_format)
+            self.config.end_datetime = end_datetime.toString(self.config.date_time_format)
+
+        # bbox can be either a commasep.strting of W,S,E,N (latlon coords
+        # OR a string like 'ZEELAND', 'NL' or 'EU'
+        if self.config.bbox in self.BOXES.keys():
+            self.config.bbox = self.BOXES[self.config.bbox]
+        cql_filter = f"bbox(location,{self.config.bbox})"
+
         # the actual cql filter, something like:
         # "bbox(location,51,3,52,6) and time > '2016-09-26T15:27:38.000 00:00' and time < '2016-09-26T19:27:38.000 00:00' and endTime-startTime=3600 and quantity='T-GAMMA' and substance='A5'"
-        cql_filter = "bbox(location,{bbox}) and time > '{start_datetime}' and time < '{end_datetime}' and quantity='{quantity}' and substance='{substance}'".format(
-            bbox=self.config.bbox,
-            start_datetime=self.config.start_datetime,
-            end_datetime=self.config.end_datetime,
-            quantity=self.config.quantity,
-            substance=self.config.substance
-        )
-        cql_filter += " and endTime-startTime={}".format(self.config.endminusstart)
+        cql_filter += f" and time > '{self.config.start_datetime}' and time < '{self.config.end_datetime}' "
+        cql_filter += f" and quantity='{self.config.quantity}' and substance='{self.config.substance}'"
+        cql_filter += f" and endTime-startTime={self.config.endminusstart}"
         if len(self.config.lower_bound) > 0:
-            cql_filter += " and value > {}".format(self.config.lower_bound)
+            cql_filter += f" and value > {self.config.lower_bound}"
         if len(self.config.upper_bound) > 0:
-            cql_filter += " and value < {}".format(self.config.upper_bound)
+            cql_filter += f" and value < {self.config.upper_bound}"
         if len(self.config.projectid) > 0:
             # IMPORTANT! projectid is ONE(!) int, NOT a string (or comma separated string) anymore!!
-            cql_filter += " and projectid={}".format(int(self.config.projectid))
+            cql_filter += f" and projectid={int(self.config.projectid)}"
         query.addQueryItem('CQL_FILTER', cql_filter)
 
         # putting these last so it is clearly visible in logs we are 'paging'

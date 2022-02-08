@@ -88,6 +88,7 @@ from glob import glob
 import re
 from datetime import datetime
 from copy import deepcopy
+from pathlib import Path
 
 import os.path
 import json
@@ -413,8 +414,18 @@ class JRodos:
 
         if self.favorite_measurements_combo is None:
             self.favorite_measurements_combo = QComboBox()
-            self.favorite_measurements_combo.insertItem(0, self.tr('Most recent (1 hr) H*10/TGamma-A5 in The Netherlands'))
-            self.favorite_measurements_combo.insertItem(0, self.tr('Most recent (1 hr) H*10/TGamma-A5 in current view'))
+            presets_dir = Path(__file__).parent / 'presets'
+            preset_paths = presets_dir.glob('*.json')
+            # TODO sort so the zeeland, nl, eu will be grouped
+            for file in preset_paths:
+                # use title of the preset as text in the combo, and add the actual config as data
+                f = file.open()
+                conf_from_json = CalnetMeasurementsConfig.from_json(json.load(f))
+                f.close()
+                log.debug(f'Adding {conf_from_json.title} to presets')
+                self.favorite_measurements_combo.insertItem(0, self.tr(conf_from_json.title), userData=conf_from_json)
+            # now connect the index changed, NOPE: we only fire the request when user pushes button!
+            #self.favorite_measurements_combo.currentIndexChanged.connect(self.load_measurements_favourite)
             # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
             action = self.toolbar.addWidget(self.favorite_measurements_combo)
             self.actions.append(action)
@@ -597,16 +608,7 @@ class JRodos:
                 return
 
             self.setProjectionsBehavior()
-            
-            # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
-            if self.measurements_layer is None and self.jrodos_output_settings is None:
-                group_name = self.tr('JRodos plugin layers')
-                # BUT only if there isn't already such a group:
-                if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
-                    self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
-                else:
-                    log.debug(f'RE-using available group {group_name}: {QgsProject.instance().layerTreeRoot().findGroup(group_name)}')
-                    self.layer_group = QgsProject.instance().layerTreeRoot().findGroup(group_name)
+            self.create_jrodos_layer_group()
 
             # only show dialogs if the item is enabled in settings
             # but show settings in case both are disabled
@@ -648,6 +650,24 @@ class JRodos:
         except Exception as ex:
             self.msg(None, "Exception in JRodos plugin: %s \nCheck the Log Message Panel for more info" % ex)
             raise
+
+    def create_jrodos_layer_group(self):
+        """
+        Both after getting the JRodos results or getting measurements the results
+        will be placed in a 'JRodos'-layer group (for now)
+        :return: True if a new one is created, False if an existing one is used
+        """
+        # create a 'JRodos layer' group if not already there ( always on TOP == 0 )
+        #if self.measurements_layer is None and self.jrodos_output_settings is None:
+        group_name = self.tr('JRodos plugin layers')
+        # BUT only if there isn't already such a group:
+        if QgsProject.instance().layerTreeRoot().findGroup(group_name) is None:
+            self.layer_group = QgsProject.instance().layerTreeRoot().insertGroup(0, group_name)
+            return True
+        else:
+            log.debug(f'RE-using available group {group_name}: {QgsProject.instance().layerTreeRoot().findGroup(group_name)}')
+            self.layer_group = QgsProject.instance().layerTreeRoot().findGroup(group_name)
+            return False
 
     def setProjectionsBehavior(self):
         # we do NOT want the default behavior: prompting for a crs
@@ -1596,14 +1616,6 @@ class JRodos:
                 Utils.set_settings_value("upper_bound", upper_bound)
             else:
                 Utils.set_settings_value("upper_bound", '')
-
-            if self.jrodos_output_settings is None:
-                project = "'measurements'"
-                path = "'=;=wfs=;=data'"
-                measurements_settings.output_dir = ProviderUtils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
-            else:
-                measurements_settings.output_dir = self.jrodos_output_settings.output_dir
-
             measurements_settings.page_size = self.settings.value('measurements_wfs_page_size')
             measurements_settings.start_datetime = start_date.toString(measurements_settings.date_time_format)
             measurements_settings.end_datetime = end_date.toString(measurements_settings.date_time_format)
@@ -1626,6 +1638,13 @@ class JRodos:
             self.quantities_substance_provider_finished(result)
 
     def start_measurements_provider(self):
+        if self.jrodos_output_settings is None:
+            project = "'measurements'"
+            path = "'=;=wfs=;=data'"
+            self.measurements_settings.output_dir = ProviderUtils.jrodos_dirname(project, path, datetime.now().strftime("%Y%m%d%H%M%S"))
+        else:
+            self.measurements_settings.output_dir = self.jrodos_output_settings.output_dir
+        self.create_jrodos_layer_group()  # if not there, create a JRodos layer group first
         self.measurements_progress_bar.setMaximum(0)
         self.measurements_provider = CalnetMeasurementsProvider(self.measurements_settings)
         self.measurements_provider.finished.connect(self.finish_measurements_provider)
@@ -1679,8 +1698,9 @@ class JRodos:
         log.debug(f'Measurements selection change!: {selected_features_ids}')
 
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
+        # TODO REMOVE THIS
         # TODO: can we get rid of the subsetstring handling of the old timemanager?
-        # TODO: can we get rid of the disconneting to the selectionCHanged signal too?
+        # TODO: can we get rid of the disconnecting to the selectionCHanged signal too?
         # With a connected signal measurement_selection_change function would have been called again because
         # timemanager set's the subsetstring again
         self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
@@ -1778,12 +1798,14 @@ class JRodos:
                 self.remove_device_pointer()
 
         # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
+        # TODO REMOVE THIS
         log.debug(f'XXX Timemanager subsetstring: {subset_string}')
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
         # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
         self.measurements_layer.selectByIds(selected_features_ids)
         # connect measurement_selection_change  again
+        # TODO REMOVE THIS ???
         self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
     def curve_or_point_click(self, item):
@@ -2009,7 +2031,7 @@ class JRodos:
                 self.add_layer_to_timecontroller(jrodos_output_layer,
                                                  time_column='Datetime',
                                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
-            # TODO: DEPRICATED
+            # TODO: DEPRICATED REMOVE THIS
             # else:
             #     # add this layer to the TimeManager
             #     step_minutes = self.jrodos_output_settings.jrodos_model_step / 60  # jrodos_model_step is in seconds!!!
@@ -2084,6 +2106,7 @@ class JRodos:
 
     @staticmethod
     def enable_timemanager(enable):
+        # TODO REMOVE THIS
         """
         Enable OR disable the timemanager
         :param enable: 
@@ -2131,6 +2154,7 @@ class JRodos:
         self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
 
     def add_rainradar_to_timemanager(self, layer_for_settings):
+        # TODO: remove this!
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
         url = settings.value("rainradar_wmst_url")
@@ -2213,7 +2237,8 @@ class JRodos:
         #navigator.next()
 
     def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
-         # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)
+        # TODO REMOVE THIS
+        # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)
         if 'timemanager' not in plugins:
             self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
             return
@@ -2235,6 +2260,7 @@ class JRodos:
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
         timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
         # TODO: temporarily in if clause (until upstream has it too)
+        # TODO: REMOVE THIS
         if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
             timemanager.getController().refreshGuiTimeFrameProperties()
             # set 'discrete checkbox' to True to be sure there is something to see...
@@ -2248,6 +2274,15 @@ class JRodos:
 
     def load_measurements_favourite(self):
         log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.currentText()}')
+        log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())}')
+        measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
+        if isinstance(measurements_settings, CalnetMeasurementsConfig):
+            self.measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
+            self.start_measurements_provider()
+        else:
+            log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')
+
+
 
     def load_measurements(self, output_dir, style_file):
         """
@@ -2259,6 +2294,7 @@ class JRodos:
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         selected_features_ids = []
+
         if float(self.measurements_settings.endminusstart) < 0:
             interval = 'ALLES'
         else:
@@ -2378,6 +2414,7 @@ class JRodos:
                                                  frame_size_seconds=frame_size)
             else:
                 # OLD add this layer to the old TimeManager
+
                 self.add_layer_to_timemanager(self.measurements_layer, 'time')
 
             # set the display field value
@@ -2395,10 +2432,11 @@ class JRodos:
                     # Temporal Controller !
                     self.add_rainradar_to_timecontroller(self.measurements_layer)
                 else:
+                    # TODO REMOVE THIS
                     self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def get_quantity_and_substance_description(self, quantity, substance):
-        if f'{quantity}_{substance}' in self.combi_descriptions:
+        if self.combi_descriptions and f'{quantity}_{substance}' in self.combi_descriptions:
             return f'{self.combi_descriptions[quantity+"_"+substance]}<br/> ({quantity}, {substance})'
         else:
             # mmm our lookup object does not have this combi, no description returned

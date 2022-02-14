@@ -437,15 +437,6 @@ class JRodos:
             add_to_toolbar=True,
             parent=self.iface.mainWindow())
 
-        # loading a JRodos Shapefile + sld
-        # icon_path = ':/plugins/JRodos/icon.png'
-        # self.add_action(
-        #     icon_path,
-        #     text=self.tr(u'Load JRodos Shapefile (.shp) and Style (.sld)'),
-        #     callback=self.load_jrodos_shape,
-        #     add_to_toolbar=True,
-        #     parent=self.iface.mainWindow())
-
         # Create the dialog (after translation) and keep reference
         self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
         # connect the change of the project dropdown to a refresh of the data path
@@ -1697,14 +1688,16 @@ class JRodos:
         selected_features_ids = self.measurements_layer.selectedFeatureIds()
         log.debug(f'Measurements selection change!: {selected_features_ids}')
 
+
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
         # TODO REMOVE THIS
-        # TODO: can we get rid of the subsetstring handling of the old timemanager?
-        # TODO: can we get rid of the disconnecting to the selectionCHanged signal too?
+        # TODO: can we get rid of the subsetstring handling of the old timemanager? NOPE!
+        # TODO: can we get rid of the disconnecting to the selectionCHanged signal too? Maybe
         # With a connected signal measurement_selection_change function would have been called again because
         # timemanager set's the subsetstring again
-        self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
-        # remember current (timemanager-based) subset string to be able to add it later
+        #self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+
+        # remember current subset string to be able to add it later
         subset_string = self.measurements_layer.dataProvider().subsetString()
         self.measurements_layer.setSubsetString('')
 
@@ -1797,16 +1790,16 @@ class JRodos:
             else:
                 self.remove_device_pointer()
 
-        # RE-apply old (timemanager-based) subset_string again to make layer work for timemanager again
+        # RE-apply old subset_string again to make layer work  for timecontroller again(?)
         # TODO REMOVE THIS
-        log.debug(f'XXX Timemanager subsetstring: {subset_string}')
+        # log.debug(f'XXX Timemanager subsetstring: {subset_string}')
         self.measurements_layer.dataProvider().setSubsetString(subset_string)
         # AND apply the selection again because resetting the subsetString removed it
         # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
-        self.measurements_layer.selectByIds(selected_features_ids)
+#        self.measurements_layer.selectByIds(selected_features_ids)
         # connect measurement_selection_change  again
         # TODO REMOVE THIS ???
-        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
+#        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
     def curve_or_point_click(self, item):
         if item in self.curves:
@@ -1998,44 +1991,11 @@ class JRodos:
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
 
             if self.use_temporal_controller:
-                # # currently gpkg does NOT contain a QDateTime field, we add a virtual one
-                # datetime_field = QgsField('utcdatetime', QVariant.DateTime)
-                # # argh... datetime_from_epoch returns a LOCAL time, while we want UTC....
-                # # HACK HACK HACK HACK:
-                # import datetime
-                # local = datetime.datetime.fromtimestamp(1617351600)
-                # utc = datetime.datetime.utcfromtimestamp(1617351600)
-                # timezone_diff = (local - utc).seconds
-                # jrodos_output_layer.addExpressionField(f' datetime_from_epoch( ("Time" - {timezone_diff}) * 1000 ) ', datetime_field)
-                # self.add_layer_to_timecontroller(jrodos_output_layer,
-                #                                  time_column='utcdatetime',
-                #                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
-
-                # vraag is nu of we de datetime/time column als text of als echte Datetime kunnen/moeten laden
-                # het lijkt erop dat geoserver niet een Datetime kan aanmaken...
-                # maar... de temporal controller lijkt ook te werken op een text kolom ???? (je ziet dan echter niks in de layer properties)
-
-                # een andere optie: VOORDAT we de boel in QGIS laden, even in sqlite zelf een paar queries draaien?
-
-                # CURRENTLY VIRTUAL COLUMNS ARE VERY SLOW!!
-                # currently gpkg does NOT contain a QDateTime field, trying to add a virtual one
-                # log.debug('Adding a DateTime type to the table...')
-                # datetime_field = QgsField('Datetime2', QVariant.DateTime)
-                # jrodos_output_layer.addExpressionField(f'  to_datetime(  "Datetime" )', datetime_field)
-                # self.add_layer_to_timecontroller(jrodos_output_layer,
-                #                                  time_column='datetime_field',
-                #                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
-
-                # SO: we use a iso datetime text (which works in the Temporal Controller)
+                 # SO: we use a iso datetime text (which works in the Temporal Controller)
                 log.debug('Using DateTime (iso-datetime as TEXT) from table...')
                 self.add_layer_to_timecontroller(jrodos_output_layer,
                                                  time_column='Datetime',
                                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
-            # TODO: DEPRICATED REMOVE THIS
-            # else:
-            #     # add this layer to the TimeManager
-            #     step_minutes = self.jrodos_output_settings.jrodos_model_step / 60  # jrodos_model_step is in seconds!!!
-            #     self.add_layer_to_timemanager(jrodos_output_layer, 'Time', step_minutes, 'minutes')
 
     @staticmethod
     def fix_jrodos_style_sld(jrodos_style_sld):
@@ -2104,23 +2064,6 @@ class JRodos:
         # apply the renderer to the layer
         layer.setRenderer(renderer)
 
-    @staticmethod
-    def enable_timemanager(enable):
-        # TODO REMOVE THIS
-        """
-        Enable OR disable the timemanager
-        :param enable: 
-        :return: 
-        """
-        timemanager = None
-        if 'timemanager' in plugins:
-            timemanager = plugins['timemanager']
-        # enable timemanager by 'clicking' on enable button (if not enabled)
-        if enable and not timemanager.getController().getTimeLayerManager().isEnabled():
-            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
-        elif not enable and timemanager.getController().getTimeLayerManager().isEnabled():
-            timemanager.getController().getGui().dock.pushButtonToggleTime.click()
-
     def add_rainradar_to_timecontroller(self, layer_for_settings):
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
@@ -2152,36 +2095,6 @@ class JRodos:
         rain_layer = QgsRasterLayer(uri, name, "wms")
         QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
         self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
-
-    def add_rainradar_to_timemanager(self, layer_for_settings):
-        # TODO: remove this!
-        settings = JRodosSettings()
-        name = settings.value("rainradar_wmst_name")
-        url = settings.value("rainradar_wmst_url")
-        layers = settings.value("rainradar_wmst_layers")
-        styles = settings.value("rainradar_wmst_styles")
-        imgformat = settings.value("rainradar_wmst_imgformat")
-        crs = settings.value("rainradar_wmst_crs")
-
-        uri = "crs=" + crs + "&layers=" + layers + "&styles=" + styles + "&format=" + imgformat + "&url=" + url
-
-        rain_layer = QgsRasterLayer(uri, name, "wms")
-        QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
-        self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
-
-        measurements_settings = self.jrodos_settings[layer_for_settings]  # we keep (deep)copies of the settings of the layers here
-        timelayer_settings = LayerSettings()
-        timelayer_settings.layer = rain_layer
-        start = QDateTime.fromString(measurements_settings.start_datetime, measurements_settings.date_time_format)
-        datetime_format = 'yyyy-MM-ddThh:mm:ss'
-        timelayer_settings.startTimeAttribute = start.toString(datetime_format)
-        end = QDateTime.fromString(measurements_settings.end_datetime, measurements_settings.date_time_format)
-        timelayer_settings.endTimeAttribute = end.toString(datetime_format)
-
-        timelayer = WMSTRasterLayer(timelayer_settings, self.iface)
-
-        timemanager = plugins['timemanager']
-        timemanager.getController().timeLayerManager.registerTimeLayer(timelayer)
 
     def add_layer_to_timecontroller(self, layer, time_column=None, frame_size_seconds=3600):
         # get the temporal properties of the time layer
@@ -2235,42 +2148,6 @@ class JRodos:
         navigator.rewindToStart()
         # play one step
         #navigator.next()
-
-    def add_layer_to_timemanager(self, layer, time_column=None, frame_size=60, frame_type='minutes'):
-        # TODO REMOVE THIS
-        # OLD TIMEMANAGER PLUGIN (ANITA/RIVM)
-        if 'timemanager' not in plugins:
-            self.iface.messageBar().pushWarning("Warning!!", "No TimeManger plugin, we REALLY need that. Please install via Plugin Manager first...")
-            return
-        self.enable_timemanager(True)
-        timemanager = plugins['timemanager']
-        timelayer_settings = LayerSettings()
-        timelayer_settings.layer = layer
-        timelayer_settings.startTimeAttribute = time_column
-        timelayer = TimeVectorLayer(timelayer_settings, self.iface)
-        animation_frame_length = 2000
-        frame_size = frame_size
-        frame_type = frame_type
-        timemanager.getController().setPropagateGuiChanges(False)
-        timemanager.getController().setAnimationOptions(animation_frame_length, False, False)
-        timemanager.getController().guiControl.setTimeFrameType(frame_type)
-        timemanager.getController().guiControl.setTimeFrameSize(frame_size)
-        timemanager.getController().getTimeLayerManager().registerTimeLayer(timelayer)
-        # set timeslider to zero, moving it to 1 and back, thereby calling some event?
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(1)
-        timemanager.getController().getGui().dock.horizontalTimeSlider.setValue(0)
-        # TODO: temporarily in if clause (until upstream has it too)
-        # TODO: REMOVE THIS
-        if hasattr(timemanager.getController(), 'refreshGuiTimeFrameProperties'):
-            timemanager.getController().refreshGuiTimeFrameProperties()
-            # set 'discrete checkbox' to True to be sure there is something to see...
-            timemanager.getController().getGui().dock.checkBoxDiscrete.setChecked(True)
-        else:
-            #log.debug('JRodos time: refreshing gui times: {}'.format(timemanager.getController().getTimeLayerManager().getProjectTimeExtents()))
-            timemanager.getController().refreshGuiTimeExtents(timemanager.getController().getTimeLayerManager().getProjectTimeExtents())
-        # do one step to be sure there is data visible (working for hour measurements, could be based on frame_size)
-        timemanager.getController().stepForward()
-        timemanager.getController().getTimeLayerManager().refreshTimeRestrictions()
 
     def load_measurements_favourite(self):
         log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.currentText()}')
@@ -2411,11 +2288,7 @@ class JRodos:
                     frame_size = 600
                 self.add_layer_to_timecontroller(self.measurements_layer,
                                                  time_column='time',
-                                                 frame_size_seconds=frame_size)
-            else:
-                # OLD add this layer to the old TimeManager
-
-                self.add_layer_to_timemanager(self.measurements_layer, 'time')
+                                                 frame_size_seconds=framesize)
 
             # set the display field value
             self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
@@ -2431,9 +2304,6 @@ class JRodos:
                 if self.use_temporal_controller:
                     # Temporal Controller !
                     self.add_rainradar_to_timecontroller(self.measurements_layer)
-                else:
-                    # TODO REMOVE THIS
-                    self.add_rainradar_to_timemanager(self.measurements_layer)
 
     def get_quantity_and_substance_description(self, quantity, substance):
         if self.combi_descriptions and f'{quantity}_{substance}' in self.combi_descriptions:
@@ -2454,35 +2324,6 @@ class JRodos:
         #print(model)
         #index = model.node2index(treenode)
         #model.setData(index, name)
-
-    # TODO remove all shape file loading related code
-    def load_jrodos_shape(self):
-        shape_file = QFileDialog.getOpenFileName(
-            self.iface.mainWindow(),
-            self.tr("Esri Shape (.shp) bestand openen..."),
-            # os.path.realpath(filename),
-            filter=self.tr("JRodos Esri Shape files (*.shp)"))
-
-        if shape_file == "":  # user choose cancel
-            return
-
-        file_name, extension = os.path.splitext('{}'.format(shape_file))
-
-        layer = QgsVectorLayer(shape_file, file_name, "ogr")
-
-        # sld_file = '/home/richard/z/17/rivm/20170906_JRodosOutputBeverwijk/test.sld'
-        sld_file = file_name + '.sld'
-
-        sld_file_fixed = self.fix_jrodos_style_sld(sld_file)
-        layer.loadSldStyle(sld_file_fixed)
-
-        if not layer.isValid():
-            print("Layer failed to load!")
-
-        else:
-            print("Layer was loaded successfully!")
-
-        QgsProject.instance().addMapLayer(layer)
 
     # https://nathanw.net/2012/11/10/user-defined-expression-functions-for-qgis/
 

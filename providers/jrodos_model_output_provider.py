@@ -283,18 +283,9 @@ class JRodosModelProvider(ProviderBase):
             #                     "releaseStart": "2016-04-25T08:00:00.000+0000"},
             #      "id": "RodosLight"}]
             # }
-
             if 'features' in obj and len(obj['features']) > 0 \
                     and 'properties' in obj['features'][0] \
                     and 'Value' in obj['features'][0]['properties']:
-                # TODO remove this one?
-                # {u'type': u'FeatureCollection', u'features': [
-                #     {u'type': u'Feature',
-                #      u'properties': {u'Value': u'{
-                #                           timeStep:1800,
-                #                           durationOfPrognosis:43200,
-                #                           releaseStart:1477146000000}'},
-                #      u'id': u'RodosLight'}]}
                 values = obj['features'][0]['properties']['Value']
                 # preprocess the data to a nice object
                 data = {'result': 'OK', 'project': self.config.jrodos_project}

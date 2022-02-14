@@ -1,0 +1,10 @@
+{
+  "title": "Nederland, afgelopen uur Meetwagens (en instantane metingen)",
+  "url": "http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "page_size": 25000,
+  "start_datetime": "now-3600",
+  "quantity": "RN-220,T-ALFA-ART,RN-222,T-BETA-ART,T-ALFA,T-BETA,T-ALFA-NAT,T-GAMMA",
+  "substance": "A11,A5",
+  "endminusstart": "0",
+  "bbox": "NL"
+}

@@ -2151,15 +2151,15 @@ class JRodos:
 
     def load_measurements_favourite(self):
         log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.currentText()}')
-        log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())}')
+        #log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())}')
         measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
         if isinstance(measurements_settings, CalnetMeasurementsConfig):
             self.measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
+            # in the plugin we ignore the WFS-url from these settings, as dev/acc/prd is set by the user
+            self.measurements_settings.url = self.settings.value('measurements_wfs_url')
             self.start_measurements_provider()
         else:
             log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')
-
-
 
     def load_measurements(self, output_dir, style_file):
         """

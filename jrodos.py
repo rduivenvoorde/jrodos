@@ -486,6 +486,8 @@ class JRodos:
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
+        # Connect currentLayerChanged to self.current_layer_changed to be able to set 'self.measurements_layer'
+        self.iface.currentLayerChanged.connect(self.current_layer_changed)
 
     def abort_requests(self):
         log.debug('Aborting all Requests!!!')
@@ -518,6 +520,9 @@ class JRodos:
 
     def show_settings(self):
         self.settings_dlg.show()
+
+    def current_layer_changed(self, layer):
+        log.debug(f'Current layer changed to: {layer}')
 
     def show_data_item_filter_dialog(self):
         # load saved user data_items from pickled file
@@ -2304,6 +2309,11 @@ class JRodos:
                 if self.use_temporal_controller:
                     # Temporal Controller !
                     self.add_rainradar_to_timecontroller(self.measurements_layer)
+
+            log.debug(self.measurements_layer.customProperties().keys())
+            log.debug(f'TRYING TO SET JSON IN CUSTOMPROP: {str(self.measurements_settings.to_json())}')
+            self.measurements_layer.setCustomProperty('rivm_measurements', self.measurements_settings.to_json())
+            log.debug(self.measurements_layer.customProperties().keys())
 
     def get_quantity_and_substance_description(self, quantity, substance):
         if self.combi_descriptions and f'{quantity}_{substance}' in self.combi_descriptions:

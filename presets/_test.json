@@ -1,0 +1,10 @@
+{
+  "title": "_Test",
+  "url": "http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "page_size": 25000,
+  "start_datetime": "now-3600",
+  "quantity": "T-GAMMA",
+  "substance": "A5",
+  "endminusstart": "600",
+  "bbox": "ZEELAND"
+}

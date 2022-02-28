@@ -83,7 +83,7 @@ class CalnetMeasurementsUtilsProvider(ProviderBase):
             log.debug("Received: {}".format(content.data().decode('utf-8')))
             data = []
             root = ET.fromstring(content.data().decode('utf-8'))
-
+            # actual returned data is XML, here parsing to object tree / json like structure
             for ret in root.findall(".//return"):
                 if ret.find('quantity') is not None:
                     # <return>

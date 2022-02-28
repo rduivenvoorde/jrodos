@@ -83,16 +83,18 @@ def test_calnet_measurements_units(qgis, calnet_measurements_utils_provider):
 
 def test_calnet_quantity_substance_combis(qgis, calnet_measurements_utils_provider):
     def prov_finished(result):
-        # [{'substance': 'T-ALFA-ART', 'description': 'OUTDOOR AIR - TOTAL ARTIFICIAL ALPHA (A11 - T-ALFA-ART)', 'quantity': 'A11'}, {'substance': 'T-ALFA-NAT', 'description': 'OUTDOOR AIR - TOTAL NATURAL ALPHA (A11 - T-ALFA-NAT)', 'quantity': 'A11'},
         # [{'substance': 'T-ALFA-ART', 'description': 'OUTDOOR AIR (A11) , TOTAL ARTIFICIAL ALPHA (T-ALFA-ART)', 'quantity': 'A11'},
-        #  {"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION","unit":"NGY/H"}
+        #  {"quantity":"T-GAMMA","quantity_desc":"TOTAL GAMMA","substance":"A5","substance_desc":"EXTERNAL RADIATION","unit":"NGY/H"},
+        #  ...
+        #  ]
+        # actual returned data is XML, but parsed to object tree / json like structure
         assert result.error_code == 0
         assert isinstance(result, ProviderResult)
         assert isinstance(result.data, list)
         assert len(result.data) > 0
         #assert len(result.data) == 6  # off course depending on time of asking?
     calnet_measurements_utils_provider.finished.connect(prov_finished)
-    calnet_measurements_utils_provider.get_data('MeasuredCombinations', '2019-01-06T12:00:00.000Z', '2019-05-06T12:00:00.000Z')
+    calnet_measurements_utils_provider.get_data('MeasuredCombinations', '2022-01-06T12:00:00.000Z', '2022-05-06T12:00:00.000Z')
     while not calnet_measurements_utils_provider.is_finished():
         QCoreApplication.processEvents()
 

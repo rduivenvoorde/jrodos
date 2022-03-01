@@ -54,13 +54,29 @@ from qgis.PyQt.QtNetwork import (
     QNetworkRequest,
     QNetworkReply,
 )
-from qgis.core import QgsVectorLayer, QgsField, QgsFeature, \
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform, Qgis, \
-    QgsRasterLayer, QgsFeatureRequest, QgsGeometry, \
-    QgsExpression, QgsRuleBasedRenderer, QgsSymbol, QgsProject, \
-    QgsVectorLayerTemporalProperties, QgsUnitTypes, \
-    QgsTemporalUtils, QgsTemporalNavigationObject, QgsInterval, \
-    QgsDateTimeRange, QgsBlockingNetworkRequest
+from qgis.core import (
+    Qgis,
+    QgsBlockingNetworkRequest,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsDateTimeRange,
+    QgsExpression,
+    QgsFeature,
+    QgsFeatureRequest,
+    QgsField,
+    QgsGeometry,
+    QgsInterval,
+    QgsProject,
+    QgsProviderRegistry,
+    QgsRasterLayer,
+    QgsRuleBasedRenderer,
+    QgsSymbol,
+    QgsTemporalNavigationObject,
+    QgsTemporalUtils,
+    QgsUnitTypes,
+    QgsVectorLayer,
+    QgsVectorLayerTemporalProperties,
+)
 
 from qgis.utils import qgsfunction, plugins
 from qgis.gui import QgsVertexMarker
@@ -1840,6 +1856,30 @@ class JRodos:
             if 'Empty' in gpkgfile:  # JRodos sents an 'Empty.gpkg' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
+                try:
+                    # https://jira.cal-net.nl/browse/QGIS-81
+                    log.debug(f"START trying to create a DATETIME column in {gpkgfile} in {gpkgdir}")
+                    md = QgsProviderRegistry.instance().providerMetadata('ogr')
+                    conn = md.createConnection(gpkgs[0], {})
+
+                    queries = [
+                    'ALTER TABLE data RENAME Datetime TO Datetimestring;',
+                    'ALTER TABLE data ADD Datetime DATETIME;',
+                    'UPDATE data SET Datetime = Datetimestring;',
+                    'DROP VIEW view;',
+                    'CREATE VIEW view AS SELECT data.fid AS OGC_FID, data.Cell, data.Datetime, data.Value, grid.grid_geom AS geom FROM data JOIN grid ON data.Cell = grid.Cell;',
+                    'DROP INDEX data_time_index;',
+                    'CREATE INDEX data_time_index ON data(Datetime);'
+                    ]
+                    for q in queries:
+                        conn.executeSql(q)
+                    log.debug(f"Successfully created a DATETIME column in {gpkgfile} in {gpkgdir}")
+                    #raise Exception('test')
+
+                except Exception as e:
+                    log.debug(f"ERROR trying to create a DATETIME column in {gpkgfile} in {gpkgdir}")
+                    # go with the string-datetime column: working (but only when user does NOT adjust the layer/style)
+
                 uri = gpkgs[0] + '|layername=view'
                 jrodos_output_layer = QgsVectorLayer(uri, layer_name, 'ogr')
         elif len(shps) > 0:

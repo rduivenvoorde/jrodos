@@ -1500,9 +1500,10 @@ class JRodos:
         if result:  # OK was pressed
             # selected endminusstart + save to QSettings
             endminusstart = self.measurements_dlg.combo_endminusstart.itemText(self.measurements_dlg.combo_endminusstart.currentIndex())
-            # default to 1 hour in case of NO integration period = None / not set
-            if '' == endminusstart:
-                endminusstart = '3600'  # sec
+            # if user selected 'alles', set the endminusstart (= $3 in db procedures) to -1
+            # endminusstart value of -1 will NOT use the interval/integration time
+            if 'ALLES' == endminusstart:
+                endminusstart = '-1'
             Utils.set_settings_value("endminusstart", endminusstart)
 
             quantities = []
@@ -2236,10 +2237,11 @@ class JRodos:
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
         selected_features_ids = []
-        layer_display_name = "Measurements " + \
-            start_time.toString(self.measurements_settings.date_time_format_short) + " - " + \
-            end_time.toString(self.measurements_settings.date_time_format_short)
-
+        if float(self.measurements_settings.endminusstart) < 0:
+            interval = 'ALLES'
+        else:
+            interval = f'{self.measurements_settings.endminusstart} s'
+        layer_display_name = f'{start_time.toString(self.measurements_settings.date_time_format_short)} - {end_time.toString(self.measurements_settings.date_time_format_short)} - ({interval})'
         #log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         #log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 

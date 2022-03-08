@@ -2245,64 +2245,51 @@ class JRodos:
         #log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         #log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 
-        register_layers = False
-        if self.measurements_layer is None:
-            register_layers = True
+        register_layers = True
+        if self.measurements_layer:
+            # clean up IF there is a measurement layer disconnect selectionChanged signal
+            try:
+                self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+            except Exception as e:
+                pass
+            # remove pointer
+            self.remove_device_pointer()
+            # remove actual layer
+            QgsProject.instance().removeMapLayer(self.measurements_layer.id())
 
-            # TODO: fix this OR remove this
-            self.set_legend_node_name(self.layer_group,
-                                      self.tr('Data retrieved: ') + QDateTime.currentDateTime().toString(
-                                          'MM/dd HH:mm:ss'))
+        # create layer name based on self.measurements_settings
+        self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
 
-            # create layer name based on self.measurements_settings
-            self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
+        # add fields
+        pr = self.measurements_layer.dataProvider()
+        pr.addAttributes([QgsField("gml_id", QVariant.String),
+                          QgsField("startTime", QVariant.String),
+                          QgsField("endTime", QVariant.String),
+                          QgsField("quantity", QVariant.String),
+                          QgsField("substance", QVariant.String),
+                          QgsField("unit", QVariant.String),
+                          QgsField("value", QVariant.Double),
+                          QgsField("time", QVariant.DateTime),  # QgsField("time", QVariant.String),
+                          QgsField("info", QVariant.String),
+                          QgsField("device", QVariant.String),
+                          QgsField("projectid", QVariant.String),
+                          QgsField("quantity_substance", QVariant.String),
+                          #QgsField("unitvalue", QVariant.Double),
+                          ])
+        self.measurements_layer.updateFields()
 
-            # add fields
-            pr = self.measurements_layer.dataProvider()
-            pr.addAttributes([QgsField("gml_id", QVariant.String),
-                              QgsField("startTime", QVariant.String),
-                              QgsField("endTime", QVariant.String),
-                              QgsField("quantity", QVariant.String),
-                              QgsField("substance", QVariant.String),
-                              QgsField("unit", QVariant.String),
-                              QgsField("value", QVariant.Double),
-                              QgsField("time", QVariant.DateTime),  # QgsField("time", QVariant.String),
-                              QgsField("info", QVariant.String),
-                              QgsField("device", QVariant.String),
-                              QgsField("projectid", QVariant.String),
-                              QgsField("quantity_substance", QVariant.String),
-                              #QgsField("unitvalue", QVariant.Double),
-                              ])
-            self.measurements_layer.updateFields()
+        QgsProject.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
 
-            QgsProject.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
-            self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
+        # put a copy of the settings into our map<=>settings dict
+        # IF we want to be able to load a layer several times based on the same settings
+        # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
+        self.jrodos_settings[self.measurements_layer] = self.measurements_settings
 
-            # put a copy of the settings into our map<=>settings dict
-            # IF we want to be able to load a layer several times based on the same settings
-            # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
-            self.jrodos_settings[self.measurements_layer] = self.measurements_settings
-
-            self.measurements_layer.loadNamedStyle(
-                os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-            self.measurements_layer_featuresource = self.measurements_layer.dataProvider().featureSource()
-            self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
-        else:
-            # there is already a layer for this measurements_settings object, so apparently we got new data for it:
-            # remove ALL features from the  layer
-            selected_features_ids = self.measurements_layer.selectedFeatureIds()  # remember selected features (for graph)
-            self.measurements_layer.startEditing()
-            self.measurements_layer.setSubsetString('')  # first remove the query otherwise only the query result is removed
-            self.measurements_layer.beginEditCommand("Delete All Features")
-            self.measurements_layer.selectAll()
-            self.measurements_layer.deleteSelectedFeatures()
-            self.measurements_layer.removeSelection()  # to be sure the 'selectionChanged' is called again to update the graph
-            self.measurements_layer.endEditCommand()
-            self.measurements_layer.commitChanges()
-            # set current timestamp in the group node of the legend
-            # TODO: fix this OR remove this
-            self.set_legend_node_name(self.layer_group,
-                                      self.tr('Data refreshed: ') + QDateTime.currentDateTime().toString('MM/dd HH:mm:ss'))
+        self.measurements_layer.loadNamedStyle(
+            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+        self.measurements_layer_featuresource = self.measurements_layer.dataProvider().featureSource()
+        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
         feature_count = 0
         flist = []
@@ -2342,51 +2329,13 @@ class JRodos:
                         self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
                         return
 
-                # step_count = 0
-                # new_unit_msg = True
-                # for feature in features:
-                #     if features.isClosed():
-                #         self.msg(None, 'Iterator CLOSED !!!!')
-                #         break
-                #     feature_count += 1
-                #     step_count += 1
-                #     fields = feature.fields()
-                #     fields.append(QgsField('unitvalue'))
-                #     f = QgsFeature(fields)
-                #     if feature.geometry() is not None:
-                #         attributes = feature.attributes()
-                #         value = float(feature.attribute('value'))
-                #         # preferred unit is microSv/h, but the data contains value+unit column
-                #         # set all values in column unitvalue in microSv/H
-                #         if feature.attribute('unit') == 'USV/H':
-                #             # value is in microSv/h all OK
-                #             unitvalue = value
-                #         elif feature.attribute('unit') == 'NSV/H':
-                #             # value is in nanoSv/h, value / 1000
-                #             unitvalue = value / 1000
-                #         else:
-                #             unitvalue = value
-                #             if new_unit_msg:
-                #                 new_unit_msg = False
-                #         attributes.append(unitvalue)
-                #         f.setAttributes(attributes)
-                #         f.setGeometry(feature.geometry())
-                #         flist.append(f)
-                #         if len(flist) > 1000:
-                #             self.measurements_layer.dataProvider().addFeatures(flist)
-                #             flist = []
-                #     else:
-                #         self.msg(None, self.tr("ERROR: # %s no geometry !!! attributes: %s ") % (feature_count, f.attributes()))
-                #         return
-
             if feature_count == 0:
                 self.msg(None, self.tr("NO measurements found in :\n %s" % gml_file))
                 return
             else:
-               log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
+                log.debug(self.tr("%s measurements loaded from GML file, total now: %s" % (step_count, feature_count)))
 
             self.measurements_layer.dataProvider().addFeatures(flist)
-            #self.measurements_layer.dataProvider().addFeatures(features)
             self.measurements_layer.selectByIds(selected_features_ids)
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
@@ -2397,12 +2346,14 @@ class JRodos:
                 # endminusstart can be zero for meetwagen metingen
                 # but we cannot set the stepsize to zero (as is NO step...)
                 # so IF endminusstart==0, we set the stepsize to 600
-                framesize = self.measurements_settings.endminusstart
-                if framesize in [0, '0']:
-                    framesize = 600
+                # 20220308: there is also endminusstart = -1 (show ALL frames)
+                # also set to 600
+                frame_size = self.measurements_settings.endminusstart
+                if frame_size in [0, '0', -1, '-1']:
+                    frame_size = 600
                 self.add_layer_to_timecontroller(self.measurements_layer,
                                                  time_column='time',
-                                                 frame_size_seconds=framesize)
+                                                 frame_size_seconds=frame_size)
             else:
                 # OLD add this layer to the old TimeManager
                 self.add_layer_to_timemanager(self.measurements_layer, 'time')

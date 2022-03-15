@@ -415,8 +415,9 @@ class JRodos:
         if self.favorite_measurements_combo is None:
             self.favorite_measurements_combo = QComboBox()
             presets_dir = Path(__file__).parent / 'presets'
-            preset_paths = presets_dir.glob('*.json')
-            # TODO sort so the zeeland, nl, eu will be grouped
+            # globbing all *.json files an sorting them (on filename!)
+            preset_paths = list(presets_dir.glob('*.json'))
+            preset_paths.sort(reverse=True)
             for file in preset_paths:
                 # use title of the preset as text in the combo, and add the actual config as data
                 f = file.open()
@@ -424,8 +425,10 @@ class JRodos:
                 f.close()
                 log.debug(f'Adding {conf_from_json.title} to presets')
                 self.favorite_measurements_combo.insertItem(0, self.tr(conf_from_json.title), userData=conf_from_json)
-            # now connect the index changed, NOPE: we only fire the request when user pushes button!
-            #self.favorite_measurements_combo.currentIndexChanged.connect(self.load_measurements_favourite)
+            self.favorite_measurements_combo.insertItem(0, self.tr("Choose a preset"), userData={})
+            # now connect the index changed (we could also only fire the request when user pushes button)
+            self.favorite_measurements_combo.setCurrentIndex(0)  # set to first item
+            self.favorite_measurements_combo.currentIndexChanged.connect(self.load_measurements_favourite)
             # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
             action = self.toolbar.addWidget(self.favorite_measurements_combo)
             self.actions.append(action)
@@ -2162,6 +2165,10 @@ class JRodos:
             self.measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
             # in the plugin we ignore the WFS-url from these settings, as dev/acc/prd is set by the user
             self.measurements_settings.url = self.settings.value('measurements_wfs_url')
+            # IF bbox is emtpy, it means we do not use a predefined bbox, but current mapcanvas one
+            if self.measurements_settings.bbox in (None, '', ' ', 'None', '-'):
+                self.update_measurements_bbox()
+                log.debug(f'BBOX in preset was emtpy, using current map extent: {self.measurements_settings.bbox}')
             self.start_measurements_provider()
         else:
             log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')
@@ -2293,27 +2300,24 @@ class JRodos:
                     frame_size = 600
                 self.add_layer_to_timecontroller(self.measurements_layer,
                                                  time_column='time',
-                                                 frame_size_seconds=framesize)
+                                                 frame_size_seconds=frame_size)
 
-            # set the display field value
-            self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
-            # self.measurements_layer.setDisplayField('Measurements')
-            # enable maptips if (apparently) not enabled (looking at the maptips action/button)
-            if not self.iface.actionMapTips().isChecked():
-                self.iface.actionMapTips().trigger()  # trigger action
+            # # set the display field value
+            # self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')
+            # # self.measurements_layer.setDisplayField('Measurements')
+            # # enable maptips if (apparently) not enabled (looking at the maptips action/button)
+            # if not self.iface.actionMapTips().isChecked():
+            #     self.iface.actionMapTips().trigger()  # trigger action
+
             self.iface.layerTreeView().setCurrentLayer(self.measurements_layer)
             self.iface.mapCanvas().refresh()
 
-            # add rainradar and to the TimeManager IF enabled
+            # add rainradar and to the Temporal controller IF enabled
             if self.settings.value('rainradar_enabled'):
-                if self.use_temporal_controller:
-                    # Temporal Controller !
-                    self.add_rainradar_to_timecontroller(self.measurements_layer)
+                self.add_rainradar_to_timecontroller(self.measurements_layer)
 
-            log.debug(self.measurements_layer.customProperties().keys())
-            log.debug(f'TRYING TO SET JSON IN CUSTOMPROP: {str(self.measurements_settings.to_json())}')
+            log.debug(f'Adding "rivm_measurements" custom prop in layer: {str(self.measurements_settings.to_json())}')
             self.measurements_layer.setCustomProperty('rivm_measurements', self.measurements_settings.to_json())
-            log.debug(self.measurements_layer.customProperties().keys())
 
     def get_quantity_and_substance_description(self, quantity, substance):
         if self.combi_descriptions and f'{quantity}_{substance}' in self.combi_descriptions:
@@ -2442,14 +2446,3 @@ class JRodosError(Exception):
     def __init__(self, expression, message):
         self.expression = expression
         self.message = message
-
-# this is a way to catch an exception from another (for example networking) thread.
-# https://riverbankcomputing.com/pipermail/pyqt/2009-May/022961.html
-# not shure if this has other implications, note that in qgis/python/utils.py this is also done...
-# import sys
-# def excepthook(excType, excValue, tracebackobj):
-#     print excType
-#     print excValue
-#     print tracebackobj
-#
-# sys.excepthook = excepthook

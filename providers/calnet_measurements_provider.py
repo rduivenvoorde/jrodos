@@ -28,7 +28,7 @@ class CalnetMeasurementsConfig(ProviderConfig):
         self.lower_bound = ''
         self.upper_bound = ''
         self.endminusstart = 0
-        self.bbox = '50,0,60,20'
+        self.bbox = ''  # defaulting to an empty string now (was '50,0,60,20'), to be able to create a config without bbox, to be able to trigger a 'use current bbox'
         self.date_time_format = 'yyyy-MM-ddTHH:mm:ss.000+00:00'  # '2016-04-25T08:00:00.000+00:00'
         self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 

@@ -1,0 +1,10 @@
+{
+  "url": "http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "title": "Oekraine, afgelopen 48 uur ALLE quantities/substance, ALLE integratietijden",
+  "page_size": 25000,
+  "start_datetime": "now-172800",
+  "quantity": "",
+  "substance": "",
+  "endminusstart": "-1",
+  "bbox": "43.58,21.43,53.67,41.96"
+}

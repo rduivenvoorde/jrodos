@@ -94,6 +94,7 @@ import os.path
 import json
 import sys
 import pickle
+import copy
 
 from .utils import Utils
 from .ui import JRodosMeasurementsDialog, JRodosDialog, JRodosFilterDialog, JRodosGraphWidget
@@ -1694,7 +1695,7 @@ class JRodos:
         """
         self.remove_device_pointer()
         selected_features_ids = self.measurements_layer.selectedFeatureIds()
-        log.debug(f'Measurements selection change!: {selected_features_ids}')
+        #log.debug(f'Measurements selection change!: {selected_features_ids}')
 
 
         # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
@@ -2162,13 +2163,16 @@ class JRodos:
         #log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())}')
         measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
         if isinstance(measurements_settings, CalnetMeasurementsConfig):
-            self.measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
+            # create a deepcopy else we will edit the config which lives in the combobox...
+            self.measurements_settings = copy.deepcopy(self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex()))
             # in the plugin we ignore the WFS-url from these settings, as dev/acc/prd is set by the user
             self.measurements_settings.url = self.settings.value('measurements_wfs_url')
             # IF bbox is emtpy, it means we do not use a predefined bbox, but current mapcanvas one
             if self.measurements_settings.bbox in (None, '', ' ', 'None', '-'):
                 self.update_measurements_bbox()
-                log.debug(f'BBOX in preset was emtpy, using current map extent: {self.measurements_settings.bbox}')
+                log.debug(f'BBOX in preset was empty, using current map extent: {self.measurements_settings.bbox}')
+            else:
+                log.debug(f'BBOX in preset was NOT empty, using current map extent: {self.measurements_settings.bbox}')
             self.start_measurements_provider()
         else:
             log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')

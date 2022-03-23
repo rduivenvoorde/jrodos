@@ -1,0 +1,9 @@
+{
+  "url": "http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "title": "Huidige kaartbeeld, afgelopen 24 uur TGAMMA/A5, ALLE integratietijden",
+  "page_size": 25000,
+  "start_datetime": "now-86400",
+  "quantity": "T-GAMMA",
+  "substance": "A5",
+  "endminusstart": "-1"
+}

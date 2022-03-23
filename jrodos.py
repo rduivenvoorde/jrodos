@@ -2212,15 +2212,16 @@ class JRodos:
         self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
 
         # add fields
+        # see #QGIS-85 now using startTime for Temporal Controller
         pr = self.measurements_layer.dataProvider()
         pr.addAttributes([QgsField("gml_id", QVariant.String),
-                          QgsField("startTime", QVariant.String),
+                          QgsField("startTime", QVariant.DateTime),
                           QgsField("endTime", QVariant.String),
                           QgsField("quantity", QVariant.String),
                           QgsField("substance", QVariant.String),
                           QgsField("unit", QVariant.String),
                           QgsField("value", QVariant.Double),
-                          QgsField("time", QVariant.DateTime),  # QgsField("time", QVariant.String),
+                          QgsField("time", QVariant.String),  # QgsField("time", QVariant.String), or QgsField("time", QVariant.DateTime)
                           QgsField("info", QVariant.String),
                           QgsField("device", QVariant.String),
                           QgsField("projectid", QVariant.String),
@@ -2303,7 +2304,7 @@ class JRodos:
                 if frame_size in [0, '0', -1, '-1']:
                     frame_size = 600
                 self.add_layer_to_timecontroller(self.measurements_layer,
-                                                 time_column='time',
+                                                 time_column='startTime',  # see #QGIS-85
                                                  frame_size_seconds=frame_size)
 
             # # set the display field value

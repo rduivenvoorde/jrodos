@@ -428,7 +428,11 @@ class JRodos:
                 self.favorite_measurements_combo.insertItem(0, self.tr(conf_from_json.title), userData=conf_from_json)
             self.favorite_measurements_combo.insertItem(0, self.tr("Choose a preset"), userData={})
             # now connect the index changed (we could also only fire the request when user pushes button)
-            self.favorite_measurements_combo.setCurrentIndex(0)  # set to first item
+            preset = Utils.get_settings_value("jrodos_last_measurements_preset", None)
+            if preset:
+                self.favorite_measurements_combo.setCurrentText(preset)
+            else:
+                self.favorite_measurements_combo.setCurrentIndex(0)  # set to first item
             self.favorite_measurements_combo.currentIndexChanged.connect(self.load_measurements_favourite)
             # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
             action = self.toolbar.addWidget(self.favorite_measurements_combo)
@@ -445,7 +449,6 @@ class JRodos:
         self.jrodosmodel_dlg = JRodosDialog(self.iface.mainWindow())
         # connect the change of the project dropdown to a refresh of the data path
         #self.jrodosmodel_dlg.tbl_projects.clicked.connect(self.project_selected)  # RD 20200727 Better to connect to the selection change of the selection model
-        
         self.jrodosmodel_dlg.combo_task.currentIndexChanged.connect(self.task_selected)
         self.jrodosmodel_dlg.btn_item_filter.clicked.connect(self.show_data_item_filter_dialog)
 
@@ -2173,6 +2176,7 @@ class JRodos:
                 log.debug(f'BBOX in preset was empty, using current map extent: {self.measurements_settings.bbox}')
             else:
                 log.debug(f'BBOX in preset was NOT empty, using current map extent: {self.measurements_settings.bbox}')
+            Utils.set_settings_value("jrodos_last_measurements_preset", self.measurements_settings.title)
             self.start_measurements_provider()
         else:
             log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')

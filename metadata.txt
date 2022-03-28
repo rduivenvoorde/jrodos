@@ -21,7 +21,7 @@ repository=https://git.svc.cal-net.nl/qgis/jrodos
 # End of mandatory metadata
 
 changelog=
-    2.0.11  Add possibilty to create a preset for ALL substance/quantity combi's (by sending empty values: mostly implemented in db)
+    2.0.11  Add possibilty to create a preset for ALL substance/quantity combi's (by sending empty values: mostly implemented in db), more info in legend/layer tooltip, remember last preset
     2.0.10  Add 'ALLES' interval size QGIS-83, Style update (small measurements = small symbols), fix QGIS-82 (class boundaries), remove merging of measurements (was not working well)
     2.0.9   Documentation update, QGIS67 and QGIS80: fix combi list, QGIS81: DATETIME-type column in gpkg
     2.0.8   Add "Clean input"-buttons (to inputs), make Graphpoint clickable, fix issue with RE-fetching measurements would while showing graph would show ALL graphs

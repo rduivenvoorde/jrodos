@@ -2192,7 +2192,7 @@ class JRodos:
             interval = 'ALLES'
         else:
             interval = f'{self.measurements_settings.endminusstart} s'
-        layer_display_name = f'{start_time.toString(self.measurements_settings.date_time_format_short)} - {end_time.toString(self.measurements_settings.date_time_format_short)} - ({interval})'
+        layer_display_name = f'{start_time.toString(self.measurements_settings.date_time_format_short)} - {end_time.toString(self.measurements_settings.date_time_format_short)}'
         #log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
         #log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 
@@ -2210,6 +2210,15 @@ class JRodos:
 
         # create layer name based on self.measurements_settings
         self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
+        # if this layer is a preset, use it's 'title' as abstract
+        if self.measurements_settings.title == CalnetMeasurementsConfig.DEFAULT_TITLE:
+            abstract = f"""Project: {self.measurements_settings.projectid}
+            Quantities: {self.measurements_settings.quantity}
+            Substances: {self.measurements_settings.substance}
+            Integration period: {self.measurements_settings.endminusstart} sec"""
+            self.measurements_layer.setAbstract(abstract)
+        else:
+            self.measurements_layer.setAbstract(self.measurements_settings.title)
 
         # add fields
         # see #QGIS-85 now using startTime for Temporal Controller

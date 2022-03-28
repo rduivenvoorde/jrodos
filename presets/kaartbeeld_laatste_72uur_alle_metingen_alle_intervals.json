@@ -1,0 +1,9 @@
+{
+  "url": "http://geoserver.prd.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "title": "Huidige kaartbeeld, afgelopen 72 uur ALLE quantities/substance, ALLE integratietijden",
+  "page_size": 25000,
+  "start_datetime": "now-259200",
+  "quantity": "",
+  "substance": "",
+  "endminusstart": "-1"
+}

@@ -12,9 +12,12 @@ log = logging.getLogger('JRodos3 Plugin')
 
 
 class CalnetMeasurementsConfig(ProviderConfig):
+
+    DEFAULT_TITLE = 'No title set (yet) for this config/preset'
+
     def __init__(self):
         ProviderConfig.__init__(self)
-        self.title = 'No title set (yet) for this config/preset'
+        self.title = self.DEFAULT_TITLE
         self.url = ''
         self.output_dir = None
         # check and set defaults

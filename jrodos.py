@@ -46,7 +46,6 @@ from qgis.PyQt.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QToolBar,
-    QFileDialog,
     QCheckBox,
     QCompleter,
     QComboBox,
@@ -190,7 +189,7 @@ class JRodos:
         # Declare instance attributes
         self.actions = []
         self.menu = self.MENU_TITLE
-        self.toolbar = self.get_rivm_toolbar()
+        self.toolbar = None
 
         self.jrodos_output_progress_bar = None
         self.jrodos_output_settings = None
@@ -251,6 +250,8 @@ class JRodos:
         self.date_time_format_short = 'yyyy/MM/dd HH:mm'  # '17/6 23:01'
 
         self.use_temporal_controller = True
+
+        self.rivm_plugin_config_manager = None  # to be able to connect to it's signal
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -342,6 +343,8 @@ class JRodos:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
+
+        self.toolbar = self.get_rivm_toolbar()
 
         icon_path = ':/plugins/JRodos/icon.png'
         self.add_action(
@@ -598,17 +601,22 @@ class JRodos:
         # delete the graph widget
         del self.graph_widget
 
+    def environment_change(self, environment):
+        log.error(f'RIVM ENVIRONMENT CHANGED TO: {environment}')
+
     def run(self):
 
         try:
-
-            if 'RIVM_PluginConfigManager' not in plugins:
-                QMessageBox.warning(self.iface.mainWindow(),
-                                    self.MSG_TITLE,
-                                    self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                    QMessageBox.Ok,
-                                    QMessageBox.Ok)
-                return
+            if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
+                if 'RIVM_PluginConfigManager' not in plugins:
+                    QMessageBox.warning(self.iface.mainWindow(),
+                                        self.MSG_TITLE,
+                                        self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                        QMessageBox.Ok,
+                                        QMessageBox.Ok)
+                    return
+                self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
+                self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
 
             self.setProjectionsBehavior()
             self.create_jrodos_layer_group()

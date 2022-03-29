@@ -9,6 +9,7 @@ import logging
 #from .. import LOGGER_NAME
 log = logging.getLogger('JRodos3 Plugin')
 
+
 class JRodosProjectConfig(ProviderConfig):
     def __init__(self):
         ProviderConfig.__init__(self)

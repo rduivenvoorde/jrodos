@@ -464,8 +464,6 @@ class JRodos:
         self.measurements_dlg.btn_get_combis.clicked.connect(self.get_quantities_and_substances_combis)
         self.measurements_dlg.tbl_combis.clicked.connect(self.quantities_substances_toggle)
         self.measurements_dlg.btn_now.clicked.connect(self.set_measurements_time_to_now)
-        self.measurements_dlg.btn_current_calweb_id.clicked.connect(self.fetch_current_calweb_id)
-        self.measurements_dlg.le_calweb_name_search.textChanged.connect(self.calweb_project_search_changed)
         # self.quantities_substance_provider_finished(None)  # development
         # to be able to retrieve a reasonable quantities-substance combination
         # in the background, we HAVE TO set the start/end dates to a reasonable
@@ -498,6 +496,9 @@ class JRodos:
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
         # Connect currentLayerChanged to self.current_layer_changed to be able to set 'self.measurements_layer'
         self.iface.currentLayerChanged.connect(self.current_layer_changed)
+
+        # hoping we already have config manager loaded ...
+        self.connect_config_manager()
 
     def abort_requests(self):
         log.debug('Aborting all Requests!!!')
@@ -532,7 +533,8 @@ class JRodos:
         self.settings_dlg.show()
 
     def current_layer_changed(self, layer):
-        log.debug(f'Current layer changed to: {layer}')
+        #log.debug(f'Current layer changed to: {layer}')
+        pass
 
     def show_data_item_filter_dialog(self):
         # load saved user data_items from pickled file
@@ -604,20 +606,36 @@ class JRodos:
     def environment_change(self, environment):
         log.error(f'RIVM ENVIRONMENT CHANGED TO: {environment}')
 
+    def project_id_change(self, calweb_project_id, calweb_project):
+        """
+        This slot is called when the rivm config manager emits the rivm_project_id_changed signal
+
+        :param calweb_project_id: a (textual) number
+        :param calweb_project: a dict with all project information
+        """
+        log.error(f'RIVM PROJECT ID CHANGED TO: {calweb_project_id}')
+        log.error(f'RIVM PROJECT CHANGED TO: {calweb_project}')
+        self.set_calweb_project(calweb_project_id, calweb_project)
+
+    def connect_config_manager(self, with_message=False):
+        if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
+            if with_message and 'RIVM_PluginConfigManager' not in plugins:
+                QMessageBox.warning(self.iface.mainWindow(),
+                                    self.MSG_TITLE,
+                                    self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
+                                    QMessageBox.Ok,
+                                    QMessageBox.Ok)
+                return
+            self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
+            log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
+            self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
+            self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
+            # let the config manager emit it's info again...
+            self.rivm_plugin_config_manager.set_environment()
+
     def run(self):
-
         try:
-            if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
-                if 'RIVM_PluginConfigManager' not in plugins:
-                    QMessageBox.warning(self.iface.mainWindow(),
-                                        self.MSG_TITLE,
-                                        self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                        QMessageBox.Ok,
-                                        QMessageBox.Ok)
-                    return
-                self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
-                self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
-
+            self.connect_config_manager(with_message=True)
             self.setProjectionsBehavior()
             self.create_jrodos_layer_group()
 
@@ -1213,7 +1231,6 @@ class JRodos:
             datetime_utc = QDateTime.fromString(release_start, Qt.ISODate)
             datetime_local = datetime_utc.toTimeSpec(Qt.LocalTime)
             self.jrodosmodel_dlg.lbl_start2.setText('{}'.format(datetime_local.toString(self.date_time_format_short+' t')))  # localtime + timezone
-            
 
     def msg(self, parent=None, msg=""):
         if parent is None:
@@ -1354,146 +1371,31 @@ class JRodos:
             start_time = end_time.addSecs(-(60*60*6))
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
-    def fetch_current_calweb_id(self):
-        """
-        Fetch
-        - Current/Latest Calweb Project Id From the projects service,
-          via http://microservices.dev.cal-net.nl:8300/calweb/projects/current
-
-        Using the project info fetched, SET:
-        - start_time
-        - end_time (or NOW if end_time in the project info is NULL/None)
-        """
-        # remove all text from the (search) input
-        self.measurements_dlg.le_calweb_name_search.clear()
-
-        # fetch project information from service
-        calweb_project_service_url = self.settings.value("calweb_project_service_url") + '/current'
-
-        request = QgsBlockingNetworkRequest()
-        log.debug(f'Fetching current Calweb Project Id from {calweb_project_service_url}')
-        err = request.get(QNetworkRequest(QUrl(calweb_project_service_url)))
-        if err == QNetworkReply.NoError:
-            content = request.reply().content()
-            log.debug(content)
-            if len(content) > 2:
-                current_calweb_project = json.loads(content.data().decode('utf-8'))
-                log.debug(current_calweb_project)
-                # try to get the id from it
-                if 'id' in current_calweb_project:
-                    self.set_calweb_project(current_calweb_project['id'])
-                return
-        else:
-            # service is returning 3 = QNetworkReply::HostNotFoundError
-            # nothing returned: id OR service not available?
-            self.msg(None, self.tr(f'Project Id not available (or service misbehaving)?'))
-        log.debug(f'Error retrieving Current Calweb Project Id using: {calweb_project_service_url}')
-
-    def create_calweb_projects_model(self):
-        request = QgsBlockingNetworkRequest()
-        calweb_project_service_url = self.settings.value("calweb_project_service_url")
-        log.debug(f'Fetching Calweb Projects from {calweb_project_service_url}')
-        err = request.get(QNetworkRequest(QUrl(calweb_project_service_url)))
-
-        if err == QNetworkReply.NoError:
-            content = request.reply().content()
-            #log.debug(content)
-            if len(content) > 2:
-                calweb_projects = json.loads(content.data().decode('utf-8'))
-                calweb_projects_model = QStandardItemModel()
-                for p in calweb_projects:
-                    search = QStandardItem(f'{p["id"]} - {p["name"]} - {p["description"]}  ( {p["starttime"]} )')
-                    search.setData(p["id"], Qt.UserRole)  #  using data of the search string for the actual id
-                    project = QStandardItem(f'{p["id"]}')
-                    project.setData(p, Qt.UserRole)
-                    #calweb_projects_model.insertRow(0, [QStandardItem(search), QStandardItem(f'{p["id"]}')])  # reverse sort
-                    calweb_projects_model.insertRow(0, [search, project])  # reverse sort
-                log.debug(f'Successfully created Calweb Project Model by fetching from {calweb_project_service_url}')
-                return calweb_projects_model
-        log.debug(f'ERROR: Something went wrong fetching the Calweb Projects from {calweb_project_service_url}')
-
-    def calweb_search_activated(self, idx):
-        """
-        This method is called when the user 'selects/activates' an item from
-        the calweb_project_id dropdown
-
-        You get only(!) the index of the item from that current shown (filtered) list
-        So: using the found item index you have to go over the FULL model to find
-        the rest of the data
-
-        :param idx: this is the index of the completionModel(!) so the model shown to the user,
-        NOT the full model given to the completer
-        """
-        #log.debug(f'**** {idx} {idx.row()} {idx.column()}')
-        selection = self.measurements_dlg.le_calweb_name_search.completer().completionModel().index(idx.row(), 0).data()
-        log.debug(f'Selected: {selection}')
-        self.set_calweb_project(selection)
-
-    def calweb_project_search_changed(self, text):
-        """
-        Slot called when the user changes the text in the Calweb Project search
-        NOTE: ALSO called when the user clicks the 'clear' button in it
-        :param text: current text
-        """
-        #log.debug(f'Calweb search text changed to: {text}')
-        if len(text) == 0:
-            log.debug('Clearing Calweb project id and model')
-            self.calweb_project_id = None
-            self.calweb_project = None
-            # clear dialog info
-            self.measurements_dlg.le_calweb_project_id.setText('-')
-            self.set_measurements_time_to_now()
-
-    def set_calweb_project(self, id_or_completer_result):
-        """
-        :param id_or_completer_result: the (DisplayRole string) from the
-        completer user choice
-        """
-        log.debug(f'Search a Calweb project using: {id_or_completer_result} (type: {type(id_or_completer_result)})')
-        # completion_model = self.measurements_dlg.le_calweb_name_search.completer().completionModel()
-        # log.debug(f'Completion model has {completion_model.rowCount()} rows and {completion_model.columnCount()} columns')
-        calweb_projects_model = self.measurements_dlg.le_calweb_name_search.completer().model()
-        #log.debug(f'Calweb Projects model has {calweb_projects_model.rowCount()} rows and {calweb_projects_model.columnCount()} columns')
-
-        # if calweb_project_id is still 0 notice to user that there is no active calweb project yet
-        if self.calweb_project_id in [0, '0'] or id_or_completer_result in [0, '0']:
-            QMessageBox.warning(self.iface.mainWindow(),
-                    self.MSG_TITLE,
-                    self.tr(f'Calweb Project id is {self.calweb_project_id} (Regulier), \nZet calweb eerst in "Oefening" of "Calamiteit"\n op https://calweb.cal-net.nl/'),
-                    QMessageBox.Ok,
-                    QMessageBox.Ok)
+    def set_calweb_project(self, calweb_project_id, calweb_project):
+        if calweb_project_id == self.calweb_project_id and calweb_project == self.calweb_project:
+            log.debug(f'set_calweb_project called, but nothing seemed to have changed ({calweb_project_id}), ignoring...')
             return
 
-        if '-' in f'{id_or_completer_result}':
-            # this is a display string like: "198 - Wim Maas - Kwartaaloefening ( 2008-09-22T09:09:24.000 Europe/Amsterdam )"
-            # match() returns a QModelIndexList
-            match = calweb_projects_model.match(calweb_projects_model.index(0, 0), Qt.DisplayRole, id_or_completer_result, hits=1)
-            #log.debug(f'found: {match}')
-            self.calweb_project_id = calweb_projects_model.index(match[0].row(), 1).data()
-        else:
-            # this is a proper calweb id (integer)
-            match = calweb_projects_model.match(calweb_projects_model.index(0, 0), Qt.UserRole, id_or_completer_result, hits=1)
-            #log.debug(f'found: {match} found[0].data(Qt.UserRole) = {match[0].data(Qt.UserRole)}')
-            self.measurements_dlg.le_calweb_name_search.setText(match[0].data(Qt.DisplayRole))
-            self.calweb_project_id = f'{match[0].data(Qt.UserRole)}'
-
-        log.debug(f'Set Calweb Project Id to: {self.calweb_project_id}')
-        self.calweb_project = calweb_projects_model.index(match[0].row(), 1).data(Qt.UserRole)
-        log.debug(f'Set Calweb Project to: {self.calweb_project}')
+        log.debug(f'Set Calweb Project Id to: {calweb_project_id}')
+        self.calweb_project_id = calweb_project_id
+        log.debug(f'Set Calweb Project to: {calweb_project}')
+        self.calweb_project = calweb_project
         self.measurements_dlg.le_calweb_project_id.setText(self.calweb_project_id)
 
         # try to get the start (and optional) end time from the project
         # note: "2021-09-28T12:42:52.000+02:00" return a local time, so you need toUTC() !!
         if 'isostarttime' in self.calweb_project:
             starttime = QDateTime.fromString(self.calweb_project['isostarttime'], Qt.ISODateWithMs).toUTC()
-            log.debug(starttime)
+            log.debug(f'Setting starttime, based on starttime from project {self.calweb_project_id} to {starttime}')
             self.measurements_dlg.dateTime_start.setDateTime(starttime)
         # Is there an endtime in the result? Else set end to NOW()
         if 'isoendtime' in self.calweb_project:
             if self.calweb_project['isoendtime'] is not None:
                 endtime = QDateTime.fromString(self.calweb_project['isoendtime'], Qt.ISODateWithMs).toUTC()
+                log.debug(f'Setting endtime, based on endtime from project {self.calweb_project_id} to {endtime}')
             else:
                 endtime = QDateTime.currentDateTimeUtc()
+                log.debug(f'NOT setting endtime, as project {self.calweb_project_id} appears to not have one (yet)')
             self.measurements_dlg.dateTime_end.setDateTime(endtime)
 
     def show_measurements_dialog(self):
@@ -1527,22 +1429,6 @@ class JRodos:
 
         self.measurements_dlg.dateTime_start.setDateTime(self.start_time)
         self.measurements_dlg.dateTime_end.setDateTime(self.end_time)
-
-        # create a model to hold ALL calnet projects (for the dropdown), fetched from server!!
-        # and a 'Search Completer' on it so the user can select one project
-        calnet_projects = self.create_calweb_projects_model()
-        self.completer = QCompleter(calnet_projects, self.measurements_dlg)
-        # activated is an overloaded function, using the notation below you
-        # indicate to use the activated(QModelIndex) instead of activated(Qstring)
-        self.completer.activated[QModelIndex].connect(self.calweb_search_activated)
-        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.completer.setFilterMode(Qt.MatchContains)
-        # UnfilteredPopupCompletion you get a full list; default completion is a small sub resultset
-        #self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
-        self.measurements_dlg.le_calweb_name_search.setCompleter(self.completer)
-
-        #self.measurements_dlg.le_calweb_project_id.setText(Utils.get_settings_value('projectid', '-'))
-
         self.load_default_combis()
         self.measurements_dlg.show()
 
@@ -2178,12 +2064,16 @@ class JRodos:
             self.measurements_settings = copy.deepcopy(self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex()))
             # in the plugin we ignore the WFS-url from these settings, as dev/acc/prd is set by the user
             self.measurements_settings.url = self.settings.value('measurements_wfs_url')
-            # IF bbox is emtpy, it means we do not use a predefined bbox, but current mapcanvas one
+            # IF bbox is emtpy, it means we do not use a predefined bbox, but use the current mapcanvas one
             if self.measurements_settings.bbox in (None, '', ' ', 'None', '-'):
                 self.update_measurements_bbox()
                 log.debug(f'BBOX in preset was empty, using current map extent: {self.measurements_settings.bbox}')
             else:
                 log.debug(f'BBOX in preset was NOT empty, using current map extent: {self.measurements_settings.bbox}')
+            # IF there is not project id in the settings (there probably SHOULD not), add current project_id
+            if self.measurements_settings.projectid in ('', None) and self.calweb_project_id not in ('', 0, '0', None):
+                log.debug(f'Adding projectid "{self.calweb_project_id}" to the measurement settings')
+                self.measurements_settings.projectid = self.calweb_project_id
             Utils.set_settings_value("jrodos_last_measurements_preset", self.measurements_settings.title)
             self.start_measurements_provider()
         else:

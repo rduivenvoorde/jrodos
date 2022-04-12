@@ -30,7 +30,6 @@ from qgis.PyQt.QtCore import (
     Qt,
     QUrl,
     QSortFilterProxyModel,
-    QModelIndex,
     QLocale,
 )
 from qgis.PyQt.QtGui import (
@@ -47,16 +46,10 @@ from qgis.PyQt.QtWidgets import (
     QProgressBar,
     QToolBar,
     QCheckBox,
-    QCompleter,
     QComboBox,
-)
-from qgis.PyQt.QtNetwork import (
-    QNetworkRequest,
-    QNetworkReply,
 )
 from qgis.core import (
     Qgis,
-    QgsBlockingNetworkRequest,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDateTimeRange,
@@ -495,10 +488,9 @@ class JRodos:
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
         # Connect currentLayerChanged to self.current_layer_changed to be able to set 'self.measurements_layer'
-        self.iface.currentLayerChanged.connect(self.current_layer_changed)
+        #self.iface.currentLayerChanged.connect(self.current_layer_changed)
 
-        # hoping we already have config manager loaded ...
-        self.connect_config_manager()
+        self.iface.initializationCompleted.connect(self.qgis_initialization_completed)
 
     def abort_requests(self):
         log.debug('Aborting all Requests!!!')
@@ -518,9 +510,18 @@ class JRodos:
         from qgis.core import QgsMessageLog  # we need this... else QgsMessageLog is None after a plugin reload
         QgsMessageLog.logMessage('{}'.format(msg), 'JRodos3 debuginfo',  Qgis.Info)
 
+    ###########################################
     # TODO: move this to a commons class/module
+    ###########################################
+
+    # self.LAST_ENVIRONMENT_KEY = 'rivm_config/last_environment'
+    # self.LAST_PROJECT_ID = 'rivm_config/last_project_id'
+    # self.LAST_PROJECT_ID = 'rivm_config/last_project_id'
+    # self.TOOLBAR_NAME = 'RIVM Cal-Net Toolbar'
+
     def get_rivm_toolbar(self):
-        toolbar_title = 'RIVM Cal-Net Toolbar'  # TODO get this from commons and make translatable
+        self.TOOLBAR_NAME = 'RIVM Cal-Net Toolbar'
+        toolbar_title = self.TOOLBAR_NAME  # TODO get this from commons and make translatable
         toolbars = self.iface.mainWindow().findChildren(QToolBar, toolbar_title)
         if len(toolbars) == 0:
             toolbar = self.iface.addToolBar(toolbar_title)
@@ -529,12 +530,31 @@ class JRodos:
             toolbar = toolbars[0]
         return toolbar
 
+    def qgis_initialization_completed(self):
+        # get current/latest environment and project id from settings
+        self.set_calweb_project(QSettings().value('rivm_config/last_project_id', '-'))
+
+        # connect to the signals of the config manager
+        if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
+            if 'RIVM_PluginConfigManager' not in plugins:
+                # no need to go further, the RIVM_PluginConfigManager is not available yet... gonna try later
+                self.msg(f'(no?) RIVM_PluginConfigManager in plugins: {plugins}???\nThis should not happen!')
+                return
+            self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
+            log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
+            self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
+            self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
+
+    ###########################################
+    # TODO: END commons class/module
+    ###########################################
+
     def show_settings(self):
         self.settings_dlg.show()
 
-    def current_layer_changed(self, layer):
-        #log.debug(f'Current layer changed to: {layer}')
-        pass
+    # def current_layer_changed(self, layer):
+    #     #log.debug(f'Current layer changed to: {layer}')
+    #     pass
 
     def show_data_item_filter_dialog(self):
         # load saved user data_items from pickled file
@@ -604,7 +624,7 @@ class JRodos:
         del self.graph_widget
 
     def environment_change(self, environment):
-        log.error(f'RIVM ENVIRONMENT CHANGED TO: {environment}')
+        log.error(f'rivm ENVIRONMENT changed tO: {environment}')
 
     def project_id_change(self, calweb_project_id, calweb_project):
         """
@@ -613,29 +633,12 @@ class JRodos:
         :param calweb_project_id: a (textual) number
         :param calweb_project: a dict with all project information
         """
-        log.error(f'RIVM PROJECT ID CHANGED TO: {calweb_project_id}')
-        log.error(f'RIVM PROJECT CHANGED TO: {calweb_project}')
+        log.error(f'rivm PROJECT ID changed to: {calweb_project_id}')
+        log.error(f'rivm PROJECT changed to: {calweb_project}')
         self.set_calweb_project(calweb_project_id, calweb_project)
-
-    def connect_config_manager(self, with_message=False):
-        if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
-            if with_message and 'RIVM_PluginConfigManager' not in plugins:
-                QMessageBox.warning(self.iface.mainWindow(),
-                                    self.MSG_TITLE,
-                                    self.tr("Missing 'RIVM PluginConfigManager' plugin,\n we REALLY need that one.\n Please install via Plugin Manager first..."),
-                                    QMessageBox.Ok,
-                                    QMessageBox.Ok)
-                return
-            self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
-            log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
-            self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
-            self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
-            # let the config manager emit it's info again...
-            self.rivm_plugin_config_manager.set_environment()
 
     def run(self):
         try:
-            self.connect_config_manager(with_message=True)
             self.setProjectionsBehavior()
             self.create_jrodos_layer_group()
 
@@ -1371,9 +1374,12 @@ class JRodos:
             start_time = end_time.addSecs(-(60*60*6))
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
-    def set_calweb_project(self, calweb_project_id, calweb_project):
+    def set_calweb_project(self, calweb_project_id, calweb_project={}):
         if calweb_project_id == self.calweb_project_id and calweb_project == self.calweb_project:
             log.debug(f'set_calweb_project called, but nothing seemed to have changed ({calweb_project_id}), ignoring...')
+            return
+        if not calweb_project_id.isnumeric():
+            log.debug(f'set_calweb_project called, but using a non-numeric value: ({calweb_project_id}), ignoring...')
             return
 
         log.debug(f'Set Calweb Project Id to: {calweb_project_id}')

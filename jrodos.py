@@ -1381,11 +1381,12 @@ class JRodos:
             log.debug(f'set_calweb_project called, but using a non-numeric value: ({calweb_project_id}), ignoring...')
             return
 
-        log.debug(f'Set Calweb Project Id to: {calweb_project_id}')
-        self.calweb_project_id = calweb_project_id
-        self.measurements_dlg.le_calweb_project_id.setText(f'{self.calweb_project_id}')
         log.debug(f'Set Calweb Project to: {calweb_project}')
         self.calweb_project = calweb_project
+        log.debug(f'Set Calweb Project Id to: {calweb_project_id}')
+        self.calweb_project_id = calweb_project_id
+        # make sure the right calweb project id is shown in the measurements dialog
+        self.measurements_dlg.le_calweb_project_id.setText(f'{self.calweb_project_id}')
 
         # try to get the start (and optional) end time from the project
         # note: "2021-09-28T12:42:52.000+02:00" return a local time, so you need toUTC() !!

@@ -472,7 +472,6 @@ class JRodos:
         self.measurements_dlg.cb_a5.stateChanged.connect(self.cb_a5_clicked)
         self.measurements_dlg.cb_unknown.stateChanged.connect(self.cb_unknown_clicked)
         self.measurements_dlg.cb_tgamma_a5.stateChanged.connect(self.cb_tgamma_a5_clicked)
-        self.filter_dlg.le_item_filter.setPlaceholderText(self.tr('Filter project list'))
 
         self.measurements_dlg.btn_all_combis.clicked.connect(lambda: self.quantities_substances_set_all(True))
         self.measurements_dlg.btn_no_combis.clicked.connect(lambda: self.quantities_substances_set_all(False))
@@ -1378,15 +1377,15 @@ class JRodos:
         if calweb_project_id == self.calweb_project_id and calweb_project == self.calweb_project:
             log.debug(f'set_calweb_project called, but nothing seemed to have changed ({calweb_project_id}), ignoring...')
             return
-        if not calweb_project_id.isnumeric():
+        if not calweb_project_id.isnumeric() and not calweb_project_id == '':
             log.debug(f'set_calweb_project called, but using a non-numeric value: ({calweb_project_id}), ignoring...')
             return
 
         log.debug(f'Set Calweb Project Id to: {calweb_project_id}')
         self.calweb_project_id = calweb_project_id
+        self.measurements_dlg.le_calweb_project_id.setText(f'{self.calweb_project_id}')
         log.debug(f'Set Calweb Project to: {calweb_project}')
         self.calweb_project = calweb_project
-        self.measurements_dlg.le_calweb_project_id.setText(self.calweb_project_id)
 
         # try to get the start (and optional) end time from the project
         # note: "2021-09-28T12:42:52.000+02:00" return a local time, so you need toUTC() !!
@@ -1660,7 +1659,7 @@ class JRodos:
                         x.append(t/1000)
                         #y.append(feature['unitvalue'])
                         y.append(feature['value'])
-                        # log.debug('{} - {} - {} - {} - {}'.format(t/1000, feature['unitvalue'], feature['device'], feature['quantity'], feature['unit']))
+                        #log.debug('XXX {} - {} - {} - {} - {} - {}'.format(feature['time'], t/1000, feature['value'], feature['device'], feature['quantity'], feature['unit']))
 
                     # curve = self.graph_widget.graph.plot(x=x, y=y, pen='ff000099')
                     # NOT using shortcut notation above, because we want to keep a reference to the PlotCurveItem for click

@@ -1374,10 +1374,10 @@ class JRodos:
             self.measurements_dlg.dateTime_start.setDateTime(start_time)
 
     def set_calweb_project(self, calweb_project_id, calweb_project={}):
-        if calweb_project_id == self.calweb_project_id and calweb_project == self.calweb_project:
+        if str(calweb_project_id) == str(self.calweb_project_id) and calweb_project == self.calweb_project:
             log.debug(f'set_calweb_project called, but nothing seemed to have changed ({calweb_project_id}), ignoring...')
             return
-        if not calweb_project_id.isnumeric() and not calweb_project_id == '':
+        if not str(calweb_project_id).isnumeric() and not calweb_project_id == '':
             log.debug(f'set_calweb_project called, but using a non-numeric value: ({calweb_project_id}), ignoring...')
             return
 

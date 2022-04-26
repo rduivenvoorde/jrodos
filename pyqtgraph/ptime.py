@@ -13,8 +13,8 @@ time = None
 
 def winTime():
     """Return the current time in seconds with high precision (windows version, use Manager.time() to stay platform independent)."""
+    # 20220426 RD: QGIS 3.22/Windows python has issues with this, going back to just winTime
     #return systime.clock() + START_TIME
-    # 20220412 back to original:
     return systime.time()
 
 def unixTime():
@@ -22,9 +22,9 @@ def unixTime():
     return systime.time()
 
 if sys.platform.startswith('win'):
+    # 20220426 RD: QGIS 3.22/Windows python has issues with this, going back to just winTime
     #cstart = systime.clock()  ### Required to start the clock in windows
     #START_TIME = systime.time() - cstart
-    # 20220412 back to original:
     time = winTime
 else:
     time = unixTime

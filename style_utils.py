@@ -1,5 +1,18 @@
 import math
 
+from qgis.PyQt.QtGui import (
+    QColor,
+)
+from qgis.core import (
+    QgsRuleBasedRenderer,
+    QgsSymbol,
+)
+
+import logging
+from . import LOGGER_NAME
+log = logging.getLogger(LOGGER_NAME)
+
+
 class RangeCreator:
     """
 
@@ -334,6 +347,7 @@ class RangeCreator:
         # R = (255 * n) / 100
         # G = (255 * (100 - n)) / 100
         # B = 0
+
 
 if __name__ == '__main__':
     # Range set, either logarithmic

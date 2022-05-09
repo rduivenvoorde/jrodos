@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.16
 description=Plugin to connect to JRodos via WPS
-version=2.1.0
+version=2.2.0
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://git.svc.cal-net.nl/qgis/jrodos
 plugin_dependencies=RIVM PluginConfigManager
 
 changelog=
+    2.2.0   Voronoi creation, Fix PyGraph deprecation
     2.1.0   QGIS86 move project-id to config manager, QGIS87 (time.time-issue in pyqtgraph) fixed
     2.0.11  Add possibilty to create a preset for ALL substance/quantity combi's (by sending empty values: mostly implemented in db), more info in legend/layer tooltip, remember last preset
     2.0.10  Add 'ALLES' interval size QGIS-83, Style update (small measurements = small symbols), fix QGIS-82 (class boundaries), remove merging of measurements (was not working well)

@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Documentation &#8212; JRodos 2.0.9 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/haiku.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Technical and Developer Documentation" href="techdoc.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="#">
+          <span>JRodos 2.0.9 documentation</span></a></h1>
+        <h2 class="heading"><span>Documentation</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        <a class="uplink" href="#">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="techdoc.html">Technical and Developer Documentation</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<div class="contents local topic" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#what-does-it-do" id="id1">What does it do</a></p></li>
+<li><p><a class="reference internal" href="#make-it-work" id="id2">Make it work</a></p></li>
+<li><p><a class="reference internal" href="#how-does-it-work" id="id3">How does it work</a></p>
+<ul>
+<li><p><a class="reference internal" href="#the-jrodos-model-output-dialog" id="id4">The JRodos Model output dialog</a></p></li>
+<li><p><a class="reference internal" href="#the-measurements-dialog" id="id5">The Measurements dialog</a></p></li>
+<li><p><a class="reference internal" href="#the-rainradar" id="id6">The RainRadar</a></p></li>
+<li><p><a class="reference internal" href="#timemanager-play-time" id="id7">TimeManager, play time</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#development" id="id8">Development</a></p>
+<ul>
+<li><p><a class="reference internal" href="#notes" id="id9">Notes</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="techdoc.html">Technical and Developer Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="techdoc.html#build-and-deployment">Build and Deployment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techdoc.html#modules-and-classes">Modules and Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techdoc.html#workflow">Workflow</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="what-does-it-do">
+<h2><a class="toc-backref" href="#id1">What does it do</a><a class="headerlink" href="#what-does-it-do" title="Permalink to this headline">¶</a></h2>
+<p>The JRodos plugin is a plugin to:</p>
+<ul class="simple">
+<li><p>view JRodos model outputs in QGIS (requested via Geoserver-JRodos WPS + REST interface for project information)</p></li>
+<li><p>view Measurements (requested via Measurements-WFS + SOAP interface for parameters) in QGIS</p></li>
+<li><p>load Rain/Weatherinformation from KNMI (WMS-Time service) at time of measurements (only when measurements are loaded)</p></li>
+<li><p>registers the 3 layers mentioned above in (default available) ‘Temporal Controller’ to be able to (re)’play’ a time/model frame</p></li>
+</ul>
+<p>QGIS showing JRodos model output (1) JRodos Toolbar (2) Temporal Controller Panel</p>
+<a class="reference internal image-reference" href="_images/jrodos_output.svg"><img alt="_images/jrodos_output.svg" src="_images/jrodos_output.svg" width="100%" /></a>
+<p>QGIS showing measurements with tooltip</p>
+<a class="reference internal image-reference" href="_images/measurements_tooltip.png"><img alt="_images/measurements_tooltip.png" src="_images/measurements_tooltip.png" style="width: 100%;" /></a>
+<p>QGIS showing model, measurements plus rain radar in the same model period</p>
+<a class="reference internal image-reference" href="_images/jrodos_measurements_rain.png"><img alt="_images/jrodos_measurements_rain.png" src="_images/jrodos_measurements_rain.png" style="width: 100%;" /></a>
+</section>
+<section id="make-it-work">
+<h2><a class="toc-backref" href="#id2">Make it work</a><a class="headerlink" href="#make-it-work" title="Permalink to this headline">¶</a></h2>
+<p>Install both(!!!) the JRodos plugin and the TimeManager plugin using QGIS Plugin Manager,
+both from the RIVM plugin repository(!).</p>
+<p>Make sure both plugins are active (and the TimeManager slider is visible below the map).</p>
+<p>If you need some map data as background/reference layers, install ‘QuickMapServices’ plugin (to have world maps)
+or ‘PDOK Services Plugin’ (for online NL maps) via the plugin manager of QGIS.
+The RIVM WMS (WebMappingService) provides NL and world maps too,
+even without external internet connection: <a class="reference external" href="http://geoserver.prd.cal-net.nl/geoserver/rivm/ows">http://geoserver.prd.cal-net.nl/geoserver/rivm/ows</a></p>
+</section>
+<section id="how-does-it-work">
+<h2><a class="toc-backref" href="#id3">How does it work</a><a class="headerlink" href="#how-does-it-work" title="Permalink to this headline">¶</a></h2>
+<p>The plugin is an extensive user of online services</p>
+<p>The http communication is done via ‘Providers’ (provider classes)</p>
+<p>Via the QGIS menu <code class="docutils literal notranslate"><span class="pre">Web/JRodos/Show</span> <span class="pre">Settings</span></code>, open the settings dialog to enable the modules
+and to check/set the service url’s.</p>
+<p>The JRodos plugin settings dialog, with the JRodos model service enabled</p>
+<img alt="_images/jrodos_settings_dialog.png" src="_images/jrodos_settings_dialog.png" />
+<p>To retrieve JRodos Model output (JRodos Geoserver WPS tab):</p>
+<p>JRodos Geoserver Model WPS url, which is WPS interface to a Geoserver-enabled JRodos WPS to retrieve
+model input from projects (timestep, modeltime etc), use for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">geoserver</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">cal</span><span class="o">-</span><span class="n">net</span><span class="o">.</span><span class="n">nl</span><span class="o">/</span><span class="n">geoserver</span><span class="o">/</span><span class="n">wps</span>
+</pre></div>
+</div>
+<p>JRodos Model REST service url, which a REST service to retrieve all saved projects
+and the detail information of every project:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">geoserver</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">cal</span><span class="o">-</span><span class="n">net</span><span class="o">.</span><span class="n">nl</span><span class="o">/</span><span class="n">rest</span><span class="o">/</span><span class="n">jrodos</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>To retrieve Eurdep measurements (Measurements WFS tab):</p>
+<p>Measurements WFS url (the actual url to retrieve all measurement data):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?
+</pre></div>
+</div>
+<p>Measurements Utils url (soap) needed to retrieve Calnet quantities, substances and units used
+(for dropdowns and filters):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">geoserver</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">cal</span><span class="o">-</span><span class="n">net</span><span class="o">.</span><span class="n">nl</span><span class="o">/</span><span class="n">calnet</span><span class="o">-</span><span class="n">measurements</span><span class="o">-</span><span class="n">ws</span><span class="o">/</span><span class="n">utilService</span>
+</pre></div>
+</div>
+<p>Click de JRodos button to start the dialogs.</p>
+<section id="the-jrodos-model-output-dialog">
+<h3><a class="toc-backref" href="#id4">The JRodos Model output dialog</a><a class="headerlink" href="#the-jrodos-model-output-dialog" title="Permalink to this headline">¶</a></h3>
+<p>First the available JRodos (output) projects are retrieved via a REST service (output is JSON, jrodos_project_provider.py):</p>
+<p><a class="reference external" href="http://geoserver.dev.cal-net.nl/rest/jrodos/projects">http://geoserver.dev.cal-net.nl/rest/jrodos/projects</a></p>
+<p>This will result in a list of ‘projects’.</p>
+<dl class="simple">
+<dt>Selecting a project will result in the firing of a REST url to retrieve the information of the information</dt><dd><p>(output is JSON, jrodos_project_provider.py):</p>
+</dd>
+</dl>
+<p><a class="reference external" href="http://geoserver.dev.cal-net.nl/rest/jrodos/projects/1268">http://geoserver.dev.cal-net.nl/rest/jrodos/projects/1268</a></p>
+<p>At the same time a WPS request is fired to retrieve specific time related information of that project.
+That is the Duration of the model/prognosis, the timetep used and the start of the release.
+The JRodos WPS service running on:</p>
+<p><a class="reference external" href="http://geoserver.dev.cal-net.nl/geoserver/wps">http://geoserver.dev.cal-net.nl/geoserver/wps</a></p>
+<p>And needs 4 parameters:</p>
+<ul class="simple">
+<li><p>taskArg (the project name and optional the task name). Example: <code class="docutils literal notranslate"><span class="pre">project='wps-test-multipath'&amp;amp;model='LSMC'</span></code></p></li>
+<li><p>dataitem (the JRodos) datapath <code class="docutils literal notranslate"><span class="pre">path='Model</span> <span class="pre">data=;=Output=;=Prognostic</span> <span class="pre">Results=;=Potential</span> <span class="pre">doses=;=Total</span> <span class="pre">potential</span> <span class="pre">dose=;=effective'</span></code></p></li>
+<li><p>columns (the timestep, an integer starting with 0)</p></li>
+<li><p>vertical (currently always 0)</p></li>
+<li><p>threshold (only return values &gt; this value, defaults to 0)</p></li>
+</ul>
+<p>All this information is presented in a dialog:</p>
+<img alt="_images/jrodos_project_task.png" src="_images/jrodos_project_task.png" />
+<p>If you do not see any Dataitems (like in image below)</p>
+<img alt="_images/jrodos_dataitem_filter.png" src="_images/jrodos_dataitem_filter.png" />
+<p>Go to the full list of ALL dataitems first (via See All button), and use the search/filter input to search
+for example for a dataitem which you use often. Click on it (will become white and ‘Show’ will become 1)
+to make it shown in the Dataitem dropdown (this will be remembered for you).
+In this way you can make the dropdown only show the items you use often.</p>
+<p>When OK is pushed, the WPS service is now used to retrieve all model data (currently as zipped shapefiles).</p>
+<p>The shapefiles are saved in the users /tmp directory.</p>
+<dl class="simple">
+<dt>Then for every timestep a shapefile is loaded, all features (gridcells) which have NOT zero values get an attribute</dt><dd><p>added with a TimeStamp and are loaded in QGIS.</p>
+</dd>
+</dl>
+<p>When all shapefiles are loaded in this one (memory) layer, the layer is registred with TimeManager.
+The user can now use TimeManager to play the different timesteps.</p>
+</section>
+<section id="the-measurements-dialog">
+<h3><a class="toc-backref" href="#id5">The Measurements dialog</a><a class="headerlink" href="#the-measurements-dialog" title="Permalink to this headline">¶</a></h3>
+<p>After the JRodos model dialog the Measurements Dialog is shown. If the JRodos model contained a starttime and endtime
+these are prefilled in the Measurements Dialog (as you probably want to see the actual measurements in that area).</p>
+<a class="reference internal image-reference" href="_images/jrodos_requesting_model_measurements.png"><img alt="_images/jrodos_requesting_model_measurements.png" src="_images/jrodos_requesting_model_measurements.png" style="width: 100%;" /></a>
+<p>The user can choose one of the four different ‘integration’-time periods:</p>
+<ul class="simple">
+<li><p>0  irs/meetwagen data (begin_time == end_time untill fixed)</p></li>
+<li><p>600 = 10 minute data (600 seconds)</p></li>
+<li><p>3600 = 1 hour data (3600 minutes)</p></li>
+<li><p>86400 = 24 hour data (86400 minutes)</p></li>
+</ul>
+<p>The user can choose a Quantity and a Substance. The information for this Quantity and Substance lookup list
+are retrieved via a SOAP service and the CalnetMeasurementsUtilsProvider in <code class="docutils literal notranslate"><span class="pre">calnet_measurements_utils_provider.py</span></code></p>
+<p>Because both the list of quantities and substances are so long, the dropdown only lists a selection of your
+choice. So if it is empty, use the ‘See All’ button to popup the fill lists and via the filter input search
+for your favourite quantities and substances, and select them.</p>
+<img alt="_images/jrodos_quantity_filter.png" src="_images/jrodos_quantity_filter.png" />
+<p>Your selection will be remembered in your profile.</p>
+<p>After selecting all the right inputs, click OK, that actual measurement data is requested (from the Measurements Postgres database) via a WFS service.</p>
+<p>Note 1, depending on the time-range or the size of the geographical bounding box you are viewing,
+this can take some time. ONLY the measurements in current bounding box are requested. Please do not request a few
+days of data for the whole of europe if you do not want to wait several minutes. Start with little area’s first.</p>
+<p>Clicking the ‘Show Time Graph’ checkbox will show a (docked) graph in which it is possible to view current loaded
+time series of data.</p>
+<img alt="_images/jrodos_measurements_graph.png" src="_images/jrodos_measurements_graph.png" />
+<p>To have a graph: first retrieve a measurement time serie.</p>
+<p>Then using the QGIS select tools (first button) select one or more features in the map.</p>
+<img alt="_images/qgis_selecttools.png" src="_images/qgis_selecttools.png" />
+<p>From these features (devices) you will now see the timeseries in the graph. The shown curves will be selected (yellow)
+in the map.</p>
+<p>To view the relation between a curve in the graph and the feature/device, click on the curve in the graph.
+A red circle for the corresponding device will be show (see screendump above).
+Note that when there is just one curve there is no need to click in the graph.</p>
+</section>
+<section id="the-rainradar">
+<h3><a class="toc-backref" href="#id6">The RainRadar</a><a class="headerlink" href="#the-rainradar" title="Permalink to this headline">¶</a></h3>
+<p>After the measurements, a timebase rain radar layer is requested from a WMS-T service of the KNMI</p>
+<p>Example parameters (to be used in the settings dialog):</p>
+<ul class="simple">
+<li><p>Name: KNMI Regen</p></li>
+<li><p>Url: <a class="reference external" href="http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi">http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi</a></p></li>
+<li><p>Layers: RADNL_OPER_R___25PCPRR_L3_COLOR</p></li>
+<li><p>Styles:</p></li>
+<li><p>CRS: EPSG:28992</p></li>
+</ul>
+<p>Or</p>
+<ul class="simple">
+<li><p>Name: KNMI Regen</p></li>
+<li><p>Url: <a class="reference external" href="http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi">http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi</a></p></li>
+<li><p>Layers: RADNL_OPER_R___25PCPRR_L3_KNMI</p></li>
+<li><p>Styles: default</p></li>
+<li><p>CRS: EPSG:28992</p></li>
+</ul>
+</section>
+<section id="timemanager-play-time">
+<h3><a class="toc-backref" href="#id7">TimeManager, play time</a><a class="headerlink" href="#timemanager-play-time" title="Permalink to this headline">¶</a></h3>
+<p>After the retrieval of model output, measurements and rain radar, you should have a result like this:</p>
+<a class="reference internal image-reference" href="_images/jrodos_measurements_rain.png"><img alt="_images/jrodos_measurements_rain.png" src="_images/jrodos_measurements_rain.png" style="width: 100%;" /></a>
+<p>The TimeManager dialog should have found the time range in the data, the step/frame size in the projects and all other
+information to be able to ‘play through time’…</p>
+<p>Make sure the checkbox ‘Discrete steps’ in the TimeManager widget is enabled!</p>
+<p>Now you can run through time by either clicking the little &gt;&gt; buttons on the timescale, or by pushing the play button.</p>
+<p>If you do not see anything yet, please first try to advance some steps in time. Note that the retrieval of the
+rainradar is via an online KNMI service, which can take some time.</p>
+</section>
+</section>
+<section id="development">
+<h2><a class="toc-backref" href="#id8">Development</a><a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h2>
+<p>Repos:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.svc.cal-net.nl/qgis/jrodos">https://git.svc.cal-net.nl/qgis/jrodos</a></p></li>
+<li><p><a class="reference external" href="https://github.com/rduivenvoorde/JRodos">https://github.com/rduivenvoorde/JRodos</a></p></li>
+</ul>
+<p>All dialogs in english. Create dutch version via <cite>make transup</cite> see below.</p>
+<p>NOTE: all strings in plugins should be surrounded by <cite>self.tr()</cite> to be sure
+they show up in the .po files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tr</span><span class="p">(</span><span class="sa">u</span><span class="s1">&#39;My english plugin&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Create a new translation (given you are working with sphinx):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># update the nl.ts file using</span>
+<span class="n">make</span> <span class="n">transup</span>
+<span class="c1"># load the nl.ts file in Linguist and translate all strings</span>
+<span class="n">make</span> <span class="n">transclean</span>
+<span class="c1"># compile the ts file to qm file which can be used in the plugin</span>
+<span class="n">make</span> <span class="n">transcompile</span>
+</pre></div>
+</div>
+<p>Now creata a plugin zip:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># make zip</span>
+</pre></div>
+</div>
+<p>This will first copy all needed files to <cite>.qgis2/python/plugins/JRodos</cite> and then zip that directory
+and place in the the directory <cite>repo</cite>.</p>
+<p>To develop live, either create a symlink in <cite>.qgis2/python/plugins/JRodos</cite> to the dev environment.</p>
+<p>To deploy the plugin: RIVM has their own plugin repo: <a class="reference external" href="http://repo.svc.cal-net.nl/repo/rivm/qgis/plugins.xml">http://repo.svc.cal-net.nl/repo/rivm/qgis/plugins.xml</a></p>
+<p>This is a web directory with:</p>
+<ul class="simple">
+<li><p>the latest version of JRodos.zip</p></li>
+<li><p>een plugins.xml with the data of all plugins in that dir</p></li>
+<li><p>een plugins.xsl just for viewing the xml</p></li>
+</ul>
+<p>Creating a new version:</p>
+<ul class="simple">
+<li><p>in JRodos/metadata.txt in item General, upgrade the ‘version’ number</p></li>
+<li><p>in plugins.xml on website and repo update the element</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">pyqgis_plugin</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SectorPlot&quot;</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.4&quot;</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>create a new zip (via make zip)</p></li>
+<li><p>scp both plugins.xml and SectorPlot.zip to the web dir on repo.svc.cal-net.nl</p></li>
+</ul>
+<section id="notes">
+<h3><a class="toc-backref" href="#id9">Notes</a><a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h3>
+<p>Plugin is developed using PyCharm</p>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        <a class="uplink" href="#">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="techdoc.html">Technical and Developer Documentation</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017-2021, RIVM.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  </body>
+</html>

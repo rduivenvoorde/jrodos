@@ -865,7 +865,9 @@ class AxisItem(GraphicsWidget):
             lineAlpha = 255 / (i+1)
             if self.grid is not False:
                 lineAlpha *= self.grid/255. * np.clip((0.05  * lengthInPixels / (len(ticks)+1)), 0., 1.)
-            
+            # 20220509 RD: we need an INT now, not a float (Python 9.10?)
+            lineAlpha = int(lineAlpha)
+
             for v in ticks:
                 ## determine actual position to draw this tick
                 x = (v * xScale) - offset

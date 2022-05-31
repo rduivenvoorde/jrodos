@@ -50,6 +50,7 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.core import (
     Qgis,
+    QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDateTimeRange,
@@ -59,6 +60,7 @@ from qgis.core import (
     QgsField,
     QgsGeometry,
     QgsInterval,
+    QgsProcessingFeatureSourceDefinition,
     QgsProject,
     QgsProviderRegistry,
     QgsRasterLayer,
@@ -66,8 +68,11 @@ from qgis.core import (
     QgsSymbol,
     QgsTemporalNavigationObject,
     QgsTemporalUtils,
+    QgsLayerTreeUtils,
     QgsUnitTypes,
+    QgsVectorFileWriter,
     QgsVectorLayer,
+    QgsVectorLayerTemporalContext,
     QgsVectorLayerTemporalProperties,
 )
 
@@ -207,7 +212,6 @@ class JRodos:
         self.calweb_project_id = None  # the actual Calweb project ID (integer)
         self.calweb_project = None  # this is an Object holding current project variables
 
-
         self.measurements_layer = None
         self.start_time = None
         self.end_time = None
@@ -240,11 +244,22 @@ class JRodos:
         self.oldCrsBehavior = 'useGlobal'
         self.oldCrs = 'EPSG:4326'
 
-        self.date_time_format_short = 'yyyy/MM/dd HH:mm'  # '17/6 23:01'
+        self.date_time_format_short = 'MM/dd HH:mm'  # '17/6 23:01'
 
         self.use_temporal_controller = True
 
         self.rivm_plugin_config_manager = None  # to be able to connect to it's signal
+
+        # voronoi
+        self.voronoi_layer = None
+        self.do_voronoi = False
+        self.voronoi_checkbox = None
+
+        # BELOW CAN be used to time requests
+        # TOTAL time of (paging) request(s)
+        self.time_total = 0
+        # time of one page / getdata
+        self.time = QDateTime.currentMSecsSinceEpoch()
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -484,10 +499,24 @@ class JRodos:
         # Create GraphWidget
         self.graph_widget = JRodosGraphWidget()
 
+        # Voronoi layer
+        if self.voronoi_checkbox is None:
+            self.voronoi_checkbox = QCheckBox(self.tr('Show Voronoi'))
+            self.voronoi_checkbox.setToolTip(self.tr('A Voronoi Polygon layer will be created during stepping'))
+            # to be able to remove the progressbar (by removing the action), we 'catch' the action and add it to self.actions
+            action = self.toolbar.addWidget(self.voronoi_checkbox)
+            self.actions.append(action)
+            self.voronoi_checkbox.clicked.connect(self.show_voronoi)
+
+        icon_abort_path = os.path.join(os.path.dirname(__file__), 'voronoi.svg')
+        self.add_action(
+            icon_abort_path,
+            text=self.tr(u'Voronoi'),
+            callback=self.voronoi,
+            parent=self.iface.mainWindow())
+
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
-        # Connect currentLayerChanged to self.current_layer_changed to be able to set 'self.measurements_layer'
-        #self.iface.currentLayerChanged.connect(self.current_layer_changed)
 
         self.iface.initializationCompleted.connect(self.qgis_initialization_completed)
 
@@ -539,7 +568,7 @@ class JRodos:
                 # no need to go further, the RIVM_PluginConfigManager is not available yet... gonna try later
                 self.msg(f'(no?) RIVM_PluginConfigManager in plugins: {plugins}???\nThis should not happen!')
                 return
-            self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
+            self. rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
             log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
             self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
             self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
@@ -602,8 +631,7 @@ class JRodos:
         # silently fail on errors
         try:
             # IF there is a measurement layer disconnect selectionChanged signal
-            if self.measurements_layer is not None:
-                self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+            self.measurements_disconnect_selection_changed()
             QgsProject.instance().layerWillBeRemoved.disconnect(self.remove_jrodos_layer)
         except:
             pass
@@ -616,6 +644,12 @@ class JRodos:
             if self.layer_group is not None:
                 root = QgsProject.instance().layerTreeRoot()
                 root.removeChildNode(self.layer_group)
+        except Exception:
+            pass
+
+        # try to remove the updateTemporalRange signal
+        try:
+            self.iface.mapCanvas().temporalController().updateTemporalRange.disconnect(self.voronoi)
         except Exception:
             pass
 
@@ -1600,19 +1634,6 @@ class JRodos:
         selected_features_ids = self.measurements_layer.selectedFeatureIds()
         #log.debug(f'Measurements selection change!: {selected_features_ids}')
 
-
-        # Disconnect signal (temporarily), to be able to set the subsetstring to ''.
-        # TODO REMOVE THIS
-        # TODO: can we get rid of the subsetstring handling of the old timemanager? NOPE!
-        # TODO: can we get rid of the disconnecting to the selectionCHanged signal too? Maybe
-        # With a connected signal measurement_selection_change function would have been called again because
-        # timemanager set's the subsetstring again
-        #self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
-
-        # remember current subset string to be able to add it later
-        subset_string = self.measurements_layer.dataProvider().subsetString()
-        self.measurements_layer.setSubsetString('')
-
         self.graph_widget.graph.clear()
         font = QFont()
         font.setPixelSize(10)
@@ -1702,17 +1723,6 @@ class JRodos:
             else:
                 self.remove_device_pointer()
 
-        # RE-apply old subset_string again to make layer work  for timecontroller again(?)
-        # TODO REMOVE THIS
-        # log.debug(f'XXX Timemanager subsetstring: {subset_string}')
-        self.measurements_layer.dataProvider().setSubsetString(subset_string)
-        # AND apply the selection again because resetting the subsetString removed it
-        # TODO: NOT working because internal id's are used here!! either use real id's or just try not te REset the selection...
-#        self.measurements_layer.selectByIds(selected_features_ids)
-        # connect measurement_selection_change  again
-        # TODO REMOVE THIS ???
-#        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
-
     def curve_or_point_click(self, item):
         if item in self.curves:
             device, feature = self.curves[item]
@@ -1741,14 +1751,15 @@ class JRodos:
             self.iface.mapCanvas().refresh()
             self.graph_device_pointer = None
 
-    def find_jrodos_layer(self, settings_object):
-        try:
-            for layer in self.jrodos_settings:
-                if self.jrodos_settings[layer] == settings_object:
-                    return layer
-        except:
-            pass
-        return None
+    # NOT USED?
+    # def find_jrodos_layer(self, settings_object):
+    #     try:
+    #         for layer in self.jrodos_settings:
+    #             if self.jrodos_settings[layer] == settings_object:
+    #                 return layer
+    #     except:
+    #         pass
+    #     return None
 
     def remove_jrodos_layer(self, layer2remove):
         for layer in self.jrodos_settings.keys():
@@ -1886,7 +1897,7 @@ class JRodos:
                 log.debug('Layer styled using sld from zip: {}'.format(slds[0]))
         # sld_loaded_ok = False
         if not sld_loaded_ok:
-            self.style_layer(jrodos_output_layer)
+            self.style_jrodos_layer(jrodos_output_layer)
         self.iface.mapCanvas().refresh()
 
         # self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
@@ -1898,7 +1909,7 @@ class JRodos:
             self.layer_group.insertLayer(1, jrodos_output_layer)  # now add to legend in current layer group
         # ONLY when we received features back AND the time component is valid: register the layer to the timemanager etc
         if features_have_valid_time:
-            # put a copy of the settings into our map<=>settings dict
+            # put a copy of the settings into our layer<=>settings dict
             # IF we want to be able to load a layer several times based on the same settings
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
 
@@ -1944,8 +1955,71 @@ class JRodos:
 
         return sld_file_fixed
 
+
     @staticmethod
-    def style_layer(layer):
+    def copy_measurements_style(target_layer, source_layer=None):
+        """
+        This method tries to copy the (RuleBased) Styling-rules from one layer to
+        another.
+        Mostly used to copy the styling from a point (measurements) layer to
+        a polygon (voronoi of measurements) layer
+
+        :param target_layer:
+        :param source_layer:
+        :return: None
+        """
+        # create a NEW rule-based renderer
+        symbol = QgsSymbol.defaultSymbol(target_layer.geometryType())
+        target_renderer = QgsRuleBasedRenderer(symbol)
+        # get the "root" rule
+        target_root_rule = target_renderer.rootRule()
+
+        if source_layer:
+            # make sure this is also a RuleBased rendered layer
+            # https://qgis.org/pyqgis/master/core/QgsRuleBasedRenderer.html
+            # https://snorfalorpagus.net/blog/2014/03/04/symbology-of-vector-layers-in-qgis-python-plugins/
+            renderer_type = source_layer.renderer().type()
+            #log.debug(f'Styling Target layer based on {renderer_type} To Source layer: {source_layer}')
+            if renderer_type in ('RuleRenderer',):  # ?? type() returns a string, using 'in' to make it possible to also use Categorized Renderers if needed
+                #source_renderer = source_layer.renderer()
+                #for s in source_renderer.symbols(QgsRenderContext()):
+                source_root_rule = source_layer.renderer().rootRule()
+                for child_rule in source_root_rule.children():
+                    # log.debug(child_rule.symbol())
+                    # log.debug(child_rule.filterExpression())
+                    # log.debug(child_rule.symbol().color())
+                    # log.debug(child_rule.label())
+                    # create a clone (i.e. a copy) of the default TARGET rule
+                    rule = target_root_rule.children()[0].clone()
+
+                    # # set the label, expression and color
+                    rule.setLabel(child_rule.label())
+                    rule.setFilterExpression(child_rule.filterExpression())
+                    rule.symbol().symbolLayer(0).setFillColor(child_rule.symbol().color())
+
+                    outline = True
+                    if outline:
+                        # visible outline
+                        rule.symbol().symbolLayer(0).setStrokeColor(QColor.fromRgb(0, 0, 0, 50))
+                    else:
+                        # (invisible) outline transparent
+                        rule.symbol().symbolLayer(0).setStrokeColor(QColor.fromRgb(255, 255, 255, 0))
+
+                    # # set the scale limits if they have been specified
+                    # # if scale is not None:
+                    # #     rule.setScaleMinDenom(scale[0])
+                    # #     rule.setScaleMaxDenom(scale[1])
+                    # # append the rule to the list of rules
+                    target_root_rule.appendChild(rule)
+            else:
+                raise Exception('Trying to create a new style, but source layer is NOT rule based styled!!')
+        # delete the default rule
+        target_root_rule.removeChildAt(0)
+        # apply the renderer to the layer
+        target_layer.setRenderer(target_renderer)
+
+    @staticmethod
+    def style_jrodos_layer(layer):
         # create a new rule-based renderer
         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
         renderer = QgsRuleBasedRenderer(symbol)
@@ -1975,6 +2049,177 @@ class JRodos:
         root_rule.removeChildAt(0)
         # apply the renderer to the layer
         layer.setRenderer(renderer)
+
+    @staticmethod
+    def temporal_filter_for_layer(layer, canvas):
+        if canvas.mapSettings().isTemporal():
+            if not layer.temporalProperties().isVisibleInTemporalRange(canvas.temporalRange()):
+                return "FALSE"  # nothing is visible
+            temporal_context = QgsVectorLayerTemporalContext()
+            temporal_context.setLayer(layer)
+            return layer.temporalProperties().createFilterString(temporal_context, canvas.temporalRange())
+        else:
+            return None
+
+    def show_voronoi(self, checked):
+        # always try to remove a (potential) connected signal
+        try:
+            self.iface.mapCanvas().temporalController().updateTemporalRange.disconnect(self.voronoi)
+        except Exception as e:
+            pass
+        # try to remove a potential available voronoi layer
+        try:
+            if self.voronoi_layer:
+                QgsProject.instance().removeMapLayer(self.voronoi_layer.id())
+                self.iface.mapCanvas().refresh()
+        except Exception as e:
+            pass
+        if checked:
+            # create a voronoi for current timestep
+            self.voronoi()
+            # connect the temporal steps to the voronoi creation
+            self.iface.mapCanvas().temporalController().updateTemporalRange.connect(self.voronoi)
+
+    def voronoi(self, temporal_range=None):
+        """
+        :return:
+        """
+        log.debug(f'RANGE RANGE {temporal_range}')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+        self.time_total = self.time
+        try:
+            #https://gis.stackexchange.com/questions/329715/algorithm-not-found-by-pyqgis
+            from qgis.analysis import QgsNativeAlgorithms
+            import processing
+            from plugins.processing.core.Processing import Processing
+            Processing.initialize()
+            QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
+        except Exception as e:
+            QMessageBox.warning(self.iface.mainWindow(),
+                                self.MSG_TITLE,
+                                self.tr("Missing 'Processing' plugin,\n we REALLY need that one.\n Please enable it in Plugin Manager first..."),
+                                QMessageBox.Ok,
+                                QMessageBox.Ok)
+            return
+
+        point_layer = None
+        try:
+            if self.measurements_layer:
+                point_layer = self.measurements_layer
+        except Exception as e:
+            pass
+
+        if point_layer is None:
+            log.debug('Still missing Measurements Layer, we REALLY need that one...')
+            # try current active layer ? development/tests
+            if self.iface.mapCanvas().currentLayer():
+                point_layer = self.iface.mapCanvas().currentLayer()
+            else:
+                return
+
+        log.debug(f'Voronoi: loading modules took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        # remove an already available voronoi layer (as potentially we do this for every timestep)
+        try:
+            if self.voronoi_layer:
+                QgsProject.instance().removeMapLayer(self.voronoi_layer.id())
+        except Exception as e:
+            pass
+
+        log.debug(f'Voronoi: loading/removing layer took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        # select features based on current temporal filter
+        temporal_filter = self.temporal_filter_for_layer(point_layer, self.iface.mapCanvas())
+        if temporal_filter:
+            # let's disconnect the selectionChange event, as that slows down the selection below considerably
+            self.measurements_disconnect_selection_changed()
+            point_layer.selectByExpression(temporal_filter, Qgis.SelectBehavior.SetSelection)
+        else:
+            # this selects EVERYTHING!!!  :-(
+            log.debug(f'NO Temporal Filter! Selecting ALL Features in measurement layer before Voronoi creation')
+            point_layer.selectByRect(point_layer.extent(), Qgis.SelectBehavior.SetSelection)
+
+        log.debug(f'Voronoi: selecting features took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        # The voronoi algorithm will throw an exception if:
+        # - the number of points < 4
+        # - the extent of the points is the so called Null-rectangle (QgsRectangle(0,0 0,0)
+        # so we check for both (Null-rectangle you can check with QgsRectangle.isNull())
+        selection_feature_count = point_layer.selectedFeatureCount()
+        selection_extent = point_layer.boundingBoxOfSelected()
+        if selection_feature_count < 4 or selection_extent.isNull():
+            log.debug(f'Voronoi IMPOSSIBLE: current selection contains: {selection_feature_count} features, extent = {selection_extent}, aborting...')
+            return
+        else:
+            log.debug(f'Voronoi: feature_count: {selection_feature_count}, bbox of selected: {point_layer.boundingBoxOfSelected()} ISNULL: {point_layer.boundingBoxOfSelected().isNull()} ')
+
+        # Voronoing ONLY the selected
+        # NOTE: the colon (:) behind 'memory' in the 'OUTPUT' param is mandatory,
+        # else QGIS will create a geopackage!
+        selected = True
+        params = {
+            'INPUT': QgsProcessingFeatureSourceDefinition(point_layer.id(), selectedFeaturesOnly=selected),
+            'OUTPUT': 'memory:',
+            'BUFFER': 5,
+        }
+        result = processing.run("qgis:voronoipolygons", params)
+
+        log.debug(f'Voronoi: processing run took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        result_layer = result['OUTPUT']
+        result_layer_name = 'Voronoi'
+        if temporal_range:
+            result_layer_name = f'Voronoi: {temporal_range.begin().toString(self.date_time_format_short)} - {temporal_range.end().toString(self.date_time_format_short)}'
+        result_layer.setName(result_layer_name)
+        QgsProject.instance().addMapLayer(result_layer, False)  # False, meaning not ready to add to legend
+
+        self.voronoi_layer = result_layer
+        # QgsLayerTreeUtils.insertLayerBelow is not working below 32207 see: https://github.com/qgis/QGIS/issues/47909
+        if Qgis.QGIS_VERSION_INT >= 32207:
+            QgsLayerTreeUtils.insertLayerBelow(QgsProject.instance().layerTreeRoot(), point_layer, self.voronoi_layer)  # now add to legend below the point layer
+        else:
+            tree_node = QgsProject.instance().layerTreeRoot().findLayer(point_layer)
+            if tree_node and tree_node in QgsProject.instance().layerTreeRoot().children():
+                index = QgsProject.instance().layerTreeRoot().children().index(tree_node)
+                QgsProject.instance().layerTreeRoot().insertLayer(index+1, result_layer)  # now add to legend in current layer group
+            elif tree_node:
+                group_node = self.layer_group  # QgsProject.instance().layerTreeRoot().findGroup(self.layer_group)
+                if group_node:
+                    index = group_node.children().index(tree_node)
+                    group_node.insertLayer(index+1, result_layer)  # now add to legend in current layer group
+                    self.voronoi_layer = result_layer
+                else:
+                    log.debug('????')
+            else:
+                log.debug(f'AAAAA tree_node: {tree_node} tree_node in QgsProject.instance().layerTreeRoot().children() = {tree_node in QgsProject.instance().layerTreeRoot().children()}')
+
+        log.debug(f'Voronoi: insert layer in layertree: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        self.copy_measurements_style(result_layer, point_layer)
+
+        log.debug(f'Voronoi: copying the measurement style: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        if temporal_filter:
+            point_layer.selectByExpression(temporal_filter, Qgis.SelectBehavior.RemoveFromSelection)
+            # AND connect again to the selectionChange signal...
+            self.measurements_connect_selection_changed()
+
+        log.debug(f'Voronoi: DEselecting the features: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        self.time = QDateTime.currentMSecsSinceEpoch()
+
+        # Trying to set the point layer back to 'active layer'
+        self.iface.layerTreeView().setCurrentLayer(point_layer)
+        self.iface.mapCanvas().refresh()
+
+        log.debug(f'Voronoi: Refresh/Repaint: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        log.debug(f'Voronoi: Total: {(QDateTime.currentMSecsSinceEpoch()-self.time_total)/1000} seconds for {point_layer}')
+
 
     def add_rainradar_to_timecontroller(self, layer_for_settings):
         settings = JRodosSettings()
@@ -2085,6 +2330,28 @@ class JRodos:
         else:
             log.debug(f'{measurements_settings} is NOT instance of "CalnetMeasurementsConfig", ignoring...')
 
+    def measurements_disconnect_selection_changed(self):
+        """
+        This method tries to disconnect the selectionChanged signal from a
+        hopefully available measurements layer...
+        """
+        try:
+            if self.measurements_layer:
+                self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
+        except Exception as e:
+            pass
+
+    def measurements_connect_selection_changed(self):
+        """
+        This method tries to disconnect the selectionChanged signal from a
+        hopefully available measurements layer...
+        """
+        try:
+            if self.measurements_layer:
+                self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
+        except Exception as e:
+            pass
+
     def load_measurements(self, output_dir, style_file):
         """
         Load the measurements from the output_dir (as gml files), load them in a layer, and style them with style_file
@@ -2094,6 +2361,7 @@ class JRodos:
         """
         start_time = QDateTime.fromString(self.measurements_settings.start_datetime, self.measurements_settings.date_time_format)
         end_time = QDateTime.fromString(self.measurements_settings.end_datetime, self.measurements_settings.date_time_format)
+
         selected_features_ids = []
 
         if float(self.measurements_settings.endminusstart) < 0:
@@ -2101,23 +2369,22 @@ class JRodos:
         else:
             interval = f'{self.measurements_settings.endminusstart} s'
         layer_display_name = f'{start_time.toString(self.measurements_settings.date_time_format_short)} - {end_time.toString(self.measurements_settings.date_time_format_short)}'
-        #log.debug('self.measurements_settings.quantity {}'.format(self.measurements_settings.quantity))
-        #log.debug('self.measurements_settings.substance {}'.format(self.measurements_settings.substance))
 
         register_layers = True
-        if self.measurements_layer:
+
+        try:
             # clean up IF there is a measurement layer disconnect selectionChanged signal
-            try:
-                self.measurements_layer.selectionChanged.disconnect(self.measurement_selection_change)
-            except Exception as e:
-                pass
+            self.measurements_disconnect_selection_changed()
             # remove pointer
             self.remove_device_pointer()
             # remove actual layer
             QgsProject.instance().removeMapLayer(self.measurements_layer.id())
+        except Exception as e:
+            pass
 
         # create layer name based on self.measurements_settings
-        self.measurements_layer = QgsVectorLayer("point", layer_display_name, "memory")
+        self.measurements_layer = QgsVectorLayer('point', layer_display_name, 'memory')
+
         # if this layer is a preset, use it's 'title' as abstract
         if self.measurements_settings.title == CalnetMeasurementsConfig.DEFAULT_TITLE:
             abstract = f"""Project: {self.measurements_settings.projectid}
@@ -2131,34 +2398,21 @@ class JRodos:
         # add fields
         # see #QGIS-85 now using startTime for Temporal Controller
         pr = self.measurements_layer.dataProvider()
-        pr.addAttributes([QgsField("gml_id", QVariant.String),
-                          QgsField("startTime", QVariant.DateTime),
-                          QgsField("endTime", QVariant.String),
-                          QgsField("quantity", QVariant.String),
-                          QgsField("substance", QVariant.String),
-                          QgsField("unit", QVariant.String),
-                          QgsField("value", QVariant.Double),
-                          QgsField("time", QVariant.String),  # QgsField("time", QVariant.String), or QgsField("time", QVariant.DateTime)
-                          QgsField("info", QVariant.String),
-                          QgsField("device", QVariant.String),
-                          QgsField("projectid", QVariant.String),
-                          QgsField("quantity_substance", QVariant.String),
+        pr.addAttributes([QgsField('gml_id', QVariant.String),
+                          QgsField('startTime', QVariant.DateTime),
+                          QgsField('endTime', QVariant.String),
+                          QgsField('quantity', QVariant.String),
+                          QgsField('substance', QVariant.String),
+                          QgsField('unit', QVariant.String),
+                          QgsField('value', QVariant.Double),
+                          QgsField('time', QVariant.String),  # QgsField('time', QVariant.String), or QgsField('time', QVariant.DateTime)
+                          QgsField('info', QVariant.String),
+                          QgsField('device', QVariant.String),
+                          QgsField('projectid', QVariant.String),
+                          QgsField('quantity_substance', QVariant.String),
                           #QgsField("unitvalue", QVariant.Double),
                           ])
         self.measurements_layer.updateFields()
-
-        QgsProject.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
-        self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
-
-        # put a copy of the settings into our map<=>settings dict
-        # IF we want to be able to load a layer several times based on the same settings
-        # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
-        self.jrodos_settings[self.measurements_layer] = self.measurements_settings
-
-        self.measurements_layer.loadNamedStyle(
-            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
-        self.measurements_layer_featuresource = self.measurements_layer.dataProvider().featureSource()
-        self.measurements_layer.selectionChanged.connect(self.measurement_selection_change)
 
         feature_count = 0
         flist = []
@@ -2172,7 +2426,6 @@ class JRodos:
                 features = gml_layer.getFeatures()
 
                 step_count = 0
-                new_unit_msg = True
                 for feature in features:
                     if features.isClosed():
                         self.msg(None, 'Iterator CLOSED !!!!')
@@ -2208,6 +2461,35 @@ class JRodos:
             self.measurements_layer.selectByIds(selected_features_ids)
             self.measurements_layer.updateFields()
             self.measurements_layer.updateExtents()
+
+        gpkg_name = f'{output_dir}/measurements.gpkg'
+        save_options = QgsVectorFileWriter.SaveVectorOptions()
+        transform_context = QgsProject.instance().transformContext()
+        error = QgsVectorFileWriter.writeAsVectorFormatV3(self.measurements_layer,
+                                                          gpkg_name,
+                                                          transform_context,
+                                                          save_options)
+        if error[0] == QgsVectorFileWriter.NoError:
+            log.debug(f'Succesfully saved a gpkg to: {gpkg_name}')
+        else:
+            log.debug(f'Error saving gpkg ({gpkg_name}): {error}')
+
+        self.measurements_layer = QgsVectorLayer(f'{gpkg_name}|layername=measurements', layer_display_name, 'ogr')
+        if not self.measurements_layer.isValid():
+            log.error(f'ERROR loading measurements gpkg: {gpkg_name}')
+
+
+        # put a copy of the settings into our map<=>settings dict
+        # IF we want to be able to load a layer several times based on the same settings
+        # self.jrodos_settings[self.measurements_layer] = deepcopy(self.measurements_settings)
+        self.jrodos_settings[self.measurements_layer] = self.measurements_settings
+
+        QgsProject.instance().addMapLayer(self.measurements_layer, False)  # False, meaning not ready to add to legend
+        self.layer_group.insertLayer(0, self.measurements_layer)  # now add to legend in current layer group
+
+        self.measurements_layer.loadNamedStyle(
+            os.path.join(os.path.dirname(__file__), 'styles', style_file))  # qml!! sld is not working!!!
+        self.measurements_connect_selection_changed()
 
         if register_layers:
             if self.use_temporal_controller:

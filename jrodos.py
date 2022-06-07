@@ -1527,6 +1527,9 @@ class JRodos:
             measurements_settings.url = self.settings.value('measurements_wfs_url')
             # replacing the '-' because when NO projectid is given we show '-'
             project_id = self.measurements_dlg.le_calweb_project_id.text().replace('-', '').strip()
+            # if project_id == 0, it means there is no current project: set it to '' so project id will not be sent to WFS
+            if str(project_id) == '0':
+                project_id = ''
             if not project_id == '' and not project_id.isdigit():
                 # User tries to use a string in this projectid field
                 self.msg(None, self.tr('Project number is a single CalWeb project number (or empty)'))

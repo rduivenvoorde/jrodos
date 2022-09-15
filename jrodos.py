@@ -74,6 +74,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerTemporalContext,
     QgsVectorLayerTemporalProperties,
+    QgsVectorLayerUtils,
 )
 
 from qgis.utils import qgsfunction, plugins
@@ -105,6 +106,8 @@ from .providers.utils import Utils as ProviderUtils
 
 from .style_utils import RangeCreator
 
+import sip
+
 from . import resources  # needed for button images!
 
 # pycharm debugging
@@ -115,6 +118,7 @@ from . import resources  # needed for button images!
 import logging
 from . import LOGGER_NAME
 log = logging.getLogger(LOGGER_NAME)
+
 
 
 class JRodos:
@@ -175,6 +179,7 @@ class JRodos:
         self.USER_QUANTITIES_SUBSTANCES_PATH = self.plugin_dir + '/jrodos_user_quanties_substances.pickle'
 
         self.BAR_LOADING_TITLE = self.tr('Loading data...')
+        self.BAR_STYLING_TITLE = self.tr('Styling data...')
         self.JRODOS_BAR_TITLE = self.tr('JRodos Model')
 
         self.MEASUREMENTS_BAR_TITLE = self.tr('Measurements')
@@ -254,6 +259,9 @@ class JRodos:
         self.voronoi_layer = None
         self.do_voronoi = False
         self.voronoi_checkbox = None
+
+        # cloud arrival time
+        self.style_cloud_arrival_connected = False
 
         # BELOW CAN be used to time requests
         # TOTAL time of (paging) request(s)
@@ -650,6 +658,12 @@ class JRodos:
         # try to remove the updateTemporalRange signal
         try:
             self.iface.mapCanvas().temporalController().updateTemporalRange.disconnect(self.voronoi)
+        except Exception:
+            pass
+
+        # try to remove the  signal
+        try:
+            self.iface.mapCanvas().temporalController().updateTemporalRange.disconnect(self.style_cloud_arrival)
         except Exception:
             pass
 
@@ -1754,19 +1768,13 @@ class JRodos:
             self.iface.mapCanvas().refresh()
             self.graph_device_pointer = None
 
-    # NOT USED?
-    # def find_jrodos_layer(self, settings_object):
-    #     try:
-    #         for layer in self.jrodos_settings:
-    #             if self.jrodos_settings[layer] == settings_object:
-    #                 return layer
-    #     except:
-    #         pass
-    #     return None
-
     def remove_jrodos_layer(self, layer2remove):
+        arrival_layers = 0
         for layer in self.jrodos_settings.keys():
-            import sip
+            # go over all layer names, and (HACK) if 'arrival' is in the name, disconnect the updateTemporalRange signal
+            #   which calls 'style_cloud_arrival'...
+            if not sip.isdeleted(layer) and 'ARRIVAL' in layer.name().upper():
+                arrival_layers += 1
             if not sip.isdeleted(layer) and layer2remove == layer.id():
                 if self.measurements_layer == layer:
                     if self.graph_widget and not sip.isdeleted(self.graph_widget):
@@ -1774,8 +1782,14 @@ class JRodos:
                     self.measurements_layer = None
                     self.remove_device_pointer()
                     # sometimes C++ layer is already deleted...
-                    del self.jrodos_settings[layer]
-                    return
+                    # sometimes I see:     for layer in self.jrodos_settings.keys():  # RuntimeError: dictionary changed size during iteration
+                    # could it te that this is the boosdoener??
+#                    del self.jrodos_settings[layer]
+        # disconnect if there are no 'arrival' layers anymore...
+        if arrival_layers == 1 and self.style_cloud_arrival_connected:
+            log.debug('NO apparent cloud arrival layers anymore... DIS-connecting updateTemporalRange signal...')
+            self.iface.mapCanvas().temporalController().updateTemporalRange.disconnect(self.style_cloud_arrival)
+            self.style_cloud_arrival_connected = False
 
     # noinspection PyBroadException
     def load_jrodos_output(self, output_dir, style_file, layer_name, unit_used):
@@ -1899,9 +1913,17 @@ class JRodos:
                 jrodos_output_layer.setName(jrodos_output_layer.name()+' (JRodos-styled)')
                 log.debug('Layer styled using sld from zip: {}'.format(slds[0]))
         # sld_loaded_ok = False
-        if not sld_loaded_ok:
+        if not sld_loaded_ok and 'ARRIVAL' in jrodos_output_layer.name().upper():
+            log.debug(f"'ARRIVAL' in layername: {jrodos_output_layer.name().upper()} will create style for every time step..")
+            if not self.style_cloud_arrival_connected:
+                log.debug('CONNECT style_cloud_arrival to the updateTemporalRange signal...')
+                self.iface.mapCanvas().temporalController().updateTemporalRange.connect(self.style_cloud_arrival)
+                self.style_cloud_arrival_connected = True
+            else:
+                log.debug('NOT connecting style_cloud_arrival to the updateTemporalRange signal, as it apparently is already...')
+        elif not sld_loaded_ok:
+            log.debug('No sld found in JRodos result, will style the Layer automagically')
             self.style_jrodos_layer(jrodos_output_layer)
-        self.iface.mapCanvas().refresh()
 
         # self.msg(None, "min: {}, max: {} \ncount: {}, deleted: {}".format(features_min_value, 'TODO?', i, j))
         # ONLY when we received features back load it as a layer
@@ -1917,11 +1939,110 @@ class JRodos:
             self.jrodos_settings[jrodos_output_layer] = deepcopy(self.jrodos_output_settings)
 
             if self.use_temporal_controller:
-                 # SO: we use a iso datetime text (which works in the Temporal Controller)
+                 # SO: we use an iso datetime text (which works in the Temporal Controller)
                 log.debug('Using DateTime (iso-datetime as TEXT) from table...')
                 self.add_layer_to_timecontroller(jrodos_output_layer,
                                                  time_column='Datetime',
                                                  frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
+        # let's repaint the canvas (another time?) because apparently adding the cloud arrival styling does not?
+        self.iface.mapCanvas().redrawAllLayers()
+
+    def cloud_arrival_for_layer(self, layer: QgsVectorLayer):
+        """
+        The style to be used for cloud arrival is to be determined by the Maximum (arrival time) value.
+
+        So we first determine the max value.
+        Then we have 2 strategies:
+        - is to create 5 (in case the max < 1.0 hr) or (mostly) 10 classes exactly as JRodos does it
+        - use some predefined styles from Jasper, based on the number of hours the model has gone
+
+        :param QgsVectorLayer: JRodos (vector) output layer
+        """
+
+        jrodos_styles = False
+
+        # select features based on current temporal filter
+        temporal_filter = self.temporal_filter_for_layer(layer, self.iface.mapCanvas())
+        if temporal_filter:
+            # log.debug(f'Temporal Filter: {temporal_filter}')
+            # layer.selectByExpression(temporal_filter, Qgis.SelectBehavior.SetSelection)
+            # values = QgsVectorLayerUtils.getValues(layer, 'Value', selectedOnly=True)[0]
+            # max_value = max(values)
+
+
+            # BEGIN of current filter  -- JRODOS: UTC
+            # iface.mapCanvas().temporalRange().begin()
+            # PyQt5.QtCore.QDateTime(2019, 9, 1, 7, 0, 0, 0, PyQt5.QtCore.Qt.TimeSpec(1))  # 1 == UTC !!!
+            # iface.mapCanvas().temporalRange().begin().toTimeSpec(Qt.LocalTime)
+            # PyQt5.QtCore.QDateTime(2019, 9, 1, 9, 0)
+
+            # BEGIN of total time range of Temporal Controler  -- LOCAL TIME
+            # QgsTemporalUtils.calculateTemporalRangeForProject(QgsProject.instance()).begin()
+            # PyQt5.QtCore.QDateTime(2019, 9, 1, 7, 0)
+            # QgsTemporalUtils.calculateTemporalRangeForProject(QgsProject.instance()).begin().toTimeSpec(Qt.LocalTime)
+            # PyQt5.QtCore.QDateTime(2019, 9, 1, 7, 0)
+
+            # ARGH, something's going wrong...
+            # The temporal controller is in LOCAL time
+            # While the (JRodos/Measurement)data is actually in UTC, BUT(!!!!) seen by QGIS as LOCAL !!
+            # So the HACK is to substract the hours of LOCAL from UTC
+            # OFFset localtime from UTC
+            # https://stackoverflow.com/questions/24281744/how-to-find-out-the-utc-offset-of-my-current-location-in-qt-5-1
+            # QDateTime.currentDateTime().timeZone().offsetFromUtc(QDateTime.currentDateTime())( in seconds)
+
+            # calculate localtime-utc offset in hours
+            begin = QgsTemporalUtils.calculateTemporalRangeForProject(QgsProject.instance()).begin()
+            utc_offset_hours = begin.timeZone().offsetFromUtc(begin)/3600
+            # substract that from the difference in start of project range and slider current end
+            max_value = (begin.secsTo(self.iface.mapCanvas().temporalRange().end())/3600) - utc_offset_hours
+            #log.debug(f'max_value (hours): {max_value}')
+        else:
+            idx = layer.fields().indexFromName('Value')
+            max_value = layer.maximumValue(idx)
+        # log.debug(f'min: {min_value} max: {max_value}')
+        # max_value < 1.0: 5 classes, else: 10 classes
+        steps = 10
+        if max_value <= 1.0:
+            steps = 5
+        # create a new rule-based renderer
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        renderer = QgsRuleBasedRenderer(symbol)
+        # get the "root" rule
+        root_rule = renderer.rootRule()
+
+        if jrodos_styles:
+            # create a nice 'Full Cream' color ramp ourselves NOTE: we start at 0 (though the min_value is probably higher)
+            rules = RangeCreator.create_rule_set(0, max_value, class_count=steps, min_inf=False, max_inf=False, reverse=True)
+        else:
+            rules = RangeCreator.create_cloud_ruleset(max_value)
+
+        for label, expression, color in rules:
+            # create a clone (i.e. a copy) of the default rule
+            rule = root_rule.children()[0].clone()
+            # set the label, expression and color
+            rule.setLabel(label)
+            rule.setFilterExpression(expression)
+            rule.symbol().symbolLayer(0).setFillColor(color)
+            # outline transparent
+            rule.symbol().symbolLayer(0).setStrokeColor(QColor.fromRgb(255, 255, 255, 0))
+            # append the rule to the list of rules
+            root_rule.appendChild(rule)
+
+        # delete the default rule
+        root_rule.removeChildAt(0)
+        # apply the renderer to the layer
+        layer.setRenderer(renderer)
+
+    def style_cloud_arrival(self, temporal_range):
+        #log.debug(f'STYLING CLOUD ARRIVAL... will take some time')
+        self.jrodos_output_progress_bar.setFormat(self.BAR_STYLING_TITLE)
+        QCoreApplication.processEvents()  # to be sure we have the styling msg
+        for layer in self.jrodos_settings.keys():
+            # go over all layer names, and (HACK) if 'arrival' is in the name, style it for cloud_arrival
+            if not sip.isdeleted(layer) and 'ARRIVAL' in layer.name().upper():
+                # get min and max for current temporal_range (frame)
+                self.cloud_arrival_for_layer(layer)
+        self.jrodos_output_progress_bar.setFormat(self.JRODOS_BAR_TITLE)
 
     @staticmethod
     def fix_jrodos_style_sld(jrodos_style_sld):
@@ -1982,7 +2103,7 @@ class JRodos:
             # https://qgis.org/pyqgis/master/core/QgsRuleBasedRenderer.html
             # https://snorfalorpagus.net/blog/2014/03/04/symbology-of-vector-layers-in-qgis-python-plugins/
             renderer_type = source_layer.renderer().type()
-            #log.debug(f'Styling Target layer based on {renderer_type} To Source layer: {source_layer}')
+            log.debug(f'Styling Target layer {target_layer} with rendertype {target_renderer.type()} To Source layer: {source_layer} with rendertype {renderer_type}')
             if renderer_type in ('RuleRenderer',):  # ?? type() returns a string, using 'in' to make it possible to also use Categorized Renderers if needed
                 #source_renderer = source_layer.renderer()
                 #for s in source_renderer.symbols(QgsRenderContext()):
@@ -2030,7 +2151,7 @@ class JRodos:
         root_rule = renderer.rootRule()
 
         # create a nice 'Full Cream' color ramp ourselves
-        rules = RangeCreator.create_rule_set(-5, 4, False, True)
+        rules = RangeCreator.create_log_rule_set(-5, 4, False, True)
 
         for label, expression, color in rules:
             # create a clone (i.e. a copy) of the default rule
@@ -2047,7 +2168,6 @@ class JRodos:
             #     rule.setScaleMaxDenom(scale[1])
             # append the rule to the list of rules
             root_rule.appendChild(rule)
-
         # delete the default rule
         root_rule.removeChildAt(0)
         # apply the renderer to the layer

@@ -2241,7 +2241,7 @@ class JRodos:
         if point_layer is None:
             log.debug('Still missing Measurements Layer, we REALLY need that one...')
             # try current active layer ? development/tests
-            if self.iface.mapCanvas().currentLayer():
+            if False:  # self.iface.mapCanvas().currentLayer():
                 point_layer = self.iface.mapCanvas().currentLayer()
             else:
                 return

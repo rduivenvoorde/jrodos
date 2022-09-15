@@ -24,7 +24,7 @@ repository=https://git.svc.cal-net.nl/qgis/jrodos
 plugin_dependencies=RIVM PluginConfigManager
 
 changelog=
-    2.2.2   Local styling of 'Cloud arrival time',
+    2.2.2   Local styling of 'Cloud arrival time', merge Voronoi/Checkbox in one Action
     2.2.1   Title change of Measurements Dialog
     2.2.0   Voronoi creation, Fix PyGraph deprecation
     2.1.1   QGIS87 (time.time-issue in pyqtgraph) fixed, new version

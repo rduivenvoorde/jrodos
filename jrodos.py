@@ -508,6 +508,12 @@ class JRodos:
         self.graph_widget = JRodosGraphWidget()
 
         # Voronoi layer
+        icon_abort_path = os.path.join(os.path.dirname(__file__), 'voronoi.svg')
+        self.add_action(
+            icon_abort_path,
+            text=self.tr(u'Voronoi'),
+            callback=self.switch_voronoi,
+            parent=self.iface.mainWindow())
         if self.voronoi_checkbox is None:
             self.voronoi_checkbox = QCheckBox(self.tr('Show Voronoi'))
             self.voronoi_checkbox.setToolTip(self.tr('A Voronoi Polygon layer will be created during stepping'))
@@ -515,13 +521,6 @@ class JRodos:
             action = self.toolbar.addWidget(self.voronoi_checkbox)
             self.actions.append(action)
             self.voronoi_checkbox.clicked.connect(self.show_voronoi)
-
-        icon_abort_path = os.path.join(os.path.dirname(__file__), 'voronoi.svg')
-        self.add_action(
-            icon_abort_path,
-            text=self.tr(u'Voronoi'),
-            callback=self.voronoi,
-            parent=self.iface.mainWindow())
 
         # Make sure that when a QGIS layer is removed it will also be removed from the plugin
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
@@ -2184,6 +2183,13 @@ class JRodos:
         else:
             return None
 
+    def switch_voronoi(self):
+        """
+        Used to check/uncheck the Voronoi checkbox
+        :return:
+        """
+        self.voronoi_checkbox.click()
+
     def show_voronoi(self, checked):
         # always try to remove a (potential) connected signal
         try:
@@ -2207,7 +2213,7 @@ class JRodos:
         """
         :return:
         """
-        log.debug(f'RANGE RANGE {temporal_range}')
+        #log.debug(f'RANGE RANGE {temporal_range}')
         self.time = QDateTime.currentMSecsSinceEpoch()
         self.time_total = self.time
         try:
@@ -2240,7 +2246,7 @@ class JRodos:
             else:
                 return
 
-        log.debug(f'Voronoi: loading modules took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: loading modules took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         # remove an already available voronoi layer (as potentially we do this for every timestep)
@@ -2250,7 +2256,7 @@ class JRodos:
         except Exception as e:
             pass
 
-        log.debug(f'Voronoi: loading/removing layer took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: loading/removing layer took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         # select features based on current temporal filter
@@ -2264,7 +2270,7 @@ class JRodos:
             log.debug(f'NO Temporal Filter! Selecting ALL Features in measurement layer before Voronoi creation')
             point_layer.selectByRect(point_layer.extent(), Qgis.SelectBehavior.SetSelection)
 
-        log.debug(f'Voronoi: selecting features took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: selecting features took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         # The voronoi algorithm will throw an exception if:
@@ -2274,7 +2280,7 @@ class JRodos:
         selection_feature_count = point_layer.selectedFeatureCount()
         selection_extent = point_layer.boundingBoxOfSelected()
         if selection_feature_count < 4 or selection_extent.isNull():
-            log.debug(f'Voronoi IMPOSSIBLE: current selection contains: {selection_feature_count} features, extent = {selection_extent}, aborting...')
+            #log.debug(f'Voronoi IMPOSSIBLE: current selection contains: {selection_feature_count} features, extent = {selection_extent}, aborting...')
             return
         else:
             log.debug(f'Voronoi: feature_count: {selection_feature_count}, bbox of selected: {point_layer.boundingBoxOfSelected()} ISNULL: {point_layer.boundingBoxOfSelected().isNull()} ')
@@ -2290,7 +2296,7 @@ class JRodos:
         }
         result = processing.run("qgis:voronoipolygons", params)
 
-        log.debug(f'Voronoi: processing run took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: processing run took: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         result_layer = result['OUTPUT']
@@ -2318,14 +2324,14 @@ class JRodos:
                 else:
                     log.debug('????')
             else:
-                log.debug(f'AAAAA tree_node: {tree_node} tree_node in QgsProject.instance().layerTreeRoot().children() = {tree_node in QgsProject.instance().layerTreeRoot().children()}')
+                log.debug(f'???? tree_node: {tree_node} tree_node in QgsProject.instance().layerTreeRoot().children() = {tree_node in QgsProject.instance().layerTreeRoot().children()}')
 
-        log.debug(f'Voronoi: insert layer in layertree: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: insert layer in layertree: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         self.copy_measurements_style(result_layer, point_layer)
 
-        log.debug(f'Voronoi: copying the measurement style: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: copying the measurement style: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         if temporal_filter:
@@ -2333,14 +2339,14 @@ class JRodos:
             # AND connect again to the selectionChange signal...
             self.measurements_connect_selection_changed()
 
-        log.debug(f'Voronoi: DEselecting the features: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: DEselecting the features: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         self.time = QDateTime.currentMSecsSinceEpoch()
 
         # Trying to set the point layer back to 'active layer'
         self.iface.layerTreeView().setCurrentLayer(point_layer)
         self.iface.mapCanvas().refresh()
 
-        log.debug(f'Voronoi: Refresh/Repaint: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
+        #log.debug(f'Voronoi: Refresh/Repaint: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         log.debug(f'Voronoi: Total: {(QDateTime.currentMSecsSinceEpoch()-self.time_total)/1000} seconds for {point_layer}')
 
 

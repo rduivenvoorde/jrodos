@@ -573,7 +573,8 @@ class JRodos:
         if self.rivm_plugin_config_manager is None:  # if the rivm_environment_changed is already connected or not
             if 'RIVM_PluginConfigManager' not in plugins:
                 # no need to go further, the RIVM_PluginConfigManager is not available yet... gonna try later
-                self.msg(f'(no?) RIVM_PluginConfigManager in plugins: {plugins}???\nThis should not happen!')
+                self.msg(self.iface.mainWindow(), f'NO "RIVM_PluginConfigManager" in active plugins:\n\n {list(plugins.keys())}???\n\nThis should not happen!'
+                                                  f'\n\nPlease, either install "RIVM_PluginConfigManager" or enable it first (and restart QGIS).')
                 return
             self. rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
             log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')

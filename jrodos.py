@@ -507,6 +507,14 @@ class JRodos:
         # Create GraphWidget
         self.graph_widget = JRodosGraphWidget()
 
+        # Hexagon measurement layer
+        hexagon_icon_path = ':/plugins/JRodos/icon.png'
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Hexagons'),
+            callback=self.switch_hexagons,
+            parent=self.iface.mainWindow())
+
         # Voronoi layer
         icon_abort_path = os.path.join(os.path.dirname(__file__), 'voronoi.svg')
         self.add_action(
@@ -2184,6 +2192,36 @@ class JRodos:
         else:
             return None
 
+    def switch_hexagons(self):
+        settings = JRodosSettings()
+        # name = settings.value("rainradar_wmst_name")
+        # url = settings.value("rainradar_wmst_url")
+        # layers = settings.value("rainradar_wmst_layers")
+        # styles = settings.value("rainradar_wmst_styles")
+        # imgformat = settings.value("rainradar_wmst_imgformat")
+        #crs = settings.value("rainradar_wmst_crs")
+        # better to get the crs from current project to get best image results
+        crs = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+        # it's better to get the temporal extents from the controller, as these are already 'fixed' (to reasonable/nice begin/end)
+        current_temporal_extent = self.iface.mapCanvas().temporalController().temporalExtents()
+
+        tformat = 'yyyy-MM-ddTHH:mm:ssZ'
+        layers ='hexagon_points,hexagon4,hexagon3'
+        styles = '' #'rivm:hexagon_points,rivm:hexagon4,rivm:hexagon3'
+        imgformat = 'image/png'
+        url = 'http://geoserver.dev.cal-net.nl/geoserver/rivm/ows?SERVICE=WMS&'
+
+        uri = f'timeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}' \
+            f'type=wmst&allowTemporalUpdates=true&temporalSource=provider' \
+            f'&type=wmst&layers={layers}&styles={styles}' \
+            f'&crs={crs}&format={imgformat}&url={url}'
+
+        log.debug(f'uri: {uri}')
+
+        rain_layer = QgsRasterLayer(uri, "HEXHEX", "wms")
+        QgsProject.instance().addMapLayer(rain_layer, True)  # False, meaning not ready to add to legend
+        #self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
+
     def switch_voronoi(self):
         """
         Used to check/uncheck the Voronoi checkbox
@@ -2349,7 +2387,6 @@ class JRodos:
 
         #log.debug(f'Voronoi: Refresh/Repaint: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         log.debug(f'Voronoi: Total: {(QDateTime.currentMSecsSinceEpoch()-self.time_total)/1000} seconds for {point_layer}')
-
 
     def add_rainradar_to_timecontroller(self, layer_for_settings):
         settings = JRodosSettings()

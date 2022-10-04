@@ -2006,6 +2006,9 @@ class JRodos:
             steps = 5
         # create a new rule-based renderer
         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        # mmm sometimes the defaultSymbol from default projects is 100 transparent.. make sure it is NOT:
+        symbol.setOpacity(1)
+
         renderer = QgsRuleBasedRenderer(symbol)
         # get the "root" rule
         root_rule = renderer.rootRule()
@@ -2016,14 +2019,16 @@ class JRodos:
         else:
             rules = RangeCreator.create_cloud_ruleset(max_value)
 
+        log.debug(f'cloud_arrival_for_layer calculation for layer: "{layer.name()}"')
         for label, expression, color in rules:
+            #log.debug(f'{label} {color.name()}')
             # create a clone (i.e. a copy) of the default rule
             rule = root_rule.children()[0].clone()
             # set the label, expression and color
             rule.setLabel(label)
             rule.setFilterExpression(expression)
             rule.symbol().symbolLayer(0).setFillColor(color)
-            # outline transparent
+            # outline transparent!
             rule.symbol().symbolLayer(0).setStrokeColor(QColor.fromRgb(255, 255, 255, 0))
             # append the rule to the list of rules
             root_rule.appendChild(rule)

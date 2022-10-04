@@ -514,7 +514,7 @@ class JRodos:
         hexagon_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'hexagons.svg')
         self.add_action(
             hexagon_icon_path,
-            text=self.tr(u'Hexagons'),
+            text=self.tr(u'Gamma Hexagons'),
             callback=self.switch_hexagons,
             parent=self.iface.mainWindow())
 
@@ -2234,10 +2234,13 @@ class JRodos:
         # NOT needed?: f'referenceTimeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}' \
         log.debug(f'uri: {uri}')
         if self.hex_layer:
-            # remove it
-            QgsProject.instance().removeMapLayer(self.hex_layer.id())
+            # try to remove it (it's always possible the user already removed it...)
+            try:
+                QgsProject.instance().removeMapLayer(self.hex_layer.id())
+            except Exception as e:
+                log.debug('Hexagons alread removed (by user?)')
 
-        self.hex_layer = QgsRasterLayer(uri, "Hexagons Value >200 ", "wms")
+        self.hex_layer = QgsRasterLayer(uri, "Hexagons Gamma >200", "wms")
         QgsProject.instance().addMapLayer(self.hex_layer, True)  # False, meaning not ready to add to legend
         # now 'fix' the temporal properties of the layer
         layer_temporal_props = self.hex_layer.temporalProperties()

@@ -10,7 +10,7 @@
 name=JRodos
 qgisMinimumVersion=3.16
 description=Plugin to connect to JRodos via WPS
-version=2.2.3
+version=2.3.0
 author=Zuidt
 email=richard@zuidt.nl
 
@@ -24,6 +24,7 @@ repository=https://git.svc.cal-net.nl/qgis/jrodos
 plugin_dependencies=RIVM PluginConfigManager
 
 changelog=
+    2.3.0   Hexagons layer
     2.2.3   Fix issue with Cloud transparency from certain projects
     2.2.2   Local styling of 'Cloud arrival time', merge Voronoi/Checkbox in one Action
     2.2.1   Title change of Measurements Dialog

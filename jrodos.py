@@ -260,6 +260,9 @@ class JRodos:
         self.do_voronoi = False
         self.voronoi_checkbox = None
 
+        # hexagons
+        self.hex_layer = None
+
         # cloud arrival time
         self.style_cloud_arrival_connected = False
 
@@ -507,8 +510,16 @@ class JRodos:
         # Create GraphWidget
         self.graph_widget = JRodosGraphWidget()
 
+        # Hexagon measurement layer
+        hexagon_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'hexagons.svg')
+        self.add_action(
+            hexagon_icon_path,
+            text=self.tr(u'Gamma Hexagons'),
+            callback=self.switch_hexagons,
+            parent=self.iface.mainWindow())
+
         # Voronoi layer
-        icon_abort_path = os.path.join(os.path.dirname(__file__), 'voronoi.svg')
+        icon_abort_path = os.path.join(os.path.dirname(__file__), 'images', 'voronoi.svg')
         self.add_action(
             icon_abort_path,
             text=self.tr(u'Voronoi'),
@@ -1941,9 +1952,9 @@ class JRodos:
             if self.use_temporal_controller:
                  # SO: we use an iso datetime text (which works in the Temporal Controller)
                 log.debug('Using DateTime (iso-datetime as TEXT) from table...')
-                self.add_layer_to_timecontroller(jrodos_output_layer,
-                                                 time_column='Datetime',
-                                                 frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
+                self.add_vector_layer_to_timecontroller(jrodos_output_layer,
+                                                        time_column='Datetime',
+                                                        frame_size_seconds=self.jrodos_output_settings.jrodos_model_step)
         # let's repaint the canvas (another time?) because apparently adding the cloud arrival styling does not?
         self.iface.mapCanvas().redrawAllLayers()
 
@@ -2189,6 +2200,63 @@ class JRodos:
         else:
             return None
 
+    def switch_hexagons(self):
+        """
+        # &allowTemporalUpdates=true
+        # &contextualWMSLegend=0
+        # &crs=EPSG:3857
+        # &enableTime=true
+        # &featureCount=10
+        # &format=image/png
+        # &layers=hexagon3
+        # &styles&timeDimensionExtent=2022-06-10T11:00:00.000Z/2022-12-01T04:00:00.000Z/PT1H
+        # &type=wmst
+        # &url=http://geoserver.dev.cal-net.nl/geoserver/rivm/wms
+        """
+        # better to get the crs from current project to get best image results
+        crs = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+        # 3 hexagon layers in one go
+        # NOTE: you need 3x the layers= param, so &layers=layer1&layers=layer2&layers=layer3
+        # same for styles OR 3x empty:  &styles=&styles=&styles=
+        layers ='hexagon_points&layers=hexagon3&layers=hexagon4'
+        styles = '&styles=&styles=' #'rivm:hexagon_points,rivm:hexagon4,rivm:hexagon3'
+        imgformat = 'image/png'
+        url = self.settings.value('measurements_wms_url')
+        tformat = 'yyyy-MM-ddTHH:mm:ssZ'
+
+        end_time = QDateTime.currentDateTimeUtc()  # end is NOW
+        time = end_time.time()
+        time.setHMS(time.hour() + 1, 0, 0, 0)  # make sure it is Thh:00:00
+        end_time.setTime(time)
+        start_time = end_time.addSecs(-60 * 60 * 24 * 60)  # minus 60 days
+        uri = f'timeDimensionExtent={start_time.toString(tformat)}/{end_time.toString(tformat)}/PT1H' \
+              f'&enableTime=true' \
+              f'&contextualWMSLegend=0' \
+              f'&allowTemporalUpdates=true' \
+              f'&temporalSource=provider' \
+              f'&type=wmst&layers={layers}&styles={styles}' \
+              f'&crs={crs}&format={imgformat}&url={url}'
+        # NOT needed?: f'referenceTimeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}' \
+        log.debug(f'uri: {uri}')
+        if self.hex_layer:
+            # try to remove it (it's always possible the user already removed it...)
+            try:
+                QgsProject.instance().removeMapLayer(self.hex_layer.id())
+            except Exception as e:
+                log.debug('Hexagons alread removed (by user?)')
+
+        self.hex_layer = QgsRasterLayer(uri, "Hexagons Gamma >200", "wms")
+        QgsProject.instance().addMapLayer(self.hex_layer, True)  # False, meaning not ready to add to legend
+        # now 'fix' the temporal properties of the layer
+        layer_temporal_props = self.hex_layer.temporalProperties()
+        layer_temporal_props.setIntervalHandlingMethod(Qgis.TemporalIntervalMatchMethod.MatchUsingWholeRange)
+        layer_temporal_props.setMode(Qgis.RasterTemporalMode.TemporalRangeFromDataProvider)
+        layer_temporal_props.setDefaultsFromDataProviderTemporalCapabilities(self.hex_layer.dataProvider().temporalCapabilities())
+        # make sure the temporal extents of the navigator/temporal widget reflect the new project temporal extents
+        navigator = self.iface.mapCanvas().temporalController()
+        temporal_range = QgsTemporalUtils.calculateTemporalRangeForProject(QgsProject.instance())
+        navigator.setTemporalExtents(temporal_range)
+
     def switch_voronoi(self):
         """
         Used to check/uncheck the Voronoi checkbox
@@ -2355,7 +2423,6 @@ class JRodos:
         #log.debug(f'Voronoi: Refresh/Repaint: {(QDateTime.currentMSecsSinceEpoch()-self.time)/1000} seconds')
         log.debug(f'Voronoi: Total: {(QDateTime.currentMSecsSinceEpoch()-self.time_total)/1000} seconds for {point_layer}')
 
-
     def add_rainradar_to_timecontroller(self, layer_for_settings):
         settings = JRodosSettings()
         name = settings.value("rainradar_wmst_name")
@@ -2388,7 +2455,7 @@ class JRodos:
         QgsProject.instance().addMapLayer(rain_layer, False)  # False, meaning not ready to add to legend
         self.layer_group.insertLayer(len(self.layer_group.children()), rain_layer)  # now add to legend in current layer group on bottom
 
-    def add_layer_to_timecontroller(self, layer, time_column=None, frame_size_seconds=3600):
+    def add_vector_layer_to_timecontroller(self, layer, time_column=None, frame_size_seconds=3600):
         # get the temporal properties of the time layer
         layer_temporal_props = layer.temporalProperties()
         # set the temporal mode to 'DateTime comes from one attribute field'
@@ -2637,9 +2704,9 @@ class JRodos:
                 frame_size = self.measurements_settings.endminusstart
                 if frame_size in [0, '0', -1, '-1']:
                     frame_size = 600
-                self.add_layer_to_timecontroller(self.measurements_layer,
-                                                 time_column='startTime',  # see #QGIS-85
-                                                 frame_size_seconds=frame_size)
+                self.add_vector_layer_to_timecontroller(self.measurements_layer,
+                                                        time_column='startTime',  # see #QGIS-85
+                                                        frame_size_seconds=frame_size)
 
             # # set the display field value
             # self.measurements_layer.setMapTipTemplate('[% measurement_values()%]')

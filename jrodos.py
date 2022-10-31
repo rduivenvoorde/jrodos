@@ -537,6 +537,7 @@ class JRodos:
         QgsProject.instance().layerWillBeRemoved.connect(self.remove_jrodos_layer)
 
         self.iface.initializationCompleted.connect(self.qgis_initialization_completed)
+        self.qgis_initialization_completed()  # just to be sure, during development and plugin upgrades
 
     def abort_requests(self):
         log.debug('Aborting all Requests!!!')
@@ -577,6 +578,7 @@ class JRodos:
         return toolbar
 
     def qgis_initialization_completed(self):
+
         # get current/latest environment and project id from settings
         self.set_calweb_project(QSettings().value('rivm_config/last_project_id', '-'))
 
@@ -585,12 +587,15 @@ class JRodos:
             if 'RIVM_PluginConfigManager' not in plugins:
                 # no need to go further, the RIVM_PluginConfigManager is not available yet... gonna try later
                 self.msg(self.iface.mainWindow(), f'NO "RIVM_PluginConfigManager" in active plugins:\n\n {list(plugins.keys())}???\n\nThis should not happen!'
-                                                  f'\n\nPlease, either install "RIVM_PluginConfigManager" or enable it first (and restart QGIS).')
+                                                  f'\n\nPlease, either install "RIVM_PluginConfigManager" or enable it first (and restart(!) QGIS).')
                 return
-            self. rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
-            log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
-            self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
-            self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
+            else:
+                self.rivm_plugin_config_manager = plugins['RIVM_PluginConfigManager']
+
+        # we should be able to check IF the signals are already connected
+        log.debug(f'Connecting to signals from configmanager: {self.rivm_plugin_config_manager}')
+        self.rivm_plugin_config_manager.rivm_environment_changed.connect(self.environment_change)
+        self.rivm_plugin_config_manager.rivm_project_id_changed.connect(self.project_id_change)
 
     ###########################################
     # TODO: END commons class/module
@@ -682,7 +687,12 @@ class JRodos:
         del self.graph_widget
 
     def environment_change(self, environment):
-        log.error(f'rivm ENVIRONMENT changed tO: {environment}')
+        log.error(f'RIVM ENVIRONMENT changed to: {environment}')
+        # because of environment change:
+        # check IF there is a hexagon layer, if so, remove it (as it came from old env), and add it (using new env)
+        if self.hex_layer:
+            self.remove_hexagons()
+            self.switch_hexagons()
 
     def project_id_change(self, calweb_project_id, calweb_project):
         """
@@ -1871,7 +1881,7 @@ class JRodos:
         elif len(shps) > 0:
             (shpdir, shpfile) = os.path.split(shps[0])
             # log.debug("{}\n{}".format(shpdir, shpfile))
-            if 'Empty' in shpfile:  # JRodos sents an 'Empty.shp' if no features are in the model data path)
+            if 'Empty' in shpfile:  # JRodos sends an 'Empty.shp' if no features are in the model data path)
                 self.msg(None, self.tr("JRodos data received successfully. \nBut dataset '"+layer_name+"' is empty."))
             else:
                 jrodos_output_layer = QgsVectorLayer(shps[0], layer_name, 'ogr')
@@ -2200,8 +2210,19 @@ class JRodos:
         else:
             return None
 
+    def remove_hexagons(self):
+        # try to remove it (it's always possible the user already removed it...)
+        try:
+            QgsProject.instance().removeMapLayer(self.hex_layer.id())
+            self.hex_layer = None
+        except Exception as e:
+            log.debug('Asked to remove Hexagons, but they are already removed (by user?)')
+
     def switch_hexagons(self):
         """
+        This method will either remove the Hexagons layer (IF it was loaded),
+        or it will load the Hexagons layer (from current RIVM environment) if NOT yet available.
+
         # &allowTemporalUpdates=true
         # &contextualWMSLegend=0
         # &crs=EPSG:3857
@@ -2213,6 +2234,12 @@ class JRodos:
         # &type=wmst
         # &url=http://geoserver.dev.cal-net.nl/geoserver/rivm/wms
         """
+
+        # IF there is a hexagon layer: REMOVE it and return
+        if self.hex_layer:
+            self.remove_hexagons()
+            return
+
         # better to get the crs from current project to get best image results
         crs = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
         # 3 hexagon layers in one go
@@ -2221,7 +2248,7 @@ class JRodos:
         layers ='hexagon_points&layers=hexagon3&layers=hexagon4'
         styles = '&styles=&styles=' #'rivm:hexagon_points,rivm:hexagon4,rivm:hexagon3'
         imgformat = 'image/png'
-        url = self.settings.value('measurements_wms_url')
+        url = self.settings.value('measurements_wms_url')  # RIVM environment specific!
         tformat = 'yyyy-MM-ddTHH:mm:ssZ'
 
         end_time = QDateTime.currentDateTimeUtc()  # end is NOW
@@ -2236,15 +2263,8 @@ class JRodos:
               f'&temporalSource=provider' \
               f'&type=wmst&layers={layers}&styles={styles}' \
               f'&crs={crs}&format={imgformat}&url={url}'
-        # NOT needed?: f'referenceTimeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}' \
+        # NOT needed?: f'referenceTimeDimensionExtent={current_temporal_extent.begin().toString(tformat)}/{current_temporal_extent.end().toString(tformat)}'
         log.debug(f'uri: {uri}')
-        if self.hex_layer:
-            # try to remove it (it's always possible the user already removed it...)
-            try:
-                QgsProject.instance().removeMapLayer(self.hex_layer.id())
-            except Exception as e:
-                log.debug('Hexagons alread removed (by user?)')
-
         self.hex_layer = QgsRasterLayer(uri, "Hexagons Gamma >200", "wms")
         QgsProject.instance().addMapLayer(self.hex_layer, True)  # False, meaning not ready to add to legend
         # now 'fix' the temporal properties of the layer
@@ -2510,7 +2530,6 @@ class JRodos:
 
     def load_measurements_favourite(self):
         log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.currentText()}')
-        #log.debug(f'Loading favourite measurements: ...{self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())}')
         measurements_settings = self.favorite_measurements_combo.itemData(self.favorite_measurements_combo.currentIndex())
         if isinstance(measurements_settings, CalnetMeasurementsConfig):
             # create a deepcopy else we will edit the config which lives in the combobox...

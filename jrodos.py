@@ -2214,9 +2214,10 @@ class JRodos:
         # try to remove it (it's always possible the user already removed it...)
         try:
             QgsProject.instance().removeMapLayer(self.hex_layer.id())
-            self.hex_layer = None
         except Exception as e:
             log.debug('Asked to remove Hexagons, but they are already removed (by user?)')
+        self.hex_layer = None
+        self.iface.mapCanvas().refresh()
 
     def switch_hexagons(self):
         """

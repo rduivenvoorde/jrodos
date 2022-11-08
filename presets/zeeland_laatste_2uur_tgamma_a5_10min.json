@@ -1,0 +1,10 @@
+{
+  "title": "Zeeland, afgelopen 2 uur H*10 / TGAMMA-A5 (10 min metingen)",
+  "url": "http://geoserver.dev.cal-net.nl/geoserver/radiation.measurements/ows?",
+  "page_size": 25000,
+  "start_datetime": "now-7200",
+  "quantity": "T-GAMMA",
+  "substance": "A5",
+  "endminusstart": "600",
+  "bbox": "ZEELAND"
+}
